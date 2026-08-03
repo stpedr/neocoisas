@@ -1,0 +1,8 @@
+{
+  "creator_name": "Admin",
+  "active_niche": "League of Legends Memes",
+  "ollama_model": "llama3",
+  "ollama_base_url": "http://localhost:11434",
+  "request_timeout": 120,
+  "platforms_target": ["tiktok", "instagram", "youtube_shorts"]
+}

@@ -1,0 +1,18 @@
+# Configuração local com credenciais/nicho ativo
+config.json
+
+# Saídas de renderização
+output/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
