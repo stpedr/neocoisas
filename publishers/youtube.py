@@ -1,17 +1,29 @@
-"""Publisher para o YouTube (Data API v3) — pré-configurado, requer credenciais.
+"""Publisher para o YouTube (Data API v3).
 
-Assinatura de um publisher: `fn(idea) -> str` (devolve a URL/ID do post).
+Assinatura de um publisher: `fn(idea) -> str` (devolve a URL do vídeo publicado).
 
-O upload real usa a YouTube Data API v3 com OAuth. Este módulo já valida o
-pré-requisito (vídeo renderizado) e as credenciais; a chamada de upload em si é
-o único ponto a completar com a lib oficial `google-api-python-client` (deixada
-fora das dependências até você optar por ela).
+Faz o upload real via `google-api-python-client` usando credenciais OAuth
+(refresh token). As credenciais vêm de variáveis de ambiente — configure-as no
+`.env` (nunca no código/commit). Sem elas, levanta um erro claro.
+
+Variáveis:
+    YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN  (obrigatórias)
+    YOUTUBE_PRIVACY  (opcional: private | unlisted | public; padrão private)
+    YOUTUBE_CATEGORY_ID  (opcional; padrão 22 = People & Blogs)
 """
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
+
+_TOKEN_URI = "https://oauth2.googleapis.com/token"
+
+
+def _description(idea) -> str:
+    linhas = [s.narration for s in idea.scenes if getattr(s, "narration", "").strip()]
+    corpo = "\n".join(linhas)
+    return f"{corpo}\n\n#shorts".strip()
 
 
 def youtube_publisher(idea) -> str:
@@ -30,20 +42,45 @@ def youtube_publisher(idea) -> str:
     if faltando:
         raise RuntimeError(
             "Credenciais do YouTube ausentes: " + ", ".join(faltando) + ". "
-            "Configure-as (OAuth) para habilitar a publicação."
+            "Configure-as no .env (OAuth) para habilitar a publicação."
         )
 
-    # --- Ponto a completar -------------------------------------------------
-    # Com as credenciais presentes, faça o upload via YouTube Data API v3:
-    #   from googleapiclient.discovery import build
-    #   from google.oauth2.credentials import Credentials
-    #   creds = Credentials(None, refresh_token=..., client_id=..., client_secret=...,
-    #                       token_uri="https://oauth2.googleapis.com/token")
-    #   youtube = build("youtube", "v3", credentials=creds)
-    #   ... videos().insert(part="snippet,status", body={...},
-    #                       media_body=MediaFileUpload(idea.video_path)) ...
-    #   return f"https://youtu.be/{response['id']}"
-    raise NotImplementedError(
-        "Upload ao YouTube pré-configurado, mas a chamada final precisa ser "
-        "completada com google-api-python-client (ver comentário em publishers/youtube.py)."
+    # Imports tardios: as libs do Google só são necessárias para publicar de fato,
+    # então o módulo continua importável sem elas (testes/placeholder).
+    try:
+        from google.oauth2.credentials import Credentials
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaFileUpload
+    except ImportError as exc:  # pragma: no cover - depende de dependência opcional
+        raise RuntimeError(
+            "Dependências do YouTube ausentes. Instale com "
+            "`pip install google-api-python-client google-auth`."
+        ) from exc
+
+    creds = Credentials(
+        None,
+        refresh_token=os.environ["YOUTUBE_REFRESH_TOKEN"],
+        client_id=os.environ["YOUTUBE_CLIENT_ID"],
+        client_secret=os.environ["YOUTUBE_CLIENT_SECRET"],
+        token_uri=_TOKEN_URI,
     )
+    youtube = build("youtube", "v3", credentials=creds, cache_discovery=False)
+
+    body = {
+        "snippet": {
+            "title": (idea.title or "Vídeo")[:100],
+            "description": _description(idea)[:5000],
+            "categoryId": os.environ.get("YOUTUBE_CATEGORY_ID", "22"),
+        },
+        "status": {
+            "privacyStatus": os.environ.get("YOUTUBE_PRIVACY", "private"),
+            "selfDeclaredMadeForKids": False,
+        },
+    }
+    media = MediaFileUpload(
+        idea.video_path, chunksize=-1, resumable=True, mimetype="video/mp4"
+    )
+    response = youtube.videos().insert(
+        part="snippet,status", body=body, media_body=media
+    ).execute()
+    return f"https://youtu.be/{response['id']}"

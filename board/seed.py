@@ -138,9 +138,9 @@ SEED_CARDS: list[dict] = [
     # ------------------------- Sprint 3 (publicação via APIs) ----------------
     {
         "title": "Publisher via API oficial (1 plataforma)",
-        "description": "Scaffolding publishers/ + stub YouTube (valida render e "
-        "credenciais). Falta completar a chamada de upload (google-api-python-client).",
-        "column": "in_progress",
+        "description": "YouTube Data API v3 implementado (upload real via "
+        "google-api-python-client). Em revisão até validar com o token OAuth no .env.",
+        "column": "review",
         "sprint": "Sprint 3 · Publicação",
         "labels": ["backend", "integração"],
     },
@@ -176,9 +176,9 @@ SEED_CARDS: list[dict] = [
     },
     {
         "title": "Deploy do backend e do frontend",
-        "description": "Publicar a API e a interface (ex: container + host de sua "
-        "escolha). Observação: o Ollama roda na máquina do usuário.",
-        "column": "backlog",
+        "description": "Hospedagem 100% local via docker compose (restart: "
+        "unless-stopped) — ollama + api + web + Ollama, tudo na máquina do usuário.",
+        "column": "done",
         "sprint": "Sprint 4 · Deploy & Publicação",
         "labels": ["infra"],
     },

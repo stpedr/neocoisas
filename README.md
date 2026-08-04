@@ -191,8 +191,12 @@ config (`config.json`) ou variável de ambiente:
   **out of the box**, sem chave nenhuma.
 - **stability / elevenlabs** exigem `STABILITY_API_KEY` / `ELEVENLABS_API_KEY`
   (ver `.env.example`).
-- **youtube** é um stub pré-configurado (valida render + credenciais OAuth);
-  falta completar a chamada de upload — ver `publishers/youtube.py`.
+- **youtube** faz o upload real via YouTube Data API v3
+  (`google-api-python-client`). Configure as credenciais OAuth **no `.env`**
+  (nunca no código): `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`,
+  `YOUTUBE_REFRESH_TOKEN` (+ opcionais `YOUTUBE_PRIVACY`, `YOUTUBE_CATEGORY_ID`)
+  e `ANE_PUBLISHER=youtube`. Depois `docker compose up -d`. O `.env` está no
+  `.gitignore` — os segredos não vão para o git.
 
 Renderizar uma ideia aprovada: botão **Renderizar vídeo** no frontend, ou
 `POST /api/ideas/{id}/render` (o vídeo fica em `POST` → preview via

@@ -65,3 +65,24 @@ def test_publisher_youtube():
 def test_publisher_invalido_levanta():
     with pytest.raises(ValueError):
         get_publisher({"publisher": "xpto"})
+
+
+class _FakeIdea:
+    def __init__(self, video_path=None):
+        self.title = "t"
+        self.video_path = video_path
+        self.scenes = []
+
+
+def test_youtube_sem_video_levanta():
+    with pytest.raises(RuntimeError, match="Renderize o vídeo"):
+        youtube_publisher(_FakeIdea(video_path=None))
+
+
+def test_youtube_sem_credenciais_levanta(tmp_path, monkeypatch):
+    for var in ("YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN"):
+        monkeypatch.delenv(var, raising=False)
+    video = tmp_path / "v.mp4"
+    video.write_bytes(b"fake")
+    with pytest.raises(RuntimeError, match="Credenciais do YouTube ausentes"):
+        youtube_publisher(_FakeIdea(video_path=str(video)))
