@@ -133,6 +133,14 @@ def models() -> dict:
     return describe(_app_config())
 
 
+@app.get("/api/models/available")
+def models_available() -> dict:
+    """Modelos disponíveis ao vivo (Ollama /api/tags) + conhecidos dos provedores."""
+    from registry import available_models
+
+    return available_models(_app_config())
+
+
 @app.get("/api/ideas")
 def list_ideas(status: str | None = None) -> dict:
     queue = get_queue()

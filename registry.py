@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import os
 
+import requests
+
 from agents.llm.factory import _PROVIDERS as _TEXT_PROVIDERS
 from agents.media.factory import (
     _IMAGE_PROVIDERS,
@@ -86,6 +88,34 @@ def validate(cap: str, provider: str) -> bool:
     if cap not in CAP_PROVIDERS:
         raise ValueError(f"Capacidade desconhecida: '{cap}'.")
     return provider in CAP_PROVIDERS[cap]
+
+
+def _ollama_tags(config: dict) -> list[str]:
+    """Modelos instalados no Ollama (via /api/tags). Resiliente: [] se falhar."""
+    base = os.environ.get("ANE_OLLAMA_BASE_URL") or config.get(
+        "ollama_base_url", "http://localhost:11434"
+    )
+    try:
+        r = requests.get(base.rstrip("/") + "/api/tags", timeout=5)
+        r.raise_for_status()
+        return [m["name"] for m in r.json().get("models", [])]
+    except Exception:  # noqa: BLE001 - Ollama pode estar fora do ar
+        return []
+
+
+def available_models(config: dict | None = None) -> dict:
+    """Modelos disponíveis por capacidade/provider para popular a UI.
+
+    Para `ollama` consulta ao vivo (/api/tags), com fallback nos modelos
+    conhecidos; para os demais usa a lista estática conhecida.
+    """
+    config = config or {}
+    ollama = _ollama_tags(config) or KNOWN_MODELS["text"]["ollama"]
+    return {
+        "text": {"ollama": ollama, "gemini": KNOWN_MODELS["text"]["gemini"]},
+        "image": KNOWN_MODELS.get("image", {}),
+        "video": KNOWN_MODELS.get("video", {}),
+    }
 
 
 def describe(config: dict | None = None) -> dict:

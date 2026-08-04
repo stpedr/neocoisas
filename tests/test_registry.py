@@ -55,3 +55,33 @@ def test_validate():
     assert registry.validate("image", "xpto") is False
     with pytest.raises(ValueError):
         registry.validate("cap-invalida", "x")
+
+
+class _Resp:
+    def __init__(self, data):
+        self._data = data
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._data
+
+
+def test_available_models_descobre_ollama(monkeypatch):
+    monkeypatch.setattr(
+        registry.requests, "get",
+        lambda *a, **k: _Resp({"models": [{"name": "llama3"}, {"name": "mistral"}]}),
+    )
+    av = registry.available_models({})
+    assert av["text"]["ollama"] == ["llama3", "mistral"]
+    assert "gemini-1.5-flash" in av["text"]["gemini"]
+
+
+def test_available_models_fallback_quando_ollama_cai(monkeypatch):
+    def boom(*a, **k):
+        raise ConnectionError("ollama offline")
+
+    monkeypatch.setattr(registry.requests, "get", boom)
+    av = registry.available_models({})
+    assert av["text"]["ollama"] == registry.KNOWN_MODELS["text"]["ollama"]

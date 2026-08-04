@@ -78,7 +78,7 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Descoberta de modelos disponíveis',
         'description': 'Listar modelos do Ollama (/api/tags) e dos provedores p/ popular a UI. Aceite: endpoint retorna modelos instalados/configurados.',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 9 · Troca de modelos',
         'labels': ['backend', 'integração', 'prioridade:baixa'],
     },
