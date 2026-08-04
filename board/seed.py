@@ -92,7 +92,7 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Documentação final e publicação do projeto',
         'description': 'README/HANDOFF revisados, licença, guia de execução e diagrama de arquitetura. Aceite: reproduzível do zero seguindo o README; licença definida; main como default (pelo dono).',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 4 · Deploy & Publicação',
         'labels': ['docs', 'prioridade:baixa'],
     },
