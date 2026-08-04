@@ -33,6 +33,14 @@ export type GenerateResult = {
   ideas: Idea[];
 };
 
+export type MetricsSummary = {
+  counts: Counts;
+  totals: { com_metricas: number; views: number; likes: number };
+  ideas: { id: string; title: string; status: string; metrics: Record<string, number> }[];
+};
+
+export type Analysis = { insights: string; recommendations: string[] };
+
 export type Column = { id: string; label: string };
 
 export type Card = {
@@ -216,4 +224,9 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(body),
     }),
+
+  // Métricas / análise --------------------------------------------------
+  getMetricsSummary: () => request<MetricsSummary>("/api/metrics/summary"),
+
+  analyze: () => request<Analysis>("/api/analyze", { method: "POST" }),
 };

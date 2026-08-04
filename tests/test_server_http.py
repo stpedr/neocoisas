@@ -68,6 +68,20 @@ def test_metrics(client):
     assert r.status_code == 200 and r.json()["metrics"]["views"] == 10
 
 
+def test_metrics_summary(client):
+    a = _add_idea("a")
+    b = _add_idea("b")
+    client.post(f"/api/ideas/{a.id}/metrics", json={"views": 100, "likes": 5})
+    client.post(f"/api/ideas/{b.id}/metrics", json={"views": 50, "likes": 2})
+    r = client.get("/api/metrics/summary")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["totals"]["com_metricas"] == 2
+    assert body["totals"]["views"] == 150
+    assert body["totals"]["likes"] == 7
+    assert len(body["ideas"]) == 2
+
+
 def test_auth_bloqueia_sem_chave(tmp_path, monkeypatch):
     monkeypatch.setattr(server, "QUEUE_PATH", str(tmp_path / "q.json"))
     monkeypatch.setattr(server, "BOARD_PATH", str(tmp_path / "b.json"))

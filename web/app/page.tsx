@@ -5,8 +5,9 @@ import IdeasView from "./components/IdeasView";
 import KanbanView from "./components/KanbanView";
 import ScheduleView from "./components/ScheduleView";
 import ModelsView from "./components/ModelsView";
+import DashboardView from "./components/DashboardView";
 
-type Tab = "ideas" | "kanban" | "schedule" | "models";
+type Tab = "ideas" | "kanban" | "schedule" | "models" | "dashboard";
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>("ideas");
@@ -43,6 +44,12 @@ export default function Home() {
           >
             ⚙️ Modelos
           </button>
+          <button
+            className={`tab ${tab === "dashboard" ? "active" : ""}`}
+            onClick={() => setTab("dashboard")}
+          >
+            📊 Dashboard
+          </button>
         </div>
       </div>
 
@@ -50,6 +57,7 @@ export default function Home() {
       {tab === "kanban" && <KanbanView />}
       {tab === "schedule" && <ScheduleView />}
       {tab === "models" && <ModelsView />}
+      {tab === "dashboard" && <DashboardView />}
     </div>
   );
 }

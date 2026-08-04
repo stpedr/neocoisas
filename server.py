@@ -426,6 +426,29 @@ def set_metrics(idea_id: str, metrics: dict) -> dict:
         raise HTTPException(404, str(exc)) from exc
 
 
+@app.get("/api/metrics/summary")
+def metrics_summary() -> dict:
+    """Agrega dados para o dashboard: contagens, totais e ideias com métricas."""
+    queue = get_queue()
+    com_metricas = [i for i in queue.all() if i.metrics]
+
+    def _total(chave: str) -> int:
+        return sum(int(i.metrics.get(chave, 0) or 0) for i in com_metricas)
+
+    return {
+        "counts": queue.counts(),
+        "totals": {
+            "com_metricas": len(com_metricas),
+            "views": _total("views"),
+            "likes": _total("likes"),
+        },
+        "ideas": [
+            {"id": i.id, "title": i.title, "status": i.status, "metrics": i.metrics}
+            for i in com_metricas
+        ],
+    }
+
+
 @app.post("/api/analyze")
 def analyze() -> dict:
     from agents.analyst import AnalystAgent

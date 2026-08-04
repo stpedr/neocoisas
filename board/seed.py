@@ -36,7 +36,7 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Dashboard de métricas real',
         'description': 'Aba no frontend: KPIs (pendentes/aprovadas/postadas), views/likes por vídeo e insights do analista. Aceite: consome /api/ideas e /api/analyze e atualiza ao vivo. Depende de: coleta automática de métricas (p/ dados reais).',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 8 · Métricas & Escala',
         'labels': ['frontend', 'backend', 'prioridade:média'],
     },
