@@ -112,6 +112,14 @@ SEED_CARDS: list[dict] = [
         "labels": ["backend", "conteúdo"],
     },
     {
+        "title": "Provedor Gemini (imagem e vídeo)",
+        "description": "image_provider=gemini (Imagen) e video_provider=gemini (Veo, "
+        "clipe por cena com muxagem de narração/legenda). GEMINI_API_KEY no .env.",
+        "column": "done",
+        "sprint": "Sprint 2 · Geração de mídia",
+        "labels": ["backend", "conteúdo", "integração"],
+    },
+    {
         "title": "Legendas / burn-in no vídeo",
         "description": "drawtext do FFmpeg queima a narração por cena (config "
         "burn_subtitles); escape de fonte cross-platform (Windows/Linux).",
@@ -190,5 +198,24 @@ SEED_CARDS: list[dict] = [
         "column": "backlog",
         "sprint": "Sprint 4 · Deploy & Publicação",
         "labels": ["docs"],
+    },
+    # ---------------------- Sprint 5 (bot do Telegram) ----------------------
+    {
+        "title": "Bot do Telegram — operar a arquitetura completa",
+        "description": "Bot que comanda todo o fluxo pelo Telegram, reusando a API "
+        "existente: /gerar <prompt> (manual/auto), listar pendentes e aprovar/"
+        "rejeitar por botões inline, renderizar e postar/agendar. Notifica quando "
+        "houver ideias para revisar. Token via TELEGRAM_BOT_TOKEN no .env.",
+        "column": "backlog",
+        "sprint": "Sprint 5 · Bot do Telegram",
+        "labels": ["backend", "integração"],
+    },
+    {
+        "title": "Bot do Telegram — aprovação por botões inline",
+        "description": "Cada ideia pendente vira uma mensagem com botões ✅/❌ que "
+        "chamam /api/ideas/{id}/approve|reject; preview do roteiro/vídeo no chat.",
+        "column": "backlog",
+        "sprint": "Sprint 5 · Bot do Telegram",
+        "labels": ["backend", "integração"],
     },
 ]

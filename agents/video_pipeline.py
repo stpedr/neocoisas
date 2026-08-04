@@ -78,14 +78,19 @@ class VideoPipeline:
         self,
         image_generator=None,
         voice_generator=None,
+        scene_video_generator=None,
         burn_subtitles: bool = False,
         font_path: str | None = None,
     ):
         # Pontos de extensão: funções que você fornece para gerar mídia.
         #   image_generator(visual_prompt: str, dest: Path) -> Path
         #   voice_generator(narration: str, dest: Path) -> Path
+        #   scene_video_generator(visual_prompt: str, dest: Path) -> Path (.mp4)
+        # Se `scene_video_generator` for fornecido, cada cena vira um clipe de
+        # vídeo (ex: Veo/Gemini) em vez de uma imagem estática.
         self.image_generator = image_generator
         self.voice_generator = voice_generator
+        self.scene_video_generator = scene_video_generator
         # Legendas queimadas no vídeo (drawtext). Requer um arquivo de fonte
         # existente; se a fonte informada não existir, tenta auto-detectar, e
         # se nada for encontrado o burn-in é ignorado silenciosamente.
@@ -112,12 +117,41 @@ class VideoPipeline:
 
         rendered_clips: list[Path] = []
         for idx, scene in enumerate(job.scenes):
-            image_path = self._generate_image(scene, assets_dir, idx)
             audio_path = self._generate_voice(scene, assets_dir, idx)
-            clip_path = self._compose_clip(scene, image_path, audio_path, assets_dir, idx)
+            if self.scene_video_generator is not None:
+                video_src = self._generate_scene_video(scene, assets_dir, idx)
+                clip_path = self._compose_clip_from_video(
+                    scene, video_src, audio_path, assets_dir, idx
+                )
+            else:
+                image_path = self._generate_image(scene, assets_dir, idx)
+                clip_path = self._compose_clip(scene, image_path, audio_path, assets_dir, idx)
             rendered_clips.append(clip_path)
 
         return self._concat_clips(rendered_clips, job.output_path)
+
+    def _generate_scene_video(self, scene: Scene, assets_dir: Path, idx: int) -> Path:
+        dest = assets_dir / f"scenevid_{idx:02d}.mp4"
+        return self.scene_video_generator(scene.visual_prompt, dest)
+
+    def _compose_clip_from_video(
+        self, scene: Scene, video_path: Path, audio_path: Path, assets_dir: Path, idx: int
+    ) -> Path:
+        """Combina um clipe de vídeo (gerado) com a narração e a legenda."""
+        clip_path = assets_dir / f"clip_{idx:02d}.mp4"
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(video_path),
+            "-i", str(audio_path),
+            "-map", "0:v:0", "-map", "1:a:0",
+            "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k",
+            "-pix_fmt", "yuv420p",
+            "-shortest",
+            "-vf", self._build_vf(scene, assets_dir, idx),
+            str(clip_path),
+        ]
+        subprocess.run(cmd, check=True, capture_output=True)
+        return clip_path
 
     def _generate_image(self, scene: Scene, assets_dir: Path, idx: int) -> Path:
         dest = assets_dir / f"scene_{idx:02d}.png"

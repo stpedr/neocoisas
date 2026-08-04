@@ -10,7 +10,11 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from agents.media.factory import get_image_generator, get_voice_generator
+from agents.media.factory import (
+    get_image_generator,
+    get_video_generator,
+    get_voice_generator,
+)
 from agents.video_pipeline import VideoJob, VideoPipeline
 
 _OUTPUT_DIR = os.environ.get("ANE_OUTPUT_DIR", "output")
@@ -33,9 +37,12 @@ def render_idea(idea, config: dict | None = None) -> Path:
     if not idea.scenes:
         raise ValueError("A ideia não tem cenas para renderizar.")
 
+    video_gen = get_video_generator(config)
     pipeline = VideoPipeline(
-        image_generator=get_image_generator(config),
+        # Com gerador de vídeo (ex: Veo/Gemini), a imagem estática é dispensável.
+        image_generator=None if video_gen else get_image_generator(config),
         voice_generator=get_voice_generator(config),
+        scene_video_generator=video_gen,
         burn_subtitles=_burn_subtitles(config),
     )
     job = VideoJob(

@@ -7,6 +7,7 @@
   "platforms_target": ["tiktok", "instagram", "youtube_shorts"],
   "image_provider": "placeholder",
   "voice_provider": "placeholder",
+  "video_provider": "none",
   "burn_subtitles": true,
   "publisher": "none"
 }

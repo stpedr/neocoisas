@@ -64,9 +64,13 @@ services:
       # Provedores de mídia/publicação (padrão: placeholder / sem publicação).
       ANE_IMAGE_PROVIDER: ${ANE_IMAGE_PROVIDER:-placeholder}
       ANE_VOICE_PROVIDER: ${ANE_VOICE_PROVIDER:-placeholder}
+      ANE_VIDEO_PROVIDER: ${ANE_VIDEO_PROVIDER:-none}
       ANE_BURN_SUBTITLES: ${ANE_BURN_SUBTITLES:-true}
       ANE_PUBLISHER: ${ANE_PUBLISHER:-none}
       # Chaves opcionais (passadas do host; vazias por padrão).
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_IMAGE_MODEL: ${GEMINI_IMAGE_MODEL:-imagen-3.0-generate-002}
+      GEMINI_VIDEO_MODEL: ${GEMINI_VIDEO_MODEL:-veo-2.0-generate-001}
       STABILITY_API_KEY: ${STABILITY_API_KEY:-}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
       ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-}

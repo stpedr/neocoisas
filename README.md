@@ -183,14 +183,18 @@ config (`config.json`) ou variável de ambiente:
 
 | Config | Opções | Padrão |
 |---|---|---|
-| `image_provider` / `ANE_IMAGE_PROVIDER` | `placeholder`, `stability` | `placeholder` |
+| `image_provider` / `ANE_IMAGE_PROVIDER` | `placeholder`, `stability`, `gemini` | `placeholder` |
 | `voice_provider` / `ANE_VOICE_PROVIDER` | `placeholder`, `elevenlabs` | `placeholder` |
+| `video_provider` / `ANE_VIDEO_PROVIDER` | `none`, `gemini` | `none` |
 | `publisher` / `ANE_PUBLISHER` | `none`, `youtube` | `none` |
 
 - **placeholder** usa só o FFmpeg (fundo colorido + áudio) — o vídeo renderiza
   **out of the box**, sem chave nenhuma.
-- **stability / elevenlabs** exigem `STABILITY_API_KEY` / `ELEVENLABS_API_KEY`
-  (ver `.env.example`).
+- **stability / elevenlabs** exigem `STABILITY_API_KEY` / `ELEVENLABS_API_KEY`.
+- **gemini** usa a `GEMINI_API_KEY`: como `image_provider` gera imagens (Imagen);
+  como `video_provider` gera um **clipe por cena** (Veo) e muxa narração/legenda,
+  em vez do slide estático. Modelos ajustáveis via `GEMINI_IMAGE_MODEL` /
+  `GEMINI_VIDEO_MODEL` (ver `.env.example`).
 - **youtube** faz o upload real via YouTube Data API v3
   (`google-api-python-client`). Configure as credenciais OAuth **no `.env`**
   (nunca no código): `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`,

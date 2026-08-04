@@ -2,7 +2,11 @@
 
 import pytest
 
-from agents.media.factory import get_image_generator, get_voice_generator
+from agents.media.factory import (
+    get_image_generator,
+    get_video_generator,
+    get_voice_generator,
+)
 from agents.media.placeholder import (
     _color_from_text,
     estimate_duration,
@@ -25,6 +29,24 @@ def test_voice_generator_padrao_e_placeholder():
 def test_provider_via_config():
     fn = get_image_generator({"image_provider": "stability"})
     assert fn.__name__ == "stability_image"
+
+
+def test_image_provider_gemini():
+    assert get_image_generator({"image_provider": "gemini"}).__name__ == "gemini_image"
+
+
+def test_video_generator_none_por_padrao():
+    assert get_video_generator({}) is None
+    assert get_video_generator({"video_provider": "none"}) is None
+
+
+def test_video_generator_gemini():
+    assert get_video_generator({"video_provider": "gemini"}).__name__ == "gemini_video"
+
+
+def test_video_provider_invalido_levanta():
+    with pytest.raises(ValueError):
+        get_video_generator({"video_provider": "xpto"})
 
 
 def test_provider_invalido_levanta():

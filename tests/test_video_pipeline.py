@@ -57,6 +57,32 @@ def test_render_gera_arquivo_e_chama_ffmpeg(fake_ffmpeg, tmp_path):
     assert (tmp_path / "concat_list.txt").exists()
 
 
+def test_gerador_de_video_por_cena(fake_ffmpeg, tmp_path):
+    _, voice = _generators()
+
+    def image_nunca(prompt, dest):
+        raise AssertionError("image_generator não deve ser usado com vídeo por cena")
+
+    def scene_video(prompt, dest):
+        Path(dest).write_bytes(b"vid")
+        return Path(dest)
+
+    pipe = VideoPipeline(
+        image_generator=image_nunca,
+        voice_generator=voice,
+        scene_video_generator=scene_video,
+    )
+    job = VideoJob(
+        title="v",
+        scenes=[Scene("n1", "v1", 3.0), Scene("n2", "v2", 3.0)],
+        output_dir=tmp_path,
+    )
+    out = pipe.render(job)
+    assert out.exists()
+    # Cada clipe de vídeo é composto com -map (vídeo gerado + narração).
+    assert any("-map" in cmd for cmd in fake_ffmpeg)
+
+
 def test_sem_gerador_de_imagem_levanta(fake_ffmpeg, tmp_path):
     _, voice = _generators()
     pipe = VideoPipeline(voice_generator=voice)  # sem image_generator

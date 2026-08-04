@@ -12,18 +12,24 @@ from typing import Callable
 from pathlib import Path
 
 from .placeholder import placeholder_image, placeholder_voice
-from .providers import elevenlabs_voice, stability_image
+from .providers import elevenlabs_voice, gemini_image, gemini_video, stability_image
 
 Generator = Callable[[str, Path], Path]
 
 _IMAGE_PROVIDERS: dict[str, Generator] = {
     "placeholder": placeholder_image,
     "stability": stability_image,
+    "gemini": gemini_image,
 }
 
 _VOICE_PROVIDERS: dict[str, Generator] = {
     "placeholder": placeholder_voice,
     "elevenlabs": elevenlabs_voice,
+}
+
+# Geradores de vídeo por cena (produzem um .mp4). "none" = usa imagem estática.
+_VIDEO_PROVIDERS: dict[str, Generator] = {
+    "gemini": gemini_video,
 }
 
 
@@ -44,3 +50,12 @@ def get_voice_generator(config: dict | None = None) -> Generator:
     config = config or {}
     name = os.environ.get("ANE_VOICE_PROVIDER") or config.get("voice_provider", "placeholder")
     return _select(name, _VOICE_PROVIDERS, "voz")
+
+
+def get_video_generator(config: dict | None = None) -> Generator | None:
+    """Gerador de vídeo por cena (ex: Veo). `none` (padrão) usa imagem estática."""
+    config = config or {}
+    name = os.environ.get("ANE_VIDEO_PROVIDER") or config.get("video_provider", "none")
+    if name in ("none", "", None):
+        return None
+    return _select(name, _VIDEO_PROVIDERS, "vídeo")

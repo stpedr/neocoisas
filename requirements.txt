@@ -3,5 +3,6 @@ requests>=2.31
 fastapi>=0.111
 uvicorn[standard]>=0.30
 apscheduler>=3.10
+google-genai>=0.3
 google-api-python-client>=2.100
 google-auth>=2.30
