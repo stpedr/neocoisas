@@ -105,6 +105,7 @@ services:
     container_name: ane-bot
     profiles: ["bot"]
     environment:
+      PYTHONUNBUFFERED: "1"
       ANE_API_URL: http://api:8000
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_ALLOWED_CHAT_IDS: ${TELEGRAM_ALLOWED_CHAT_IDS:-}

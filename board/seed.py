@@ -204,16 +204,16 @@ SEED_CARDS: list[dict] = [
         "title": "Bot do Telegram — operar a arquitetura completa",
         "description": "telegram_bot.py: /gerar e /auto <prompt>, /pendentes, "
         "/aprovadas — reusa a API. Serviço opt-in no compose (profile bot). "
-        "Em revisão até validar com o TELEGRAM_BOT_TOKEN.",
-        "column": "review",
+        "No ar e validado (@bot conectado à API).",
+        "column": "done",
         "sprint": "Sprint 5 · Bot do Telegram",
         "labels": ["backend", "integração"],
     },
     {
         "title": "Bot do Telegram — aprovação por botões inline",
         "description": "Cada ideia vira mensagem com botões ✅/❌ (approve/reject) e "
-        "🎬/🚀 (render/post) via callbacks para a API. Em revisão (aguarda token).",
-        "column": "review",
+        "🎬/🚀 (render/post) via callbacks para a API.",
+        "column": "done",
         "sprint": "Sprint 5 · Bot do Telegram",
         "labels": ["backend", "integração"],
     },
