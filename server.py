@@ -15,7 +15,7 @@ from __future__ import annotations
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -30,6 +30,20 @@ CONFIG_PATH = os.environ.get("ANE_CONFIG", "config.json")
 QUEUE_PATH = os.environ.get("ANE_QUEUE", "output/review_queue.json")
 BOARD_PATH = os.environ.get("ANE_BOARD", "output/board.json")
 
+# Autenticação opcional: se ANE_API_KEY estiver definido, exige o cabeçalho
+# X-API-Key em todas as rotas (exceto health/docs). Vazio = aberto (local).
+_PUBLIC_PATHS = {"/api/health", "/docs", "/openapi.json", "/redoc"}
+
+
+def require_key(request: Request) -> None:
+    api_key = os.environ.get("ANE_API_KEY")
+    if not api_key:
+        return
+    if request.url.path in _PUBLIC_PATHS:
+        return
+    if request.headers.get("x-api-key") != api_key:
+        raise HTTPException(401, "Chave de API inválida ou ausente (X-API-Key).")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Sobe o agendador de postagens (job periódico conforme output/schedule.json).
@@ -38,7 +52,12 @@ async def lifespan(app: FastAPI):
     manager.shutdown()
 
 
-app = FastAPI(title="Auto Niche Engine API", version="1.0", lifespan=lifespan)
+app = FastAPI(
+    title="Auto Niche Engine API",
+    version="1.0",
+    lifespan=lifespan,
+    dependencies=[Depends(require_key)],
+)
 
 # Libera o frontend Next.js em desenvolvimento.
 app.add_middleware(
@@ -123,16 +142,12 @@ def counts() -> dict:
     return get_queue().counts()
 
 
-@app.post("/api/generate")
-def generate(req: GenerateRequest) -> dict:
-    # Import tardio: só precisa do Ollama quando de fato vai gerar.
-    from agents.idea_generator import IdeaGenerator, OllamaError
+def _run_generation(req: GenerateRequest) -> dict:
+    """Lógica de geração compartilhada pelos endpoints síncrono e assíncrono."""
+    from agents.idea_generator import IdeaGenerator
 
     queue = get_queue()
-    try:
-        generator = IdeaGenerator(CONFIG_PATH)
-    except FileNotFoundError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    generator = IdeaGenerator(CONFIG_PATH)
 
     # Agente crítico (quality gate) opcional, ligado por config.
     scorer = None
@@ -145,33 +160,53 @@ def generate(req: GenerateRequest) -> dict:
         scorer = lambda idea: critic.score_idea(idea.title, idea.scenes)  # noqa: E731
         min_score = float(cfg.get("critic_min_score", 6.0))
 
-    try:
-        ideas = generate_and_enqueue(
-            req.prompt,
-            queue,
-            generator,
-            count=req.count,
-            num_scenes=req.num_scenes,
-            mode=req.mode,
-            scorer=scorer,
-            min_score=min_score,
-        )
-    except OllamaError as exc:
-        raise HTTPException(502, str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
-
+    ideas = generate_and_enqueue(
+        req.prompt, queue, generator,
+        count=req.count, num_scenes=req.num_scenes, mode=req.mode,
+        scorer=scorer, min_score=min_score,
+    )
     posted = 0
     if req.mode == "auto":
-        # Sem publisher conectado (APIs oficiais): as ideias ficam aprovadas.
         posted = len(post_approved(queue, publisher=None))
-
     return {
         "mode": req.mode,
         "generated": len(ideas),
         "posted": posted,
         "ideas": [i.to_dict() for i in ideas],
     }
+
+
+@app.post("/api/generate")
+def generate(req: GenerateRequest) -> dict:
+    from agents.idea_generator import OllamaError
+
+    try:
+        return _run_generation(req)
+    except FileNotFoundError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except OllamaError as exc:
+        raise HTTPException(502, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.post("/api/generate/async")
+def generate_async(req: GenerateRequest) -> dict:
+    """Gera em background e devolve um job_id (acompanhe em /api/jobs/{id})."""
+    from jobs import jobs
+
+    job_id = jobs.submit(lambda: _run_generation(req))
+    return {"job_id": job_id, "status": "pending"}
+
+
+@app.get("/api/jobs/{job_id}")
+def get_job(job_id: str) -> dict:
+    from jobs import jobs
+
+    job = jobs.get(job_id)
+    if job is None:
+        raise HTTPException(404, f"Job '{job_id}' não encontrado.")
+    return job
 
 
 @app.post("/api/ideas/{idea_id}/approve")

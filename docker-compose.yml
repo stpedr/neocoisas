@@ -61,6 +61,7 @@ services:
       ANE_QUEUE: /app/output/review_queue.json
       ANE_BOARD: /app/output/board.json
       ANE_OUTPUT_DIR: /app/output
+      ANE_API_KEY: ${ANE_API_KEY:-}
       # Provedores de mídia/publicação (padrão: placeholder / sem publicação).
       ANE_IMAGE_PROVIDER: ${ANE_IMAGE_PROVIDER:-placeholder}
       ANE_VOICE_PROVIDER: ${ANE_VOICE_PROVIDER:-placeholder}
@@ -90,6 +91,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_API_KEY: ${ANE_API_KEY:-}
     container_name: ane-web
     ports:
       - "3000:3000"
@@ -107,6 +109,7 @@ services:
     environment:
       PYTHONUNBUFFERED: "1"
       ANE_API_URL: http://api:8000
+      ANE_API_KEY: ${ANE_API_KEY:-}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_ALLOWED_CHAT_IDS: ${TELEGRAM_ALLOWED_CHAT_IDS:-}
       TELEGRAM_NOTIFY_CHAT_ID: ${TELEGRAM_NOTIFY_CHAT_ID:-}

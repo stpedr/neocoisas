@@ -14,6 +14,7 @@ Assim, `LocalNicheAgent` e `ScriptWriterAgent` não repetem esse encanamento.
 
 import json
 import os
+import time
 from pathlib import Path
 
 import requests
@@ -37,6 +38,12 @@ class OllamaClient:
         self.ollama_url = f"{base_url}/api/generate"
         self.model = self.config["ollama_model"]
         self.timeout = self.config.get("request_timeout", 120)
+        self.retries = int(
+            os.environ.get("ANE_REQUEST_RETRIES", self.config.get("request_retries", 2))
+        )
+        self.backoff = float(
+            os.environ.get("ANE_REQUEST_BACKOFF", self.config.get("request_backoff", 2.0))
+        )
 
     @staticmethod
     def _load_config(config_path: str) -> dict:
@@ -72,28 +79,36 @@ class OllamaClient:
         return cfg
 
     def generate(self, prompt: str) -> str:
-        """Envia um prompt ao Ollama local e devolve o texto gerado."""
-        payload = {
-            "model": self.model,
-            "prompt": prompt,
-            "stream": False,
-        }
-        try:
-            response = requests.post(self.ollama_url, json=payload, timeout=self.timeout)
-            response.raise_for_status()
-            return response.json().get("response", "")
-        except requests.exceptions.ConnectionError as exc:
+        """Envia um prompt ao Ollama local e devolve o texto gerado.
+
+        Reexecuta em falhas transitórias (conexão/timeout) com backoff
+        exponencial (`ANE_REQUEST_RETRIES` / `ANE_REQUEST_BACKOFF`).
+        """
+        payload = {"model": self.model, "prompt": prompt, "stream": False}
+        ultimo_erro: Exception | None = None
+        for tentativa in range(self.retries + 1):
+            try:
+                response = requests.post(self.ollama_url, json=payload, timeout=self.timeout)
+                response.raise_for_status()
+                return response.json().get("response", "")
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
+                ultimo_erro = exc
+                if tentativa < self.retries:
+                    time.sleep(self.backoff * (2 ** tentativa))
+                    continue
+            except requests.exceptions.RequestException as exc:
+                raise OllamaError(f"Falha na requisição ao Ollama: {exc}") from exc
+
+        if isinstance(ultimo_erro, requests.exceptions.Timeout):
             raise OllamaError(
-                "Não foi possível conectar ao Ollama em "
-                f"{self.ollama_url}. Verifique se o servidor está rodando "
-                f"(ex: `ollama run {self.model}`)."
-            ) from exc
-        except requests.exceptions.Timeout as exc:
-            raise OllamaError(
-                f"Tempo esgotado ({self.timeout}s) aguardando resposta do Ollama."
-            ) from exc
-        except requests.exceptions.RequestException as exc:
-            raise OllamaError(f"Falha na requisição ao Ollama: {exc}") from exc
+                f"Tempo esgotado ({self.timeout}s) aguardando resposta do Ollama "
+                f"após {self.retries + 1} tentativas."
+            ) from ultimo_erro
+        raise OllamaError(
+            "Não foi possível conectar ao Ollama em "
+            f"{self.ollama_url} após {self.retries + 1} tentativas. Verifique se o "
+            f"servidor está rodando (ex: `ollama run {self.model}`)."
+        ) from ultimo_erro
 
     @staticmethod
     def extract_json(raw_response: str):

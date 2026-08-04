@@ -11,6 +11,7 @@ mesmo estado.
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -41,8 +42,12 @@ class ReviewQueue:
     def _save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         payload = {"ideas": [idea.to_dict() for idea in self._ideas]}
-        with self.path.open("w", encoding="utf-8") as f:
+        # Escrita atômica: grava em tmp e substitui, evitando arquivo corrompido
+        # em caso de escrita concorrente/interrompida.
+        tmp = self.path.with_suffix(self.path.suffix + ".tmp")
+        with tmp.open("w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, self.path)
 
     # ------------------------------------------------------------- consultas -
     def all(self) -> list[Idea]:

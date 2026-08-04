@@ -30,6 +30,12 @@ API_URL = os.environ.get("ANE_API_URL", "http://localhost:8000").rstrip("/")
 _TIMEOUT = 300
 
 
+def _headers() -> dict:
+    """Inclui a chave de API se o backend exigir (ANE_API_KEY)."""
+    key = os.environ.get("ANE_API_KEY")
+    return {"X-API-Key": key} if key else {}
+
+
 # --------------------------------------------------------------- helpers puros
 def parse_callback(data: str) -> tuple[str, str]:
     """Divide o callback_data 'acao:id' em (acao, id)."""
@@ -69,6 +75,7 @@ def api_generate(prompt: str, mode: str, count: int = 5, num_scenes: int = 5) ->
     r = requests.post(
         f"{API_URL}/api/generate",
         json={"prompt": prompt, "mode": mode, "count": count, "num_scenes": num_scenes},
+        headers=_headers(),
         timeout=_TIMEOUT,
     )
     r.raise_for_status()
@@ -76,14 +83,18 @@ def api_generate(prompt: str, mode: str, count: int = 5, num_scenes: int = 5) ->
 
 
 def api_list(status: str) -> list[dict]:
-    r = requests.get(f"{API_URL}/api/ideas", params={"status": status}, timeout=30)
+    r = requests.get(
+        f"{API_URL}/api/ideas", params={"status": status}, headers=_headers(), timeout=30
+    )
     r.raise_for_status()
     return r.json().get("ideas", [])
 
 
 def api_action(idea_id: str, action: str) -> dict:
     """action ∈ {approve, reject, render, post}."""
-    r = requests.post(f"{API_URL}/api/ideas/{idea_id}/{action}", timeout=_TIMEOUT)
+    r = requests.post(
+        f"{API_URL}/api/ideas/{idea_id}/{action}", headers=_headers(), timeout=_TIMEOUT
+    )
     r.raise_for_status()
     return r.json()
 

@@ -69,8 +69,10 @@ class ScheduleStore:
         for key in _INT_FIELDS:
             data[key] = max(1, int(data[key]))
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.open("w", encoding="utf-8") as f:
+        tmp = self.path.with_suffix(self.path.suffix + ".tmp")
+        with tmp.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, self.path)
         return data
 
 
@@ -212,8 +214,11 @@ class SchedulerManager:
 
     def start(self) -> None:
         if self._sched is None:
-            from apscheduler.schedulers.background import BackgroundScheduler
-
+            try:
+                from apscheduler.schedulers.background import BackgroundScheduler
+            except ImportError:
+                print("[scheduler] APScheduler ausente; agendamento desativado.")
+                return
             self._sched = BackgroundScheduler(daemon=True)
             self._sched.start()
         self.reconfigure()

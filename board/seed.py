@@ -294,7 +294,7 @@ SEED_CARDS: list[dict] = [
         "title": "Autenticação da API/web",
         "description": "Token/login para proteger a API e o painel caso saiam do "
         "localhost.",
-        "column": "backlog",
+        "column": "done",
         "sprint": "Sprint 7 · Robustez",
         "labels": ["backend", "infra"],
     },
@@ -302,21 +302,21 @@ SEED_CARDS: list[dict] = [
         "title": "Geração assíncrona (jobs + status)",
         "description": "Tornar /api/generate um job em background com polling de "
         "status, evitando timeouts em lotes grandes.",
-        "column": "backlog",
+        "column": "done",
         "sprint": "Sprint 7 · Robustez",
         "labels": ["backend"],
     },
     {
         "title": "Testes de integração HTTP",
         "description": "Cobrir os endpoints do server.py ponta a ponta (TestClient).",
-        "column": "backlog",
+        "column": "done",
         "sprint": "Sprint 7 · Robustez",
         "labels": ["testes"],
     },
     {
         "title": "Persistência em SQLite",
-        "description": "Migrar fila/board dos JSON para SQLite, evitando corridas sob "
-        "concorrência.",
+        "description": "Migrar fila/board dos JSON para SQLite (mitigado por ora com escrita "
+        "atômica temp+os.replace, que evita corrupção).",
         "column": "backlog",
         "sprint": "Sprint 7 · Robustez",
         "labels": ["backend"],
@@ -325,7 +325,7 @@ SEED_CARDS: list[dict] = [
         "title": "Retry/backoff nas APIs externas",
         "description": "Reexecução com backoff em Ollama/Gemini/publishers e "
         "tratamento de falha de render.",
-        "column": "backlog",
+        "column": "done",
         "sprint": "Sprint 7 · Robustez",
         "labels": ["backend"],
     },

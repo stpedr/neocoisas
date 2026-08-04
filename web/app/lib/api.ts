@@ -77,11 +77,15 @@ export type RunResult = {
   details: { id: string; status: string; info: string | null }[];
 };
 
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (API_KEY) headers["X-API-Key"] = API_KEY;
   try {
     res = await fetch(`${API_BASE}${path}`, {
-      headers: { "Content-Type": "application/json" },
+      headers,
       cache: "no-store",
       ...init,
     });

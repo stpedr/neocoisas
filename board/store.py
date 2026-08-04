@@ -8,6 +8,7 @@ quadro nunca aparecer em branco.
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -41,8 +42,10 @@ class BoardStore:
     def _save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         payload = {"cards": [c.to_dict() for c in self._cards]}
-        with self.path.open("w", encoding="utf-8") as f:
+        tmp = self.path.with_suffix(self.path.suffix + ".tmp")
+        with tmp.open("w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, self.path)
 
     # ------------------------------------------------------------- consultas -
     def all(self) -> list[Card]:
