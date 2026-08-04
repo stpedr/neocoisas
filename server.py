@@ -125,6 +125,14 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/api/models")
+def models() -> dict:
+    """Registry unificado: capacidades, providers, modelos e seleção atual."""
+    from registry import describe
+
+    return describe(_app_config())
+
+
 @app.get("/api/ideas")
 def list_ideas(status: str | None = None) -> dict:
     queue = get_queue()

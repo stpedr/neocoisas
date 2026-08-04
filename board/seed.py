@@ -29,7 +29,7 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Registry unificado de modelos',
         'description': 'config + GET /api/models por capacidade (texto/imagem/voz/vídeo), providers e modelos; valida seleções. Aceite: /api/models lista tudo com os padrões atuais. Depende de: abstração de LLM (texto).',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 9 · Troca de modelos',
         'labels': ['backend', 'prioridade:média'],
     },

@@ -1,0 +1,103 @@
+"""Registry unificado de modelos/provedores.
+
+Ponto único que descreve cada **capacidade** (texto, imagem, voz, vídeo,
+publicação): quais providers existem (lidos dos próprios factories, então fica
+sempre em sincronia), quais modelos conhecidos, o que cada um exige (variáveis de
+ambiente) e qual está **ativo** agora. Alimenta o endpoint `GET /api/models` e a
+futura UI de troca de modelos.
+"""
+
+from __future__ import annotations
+
+import os
+
+from agents.llm.factory import _PROVIDERS as _TEXT_PROVIDERS
+from agents.media.factory import (
+    _IMAGE_PROVIDERS,
+    _VIDEO_PROVIDERS,
+    _VOICE_PROVIDERS,
+)
+from publishers.factory import _PUBLISHERS
+
+# Providers por capacidade — derivados dos factories (fonte da verdade real).
+CAP_PROVIDERS: dict[str, list[str]] = {
+    "text": sorted(_TEXT_PROVIDERS),
+    "image": sorted(_IMAGE_PROVIDERS),
+    "voice": sorted(_VOICE_PROVIDERS),
+    "video": ["none"] + sorted(_VIDEO_PROVIDERS),
+    "publisher": ["none"] + sorted(_PUBLISHERS),
+}
+
+# Variáveis de ambiente exigidas por provider (para o provider "funcionar").
+REQUIRES: dict[str, list[str]] = {
+    "gemini": ["GEMINI_API_KEY"],
+    "stability": ["STABILITY_API_KEY"],
+    "elevenlabs": ["ELEVENLABS_API_KEY"],
+    "youtube": ["YOUTUBE_CLIENT_ID", "YOUTUBE_CLIENT_SECRET", "YOUTUBE_REFRESH_TOKEN"],
+    "instagram": ["IG_USER_ID", "IG_ACCESS_TOKEN"],
+    "tiktok": ["TIKTOK_ACCESS_TOKEN"],
+}
+
+# Modelos conhecidos por (capacidade, provider) — sugestões para a UI.
+KNOWN_MODELS: dict[str, dict[str, list[str]]] = {
+    "text": {"ollama": ["llama3"], "gemini": ["gemini-1.5-flash", "gemini-1.5-pro"]},
+    "image": {"gemini": ["imagen-3.0-generate-002"], "stability": ["core"]},
+    "video": {"gemini": ["veo-2.0-generate-001"]},
+}
+
+
+def _env_or_cfg(env: str, cfg: dict, key: str, default: str) -> str:
+    return os.environ.get(env) or cfg.get(key, default)
+
+
+def current(cap: str, config: dict) -> dict:
+    """Provider + modelo ativos para uma capacidade (env tem prioridade)."""
+    c = config or {}
+    if cap == "text":
+        provider = os.environ.get("ANE_TEXT_PROVIDER") or c.get("text_provider", "ollama")
+        if provider == "gemini":
+            model = _env_or_cfg("GEMINI_TEXT_MODEL", c, "gemini_text_model", "gemini-1.5-flash")
+        else:
+            model = _env_or_cfg("ANE_OLLAMA_MODEL", c, "ollama_model", "llama3")
+    elif cap == "image":
+        provider = os.environ.get("ANE_IMAGE_PROVIDER") or c.get("image_provider", "placeholder")
+        model = os.environ.get("GEMINI_IMAGE_MODEL", "imagen-3.0-generate-002") if provider == "gemini" else None
+    elif cap == "voice":
+        provider = os.environ.get("ANE_VOICE_PROVIDER") or c.get("voice_provider", "placeholder")
+        model = os.environ.get("ELEVENLABS_VOICE_ID") if provider == "elevenlabs" else None
+    elif cap == "video":
+        provider = os.environ.get("ANE_VIDEO_PROVIDER") or c.get("video_provider", "none")
+        model = os.environ.get("GEMINI_VIDEO_MODEL", "veo-2.0-generate-001") if provider == "gemini" else None
+    elif cap == "publisher":
+        provider = os.environ.get("ANE_PUBLISHER") or c.get("publisher", "none")
+        model = None
+    else:
+        raise ValueError(f"Capacidade desconhecida: '{cap}'.")
+    return {"provider": provider, "model": model}
+
+
+def _configured(provider: str) -> bool:
+    """True se todas as variáveis exigidas pelo provider estão setadas."""
+    return all(os.environ.get(v) for v in REQUIRES.get(provider, []))
+
+
+def validate(cap: str, provider: str) -> bool:
+    """Valida se `provider` é válido para a capacidade `cap`."""
+    if cap not in CAP_PROVIDERS:
+        raise ValueError(f"Capacidade desconhecida: '{cap}'.")
+    return provider in CAP_PROVIDERS[cap]
+
+
+def describe(config: dict | None = None) -> dict:
+    """Descritor completo para o /api/models e a UI."""
+    config = config or {}
+    caps = {}
+    for cap, providers in CAP_PROVIDERS.items():
+        caps[cap] = {
+            "providers": providers,
+            "current": current(cap, config),
+            "requires": {p: REQUIRES.get(p, []) for p in providers},
+            "configured": {p: _configured(p) for p in providers},
+            "models": KNOWN_MODELS.get(cap, {}),
+        }
+    return {"capabilities": caps}
