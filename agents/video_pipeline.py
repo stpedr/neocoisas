@@ -81,6 +81,8 @@ class VideoPipeline:
         scene_video_generator=None,
         burn_subtitles: bool = False,
         font_path: str | None = None,
+        music_path: str | None = None,
+        music_volume: float = 0.2,
     ):
         # Pontos de extensão: funções que você fornece para gerar mídia.
         #   image_generator(visual_prompt: str, dest: Path) -> Path
@@ -99,6 +101,9 @@ class VideoPipeline:
         else:
             self.font_path = _detect_font()
         self.burn_subtitles = burn_subtitles and self.font_path is not None
+        # Trilha sonora de fundo (opcional): só usa se o arquivo existir.
+        self.music_path = music_path if (music_path and Path(music_path).exists()) else None
+        self.music_volume = music_volume
         self._check_ffmpeg()
 
     @staticmethod
@@ -128,7 +133,29 @@ class VideoPipeline:
                 clip_path = self._compose_clip(scene, image_path, audio_path, assets_dir, idx)
             rendered_clips.append(clip_path)
 
-        return self._concat_clips(rendered_clips, job.output_path)
+        final = self._concat_clips(rendered_clips, job.output_path)
+        if self.music_path:
+            final = self._mix_music(final)
+        return final
+
+    def _mix_music(self, video_path: Path) -> Path:
+        """Mixa uma trilha de fundo (em loop, volume reduzido) sob a narração."""
+        mixed = video_path.parent / f"{video_path.stem}_music.mp4"
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(video_path),
+            "-stream_loop", "-1", "-i", str(self.music_path),
+            "-filter_complex",
+            f"[1:a]volume={self.music_volume}[bg];"
+            "[0:a][bg]amix=inputs=2:duration=first:dropout_transition=0[a]",
+            "-map", "0:v", "-map", "[a]",
+            "-c:v", "copy", "-c:a", "aac", "-shortest",
+            str(mixed),
+        ]
+        subprocess.run(cmd, check=True, capture_output=True)
+        import os as _os
+        _os.replace(mixed, video_path)
+        return video_path
 
     def _generate_scene_video(self, scene: Scene, assets_dir: Path, idx: int) -> Path:
         dest = assets_dir / f"scenevid_{idx:02d}.mp4"

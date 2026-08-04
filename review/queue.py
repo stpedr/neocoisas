@@ -108,6 +108,24 @@ class ReviewQueue:
         self._save()
         return idea
 
+    def attach_thumbnail(self, idea_id: str, thumbnail_path: str) -> Idea:
+        idea = self.get(idea_id)
+        idea.thumbnail_path = thumbnail_path
+        self._save()
+        return idea
+
+    def add_variant(self, idea_id: str, lang: str, video_path: str) -> Idea:
+        idea = self.get(idea_id)
+        idea.video_variants[lang] = video_path
+        self._save()
+        return idea
+
+    def set_metrics(self, idea_id: str, metrics: dict) -> Idea:
+        idea = self.get(idea_id)
+        idea.metrics.update(metrics)
+        self._save()
+        return idea
+
     def clear_decided(self) -> int:
         """Remove ideias já resolvidas (rejeitadas/postadas). Devolve quantas saíram."""
         before = len(self._ideas)

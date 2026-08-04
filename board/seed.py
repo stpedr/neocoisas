@@ -262,7 +262,7 @@ SEED_CARDS: list[dict] = [
         "title": "Agente analista (feedback loop)",
         "description": "Puxa métricas dos posts (views/engajamento) e realimenta a "
         "estratégia de nicho, favorecendo formatos que performam.",
-        "column": "backlog",
+        "column": "done",
         "sprint": "Sprint 6 · Automações",
         "labels": ["backend", "integração"],
     },
@@ -270,7 +270,7 @@ SEED_CARDS: list[dict] = [
         "title": "Thumbnails + A/B de títulos",
         "description": "Gerar capa (provedor de imagem) e 2-3 títulos alternativos; "
         "escolher via agente analista/crítico.",
-        "column": "backlog",
+        "column": "done",
         "sprint": "Sprint 6 · Automações",
         "labels": ["backend", "conteúdo"],
     },
@@ -278,14 +278,14 @@ SEED_CARDS: list[dict] = [
         "title": "Legendas multi-idioma",
         "description": "Traduzir a narração (LLM) e renderizar variantes localizadas "
         "(PT/EN/ES) para canais diferentes.",
-        "column": "backlog",
+        "column": "done",
         "sprint": "Sprint 6 · Automações",
         "labels": ["backend", "conteúdo"],
     },
     {
         "title": "Trilha sonora royalty-free",
         "description": "Adicionar música de fundo por cena/vídeo (mix com a narração).",
-        "column": "backlog",
+        "column": "done",
         "sprint": "Sprint 6 · Automações",
         "labels": ["backend", "conteúdo"],
     },

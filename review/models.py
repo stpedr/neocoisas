@@ -41,6 +41,9 @@ class Idea:
     status: str = IdeaStatus.PENDING
     mode: str = "manual"           # "manual" (revisão) ou "auto" (prompta-e-posta)
     video_path: str | None = None
+    thumbnail_path: str | None = None
+    video_variants: dict = field(default_factory=dict)  # {idioma: caminho_mp4}
+    metrics: dict = field(default_factory=dict)          # {views, likes, ...}
     score: float | None = None     # nota do agente crítico (0-10), se avaliado
     note: str = ""
     created_at: str = field(default_factory=_now_iso)
@@ -62,6 +65,9 @@ class Idea:
             "status": self.status,
             "mode": self.mode,
             "video_path": self.video_path,
+            "thumbnail_path": self.thumbnail_path,
+            "video_variants": dict(self.video_variants),
+            "metrics": dict(self.metrics),
             "score": self.score,
             "note": self.note,
             "created_at": self.created_at,
@@ -86,6 +92,9 @@ class Idea:
             status=data.get("status", IdeaStatus.PENDING),
             mode=data.get("mode", "manual"),
             video_path=data.get("video_path"),
+            thumbnail_path=data.get("thumbnail_path"),
+            video_variants=dict(data.get("video_variants", {})),
+            metrics=dict(data.get("metrics", {})),
             score=data.get("score"),
             note=data.get("note", ""),
             created_at=data.get("created_at", _now_iso()),

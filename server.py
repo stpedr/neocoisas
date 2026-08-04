@@ -201,8 +201,18 @@ def mark_posted(idea_id: str) -> dict:
         raise HTTPException(409, str(exc)) from exc
 
 
+def _app_config() -> dict:
+    import json
+
+    path = CONFIG_PATH
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
 @app.post("/api/ideas/{idea_id}/render")
-def render(idea_id: str) -> dict:
+def render(idea_id: str, lang: str | None = None) -> dict:
     from render import render_idea
 
     queue = get_queue()
@@ -211,24 +221,98 @@ def render(idea_id: str) -> dict:
     except KeyError as exc:
         raise HTTPException(404, str(exc)) from exc
     try:
-        path = render_idea(idea)
+        path = render_idea(idea, _app_config(), lang=lang)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     except (RuntimeError, OSError) as exc:
         raise HTTPException(500, str(exc)) from exc
+    if lang:
+        return queue.add_variant(idea_id, lang, str(path)).to_dict()
     return queue.attach_video(idea_id, str(path)).to_dict()
 
 
 @app.get("/api/ideas/{idea_id}/video")
-def get_video(idea_id: str):
+def get_video(idea_id: str, lang: str | None = None):
     queue = get_queue()
     try:
         idea = queue.get(idea_id)
     except KeyError as exc:
         raise HTTPException(404, str(exc)) from exc
-    if not idea.video_path or not os.path.exists(idea.video_path):
-        raise HTTPException(404, "Vídeo ainda não renderizado para esta ideia.")
-    return FileResponse(idea.video_path, media_type="video/mp4")
+    path = idea.video_variants.get(lang) if lang else idea.video_path
+    if not path or not os.path.exists(path):
+        raise HTTPException(404, "Vídeo ainda não renderizado para esta ideia/idioma.")
+    return FileResponse(path, media_type="video/mp4")
+
+
+@app.post("/api/ideas/{idea_id}/titles")
+def suggest_titles(idea_id: str, n: int = 3) -> dict:
+    from agents.titler import OllamaError as _OE
+    from agents.titler import TitlerAgent
+
+    queue = get_queue()
+    try:
+        idea = queue.get(idea_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    try:
+        titulos = TitlerAgent(CONFIG_PATH).suggest_titles(idea.title, n=n)
+    except _OE as exc:
+        raise HTTPException(502, str(exc)) from exc
+    return {"titles": titulos}
+
+
+@app.post("/api/ideas/{idea_id}/thumbnail")
+def make_thumbnail(idea_id: str) -> dict:
+    from render import render_thumbnail
+
+    queue = get_queue()
+    try:
+        idea = queue.get(idea_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    try:
+        path = render_thumbnail(idea, _app_config())
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(500, str(exc)) from exc
+    return queue.attach_thumbnail(idea_id, str(path)).to_dict()
+
+
+@app.get("/api/ideas/{idea_id}/thumbnail")
+def get_thumbnail(idea_id: str):
+    queue = get_queue()
+    try:
+        idea = queue.get(idea_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    if not idea.thumbnail_path or not os.path.exists(idea.thumbnail_path):
+        raise HTTPException(404, "Thumbnail ainda não gerada.")
+    return FileResponse(idea.thumbnail_path, media_type="image/png")
+
+
+@app.post("/api/ideas/{idea_id}/metrics")
+def set_metrics(idea_id: str, metrics: dict) -> dict:
+    queue = get_queue()
+    try:
+        return queue.set_metrics(idea_id, metrics).to_dict()
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@app.post("/api/analyze")
+def analyze() -> dict:
+    from agents.analyst import AnalystAgent
+    from agents.analyst import OllamaError as _OE
+
+    queue = get_queue()
+    performances = [
+        {"title": i.title, "metrics": i.metrics}
+        for i in queue.all()
+        if i.metrics
+    ]
+    try:
+        return AnalystAgent(CONFIG_PATH).analyze(performances)
+    except _OE as exc:
+        raise HTTPException(502, str(exc)) from exc
 
 
 @app.delete("/api/ideas/decided")

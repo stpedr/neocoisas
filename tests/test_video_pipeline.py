@@ -83,6 +83,26 @@ def test_gerador_de_video_por_cena(fake_ffmpeg, tmp_path):
     assert any("-map" in cmd for cmd in fake_ffmpeg)
 
 
+def test_trilha_sonora_mixa(fake_ffmpeg, tmp_path):
+    image, voice = _generators()
+    musica = tmp_path / "bg.mp3"
+    musica.write_bytes(b"music")
+    pipe = VideoPipeline(
+        image_generator=image, voice_generator=voice, music_path=str(musica)
+    )
+    assert pipe.music_path == str(musica)
+    job = VideoJob(title="v", scenes=[Scene("n", "v", 3.0)], output_dir=tmp_path)
+    pipe.render(job)
+    # Passo de mix usa o filtro amix.
+    assert any("amix" in arg for cmd in fake_ffmpeg for arg in cmd if isinstance(arg, str))
+
+
+def test_musica_inexistente_e_ignorada(tmp_path, monkeypatch):
+    monkeypatch.setattr(video_pipeline.shutil, "which", lambda n: "/usr/bin/ffmpeg")
+    pipe = VideoPipeline(music_path="/nao/existe.mp3")
+    assert pipe.music_path is None
+
+
 def test_sem_gerador_de_imagem_levanta(fake_ffmpeg, tmp_path):
     _, voice = _generators()
     pipe = VideoPipeline(voice_generator=voice)  # sem image_generator
