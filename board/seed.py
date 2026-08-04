@@ -15,7 +15,7 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Abstração de provedor de LLM (texto)',
         'description': "get_text_generator(config) espelhando agents/media; OllamaClient vira o provider 'ollama'. Aceite: trocar provider por config sem mexer nos agentes; todos os agentes passam pelo factory. Alicerce da Sprint 9.",
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 9 · Troca de modelos',
         'labels': ['backend', 'prioridade:alta'],
     },

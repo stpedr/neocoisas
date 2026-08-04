@@ -16,7 +16,7 @@ import json
 
 from review.models import Idea
 
-from .ollama_client import OllamaClient, OllamaError
+from .llm import OllamaError, get_text_client
 from .script_writer import ScriptWriterAgent
 
 __all__ = ["IdeaGenerator", "build_idea_concepts", "OllamaError"]
@@ -64,7 +64,7 @@ class IdeaGenerator:
     """Transforma um prompt em uma lista de `Idea` com roteiro."""
 
     def __init__(self, config_path: str = "config.json"):
-        self.client = OllamaClient(config_path)
+        self.client = get_text_client(config_path)
         self.config = self.client.config
         self.script_writer = ScriptWriterAgent(config_path)
 

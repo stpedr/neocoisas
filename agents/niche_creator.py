@@ -7,7 +7,7 @@ conta sugerido, ideias de histórias/memes em alta e hashtags principais.
 
 import json
 
-from .ollama_client import OllamaClient, OllamaError
+from .llm import OllamaError, get_text_client
 
 # Reexportado para compatibilidade com quem importa de `niche_creator`.
 __all__ = ["LocalNicheAgent", "OllamaError"]
@@ -17,7 +17,7 @@ class LocalNicheAgent:
     """Agente que usa um modelo LLM local (via Ollama) para planejar nichos."""
 
     def __init__(self, config_path: str = "config.json"):
-        self.client = OllamaClient(config_path)
+        self.client = get_text_client(config_path)
         self.config = self.client.config
 
     def query_ollama(self, prompt: str) -> str:

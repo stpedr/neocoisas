@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 
-from .ollama_client import OllamaClient, OllamaError
+from .llm import OllamaError, get_text_client
 
 __all__ = ["TitlerAgent", "parse_titles", "OllamaError"]
 
@@ -33,7 +33,7 @@ class TitlerAgent:
     """Sugere títulos alternativos (A/B) para um tópico usando o LLM local."""
 
     def __init__(self, config_path: str = "config.json"):
-        self.client = OllamaClient(config_path)
+        self.client = get_text_client(config_path)
 
     def suggest_titles(self, topic: str, n: int = 3, retries: int = 2) -> list[str]:
         prompt = f"""

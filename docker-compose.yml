@@ -57,6 +57,8 @@ services:
     environment:
       ANE_OLLAMA_BASE_URL: http://ollama:11434
       ANE_OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
+      ANE_TEXT_PROVIDER: ${ANE_TEXT_PROVIDER:-ollama}
+      GEMINI_TEXT_MODEL: ${GEMINI_TEXT_MODEL:-gemini-1.5-flash}
       ANE_CORS_ORIGINS: http://localhost:3000
       ANE_QUEUE: /app/output/review_queue.json
       ANE_BOARD: /app/output/board.json

@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 
 from .critic import ScriptCriticAgent
-from .ollama_client import OllamaClient, OllamaError
+from .llm import OllamaError, get_text_client
 from .script_writer import build_scenes
 from .video_pipeline import Scene
 
@@ -56,7 +56,7 @@ class ScriptEditorAgent:
     """Revisa e reescreve roteiros usando o crítico + o LLM local."""
 
     def __init__(self, config_path: str = "config.json"):
-        self.client = OllamaClient(config_path)
+        self.client = get_text_client(config_path)
         self.critic = ScriptCriticAgent(config_path)
 
     def _rewrite(self, title: str, scenes, feedback: str) -> list[Scene]:

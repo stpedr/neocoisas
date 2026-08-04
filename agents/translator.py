@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 
-from .ollama_client import OllamaClient, OllamaError
+from .llm import OllamaError, get_text_client
 
 __all__ = ["TranslatorAgent", "parse_translations", "OllamaError"]
 
@@ -36,7 +36,7 @@ def parse_translations(data, expected: int) -> list[str]:
 
 class TranslatorAgent:
     def __init__(self, config_path: str = "config.json"):
-        self.client = OllamaClient(config_path)
+        self.client = get_text_client(config_path)
 
     def translate(self, texts: list[str], lang: str) -> list[str]:
         """Traduz `texts` para `lang` (código ISO). Mantém a ordem e o tamanho."""

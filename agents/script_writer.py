@@ -12,7 +12,7 @@ não depende do Ollama, então pode ser testada isoladamente.
 
 import json
 
-from .ollama_client import OllamaClient, OllamaError
+from .llm import OllamaError, get_text_client
 from .video_pipeline import Scene, VideoJob
 
 __all__ = ["ScriptWriterAgent", "OllamaError", "build_scenes"]
@@ -83,7 +83,7 @@ class ScriptWriterAgent:
     """Gera um roteiro cena-a-cena para um tópico usando o LLM local."""
 
     def __init__(self, config_path: str = "config.json"):
-        self.client = OllamaClient(config_path)
+        self.client = get_text_client(config_path)
         self.config = self.client.config
 
     @staticmethod

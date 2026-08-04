@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 
-from .ollama_client import OllamaClient, OllamaError
+from .llm import OllamaError, get_text_client
 
 __all__ = ["ScriptCriticAgent", "parse_critique", "OllamaError"]
 
@@ -41,7 +41,7 @@ class ScriptCriticAgent:
     """Dá uma nota de potencial viral a uma ideia usando o LLM local."""
 
     def __init__(self, config_path: str = "config.json"):
-        self.client = OllamaClient(config_path)
+        self.client = get_text_client(config_path)
         self.config = self.client.config
 
     @staticmethod
