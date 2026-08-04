@@ -44,6 +44,23 @@ export default function ModelsView() {
     }
   }
 
+  async function changeAgent(agent: string, model: string | null) {
+    setSaving("agent:" + agent);
+    setError("");
+    try {
+      setModels(await api.selectAgentModel({ agent, model }));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving("");
+    }
+  }
+
+  const AGENT_LABEL: Record<string, string> = {
+    idea: "Ideias", script: "Roteirista", critic: "Crítico", editor: "Editor",
+    titler: "Títulos", translator: "Tradutor", analyst: "Analista", niche: "Nicho",
+  };
+
   if (!models) return <p className="muted">{error || "Carregando modelos…"}</p>;
 
   return (
@@ -110,6 +127,44 @@ export default function ModelsView() {
           </div>
         );
       })}
+
+      <div className="section-title">Override de modelo por agente</div>
+      <p className="muted" style={{ marginBottom: 10 }}>
+        Deixe um agente com modelo próprio (ex.: crítico mais forte). “(global)”
+        usa o modelo de texto padrão.
+      </p>
+      {(() => {
+        const textProvider = models.capabilities.text.current.provider;
+        const textModels =
+          available["text"]?.[textProvider] ||
+          models.capabilities.text.models[textProvider] ||
+          [];
+        return (
+          <div className="panel">
+            {Object.entries(models.agents).map(([agent, info]) => (
+              <div className="row" key={agent} style={{ alignItems: "center" }}>
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <strong>{AGENT_LABEL[agent] || agent}</strong>
+                  {info.override && <span className="chip" style={{ marginLeft: 8 }}>override</span>}
+                </div>
+                <div className="field" style={{ flex: 1 }}>
+                  <select
+                    className="select"
+                    value={info.override ? info.model || "" : ""}
+                    onChange={(e) => changeAgent(agent, e.target.value || null)}
+                  >
+                    <option value="">(global)</option>
+                    {textModels.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                {saving === "agent:" + agent && <span className="spinner" />}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }

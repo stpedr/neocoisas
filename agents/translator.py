@@ -36,7 +36,7 @@ def parse_translations(data, expected: int) -> list[str]:
 
 class TranslatorAgent:
     def __init__(self, config_path: str = "config.json"):
-        self.client = get_text_client(config_path)
+        self.client = get_text_client(config_path, agent="translator")
 
     def translate(self, texts: list[str], lang: str) -> list[str]:
         """Traduz `texts` para `lang` (código ISO). Mantém a ordem e o tamanho."""

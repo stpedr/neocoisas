@@ -41,7 +41,7 @@ class ScriptCriticAgent:
     """Dá uma nota de potencial viral a uma ideia usando o LLM local."""
 
     def __init__(self, config_path: str = "config.json"):
-        self.client = get_text_client(config_path)
+        self.client = get_text_client(config_path, agent="critic")
         self.config = self.client.config
 
     @staticmethod

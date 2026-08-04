@@ -83,7 +83,7 @@ class ScriptWriterAgent:
     """Gera um roteiro cena-a-cena para um tópico usando o LLM local."""
 
     def __init__(self, config_path: str = "config.json"):
-        self.client = get_text_client(config_path)
+        self.client = get_text_client(config_path, agent="script")
         self.config = self.client.config
 
     @staticmethod

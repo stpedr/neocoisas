@@ -51,8 +51,14 @@ def save(data: dict, path: str | None = None) -> None:
 
 
 def apply_to_env(data: dict) -> None:
-    """Aplica as seleções no os.environ (provider e, se houver, modelo)."""
+    """Aplica as seleções no os.environ (provider/modelo e overrides por agente)."""
     for cap, sel in data.items():
+        # Overrides por agente ficam sob a chave especial "agents".
+        if cap == "agents":
+            for agent, model in (sel or {}).items():
+                if model:
+                    os.environ[f"ANE_AGENT_MODEL_{agent.upper()}"] = model
+            continue
         provider = sel.get("provider")
         env_p = PROVIDER_ENV.get(cap)
         if env_p and provider:
@@ -68,6 +74,20 @@ def set_selection(capability: str, provider: str, model: str | None = None,
     data[capability] = {"provider": provider, "model": model}
     save(data, path)
     apply_to_env({capability: data[capability]})
+    return data
+
+
+def set_agent_model(agent: str, model: str | None, path: str | None = None) -> dict:
+    """Define (ou limpa, se model vazio) o modelo de um agente específico."""
+    data = load(path)
+    agents = data.setdefault("agents", {})
+    if model:
+        agents[agent] = model
+        os.environ[f"ANE_AGENT_MODEL_{agent.upper()}"] = model
+    else:
+        agents.pop(agent, None)
+        os.environ.pop(f"ANE_AGENT_MODEL_{agent.upper()}", None)
+    save(data, path)
     return data
 
 

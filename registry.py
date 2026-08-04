@@ -48,8 +48,27 @@ KNOWN_MODELS: dict[str, dict[str, list[str]]] = {
 }
 
 
+# Agentes que usam LLM de texto (podem ter modelo próprio).
+AGENTS = ["idea", "script", "critic", "editor", "titler", "translator", "analyst", "niche"]
+
+
 def _env_or_cfg(env: str, cfg: dict, key: str, default: str) -> str:
     return os.environ.get(env) or cfg.get(key, default)
+
+
+def agent_models(config: dict | None = None) -> dict:
+    """Modelo efetivo por agente: override (env/config) ou o modelo de texto global."""
+    from agents.llm.factory import agent_model_override
+
+    config = config or {}
+    global_model = current("text", config)["model"]
+    result = {}
+    for agent in AGENTS:
+        result[agent] = {
+            "model": agent_model_override(agent, config) or global_model,
+            "override": bool(agent_model_override(agent, config)),
+        }
+    return result
 
 
 def current(cap: str, config: dict) -> dict:
@@ -130,4 +149,4 @@ def describe(config: dict | None = None) -> dict:
             "configured": {p: _configured(p) for p in providers},
             "models": KNOWN_MODELS.get(cap, {}),
         }
-    return {"capabilities": caps}
+    return {"capabilities": caps, "agents": agent_models(config)}

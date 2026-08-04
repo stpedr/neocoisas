@@ -154,6 +154,11 @@ class ModelSelect(BaseModel):
     model: str | None = None
 
 
+class AgentModelSelect(BaseModel):
+    agent: str
+    model: str | None = None  # vazio/None = usar o modelo global
+
+
 @app.put("/api/models/select")
 def select_model(sel: ModelSelect) -> dict:
     """Troca provider/modelo de uma capacidade (persiste e aplica em runtime)."""
@@ -163,6 +168,18 @@ def select_model(sel: ModelSelect) -> dict:
     if not validate(sel.capability, sel.provider):
         raise HTTPException(400, f"Seleção inválida: {sel.capability}/{sel.provider}.")
     _settings.set_selection(sel.capability, sel.provider, sel.model)
+    return describe(_app_config())
+
+
+@app.put("/api/models/agent")
+def select_agent_model(sel: AgentModelSelect) -> dict:
+    """Define o modelo de um agente específico (override) ou volta ao global."""
+    import settings as _settings
+    from registry import AGENTS, describe
+
+    if sel.agent not in AGENTS:
+        raise HTTPException(400, f"Agente inválido: '{sel.agent}'. Opções: {AGENTS}.")
+    _settings.set_agent_model(sel.agent, sel.model)
     return describe(_app_config())
 
 

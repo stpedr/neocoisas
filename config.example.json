@@ -15,6 +15,7 @@
   "critic_min_score": 6.0,
   "editor_enabled": false,
   "editor_max_iterations": 2,
+  "agent_models": {},
   "music_path": "",
   "music_volume": 0.2,
   "publisher": "none"

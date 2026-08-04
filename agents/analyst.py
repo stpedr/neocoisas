@@ -31,7 +31,7 @@ def parse_analysis(data: dict) -> dict:
 
 class AnalystAgent:
     def __init__(self, config_path: str = "config.json"):
-        self.client = get_text_client(config_path)
+        self.client = get_text_client(config_path, agent="analyst")
 
     def analyze(self, performances: list[dict]) -> dict:
         """`performances`: lista de {title, metrics}. Devolve insights + recs."""

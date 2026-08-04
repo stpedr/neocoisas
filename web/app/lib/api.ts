@@ -57,7 +57,11 @@ export type Capability = {
   models: Record<string, string[]>;
 };
 
-export type ModelsPayload = { capabilities: Record<string, Capability> };
+export type AgentModel = { model: string | null; override: boolean };
+export type ModelsPayload = {
+  capabilities: Record<string, Capability>;
+  agents: Record<string, AgentModel>;
+};
 export type AvailableModels = Record<string, Record<string, string[]>>;
 
 export type Schedule = {
@@ -203,6 +207,12 @@ export const api = {
 
   selectModel: (body: { capability: string; provider: string; model?: string | null }) =>
     request<ModelsPayload>("/api/models/select", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+
+  selectAgentModel: (body: { agent: string; model?: string | null }) =>
+    request<ModelsPayload>("/api/models/agent", {
       method: "PUT",
       body: JSON.stringify(body),
     }),

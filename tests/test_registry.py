@@ -85,3 +85,18 @@ def test_available_models_fallback_quando_ollama_cai(monkeypatch):
     monkeypatch.setattr(registry.requests, "get", boom)
     av = registry.available_models({})
     assert av["text"]["ollama"] == registry.KNOWN_MODELS["text"]["ollama"]
+
+
+def test_agent_models_padrao_usa_global(monkeypatch):
+    for a in registry.AGENTS:
+        monkeypatch.delenv(f"ANE_AGENT_MODEL_{a.upper()}", raising=False)
+    monkeypatch.delenv("ANE_TEXT_PROVIDER", raising=False)
+    am = registry.agent_models({"ollama_model": "llama3"})
+    assert am["critic"] == {"model": "llama3", "override": False}
+
+
+def test_agent_models_override_por_env(monkeypatch):
+    monkeypatch.setenv("ANE_AGENT_MODEL_CRITIC", "llama3:70b")
+    am = registry.agent_models({"ollama_model": "llama3"})
+    assert am["critic"] == {"model": "llama3:70b", "override": True}
+    assert am["idea"]["override"] is False  # os outros seguem global

@@ -17,7 +17,7 @@ class LocalNicheAgent:
     """Agente que usa um modelo LLM local (via Ollama) para planejar nichos."""
 
     def __init__(self, config_path: str = "config.json"):
-        self.client = get_text_client(config_path)
+        self.client = get_text_client(config_path, agent="niche")
         self.config = self.client.config
 
     def query_ollama(self, prompt: str) -> str:

@@ -56,7 +56,7 @@ class ScriptEditorAgent:
     """Revisa e reescreve roteiros usando o crítico + o LLM local."""
 
     def __init__(self, config_path: str = "config.json"):
-        self.client = get_text_client(config_path)
+        self.client = get_text_client(config_path, agent="editor")
         self.critic = ScriptCriticAgent(config_path)
 
     def _rewrite(self, title: str, scenes, feedback: str) -> list[Scene]:

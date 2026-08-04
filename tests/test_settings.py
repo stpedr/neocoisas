@@ -34,3 +34,23 @@ def test_provider_sem_modelo_so_seta_provider(tmp_path, monkeypatch):
     path = str(tmp_path / "m.json")
     settings.set_selection("publisher", "youtube", path=path)
     assert os.environ["ANE_PUBLISHER"] == "youtube"
+
+
+def test_set_agent_model_e_limpar(tmp_path, monkeypatch):
+    monkeypatch.delenv("ANE_AGENT_MODEL_CRITIC", raising=False)
+    path = str(tmp_path / "m.json")
+    settings.set_agent_model("critic", "llama3:70b", path=path)
+    assert os.environ["ANE_AGENT_MODEL_CRITIC"] == "llama3:70b"
+    assert settings.load(path)["agents"]["critic"] == "llama3:70b"
+    # limpar (model vazio) volta ao global
+    settings.set_agent_model("critic", None, path=path)
+    assert "ANE_AGENT_MODEL_CRITIC" not in os.environ
+    assert "critic" not in settings.load(path).get("agents", {})
+
+
+def test_apply_saved_aplica_agents(tmp_path, monkeypatch):
+    monkeypatch.delenv("ANE_AGENT_MODEL_IDEA", raising=False)
+    path = str(tmp_path / "m.json")
+    settings.save({"agents": {"idea": "mistral"}}, path)
+    settings.apply_saved(path)
+    assert os.environ["ANE_AGENT_MODEL_IDEA"] == "mistral"

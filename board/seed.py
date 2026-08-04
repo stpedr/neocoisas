@@ -71,7 +71,7 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Override de modelo por agente',
         'description': 'Modelo por agente sobre o padrão global (ex.: critic_model). Aceite: crítico e ideias podem usar modelos distintos. Depende de: abstração de LLM (texto).',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 9 · Troca de modelos',
         'labels': ['backend', 'prioridade:baixa'],
     },
