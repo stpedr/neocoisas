@@ -329,4 +329,37 @@ SEED_CARDS: list[dict] = [
         "sprint": "Sprint 7 · Robustez",
         "labels": ["backend"],
     },
+    # ------------------------ Sprint 8 (métricas & escala) ------------------
+    {
+        "title": "Dashboard de métricas real",
+        "description": "Aba no frontend com gráficos de desempenho (views/likes por "
+        "vídeo), contagens da esteira e os insights/recomendações do agente analista.",
+        "column": "backlog",
+        "sprint": "Sprint 8 · Métricas & Escala",
+        "labels": ["frontend", "backend"],
+    },
+    {
+        "title": "Coleta automática de métricas",
+        "description": "Puxar métricas dos posts pelas APIs (YouTube Analytics / Meta "
+        "Insights / TikTok) e gravar em Idea.metrics — alimenta o analista em loop.",
+        "column": "backlog",
+        "sprint": "Sprint 8 · Métricas & Escala",
+        "labels": ["backend", "integração"],
+    },
+    {
+        "title": "Mais plataformas de publicação",
+        "description": "Novos publishers no mesmo gancho: Facebook Reels, Kwai e X "
+        "(Twitter), dentro das regras de cada rede.",
+        "column": "backlog",
+        "sprint": "Sprint 8 · Métricas & Escala",
+        "labels": ["backend", "integração"],
+    },
+    {
+        "title": "Assistente OAuth self-service",
+        "description": "Fluxo guiado no painel para gerar/renovar os refresh tokens "
+        "das plataformas, sem editar o .env na mão.",
+        "column": "backlog",
+        "sprint": "Sprint 8 · Métricas & Escala",
+        "labels": ["backend", "frontend", "integração"],
+    },
 ]
