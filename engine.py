@@ -35,6 +35,8 @@ def generate_and_enqueue(
     mode: str = "manual",
     scorer=None,
     min_score: float = 0.0,
+    editor=None,
+    editor_max_iterations: int = 2,
 ) -> list[Idea]:
     """Gera ideias para o prompt e as coloca na fila conforme o modo.
 
@@ -45,6 +47,11 @@ def generate_and_enqueue(
     `scorer` (opcional) é um callable `scorer(idea) -> {"score", "reason"}`
     (agente crítico). Ideias com nota abaixo de `min_score` entram como
     **rejeitadas** (quality gate), independentemente do modo.
+
+    `editor` (opcional) é um objeto com `refine(title, scenes, min_score,
+    max_iterations) -> {scenes, score, passed, ...}` (agente revisor/editor).
+    Quando presente, ele substitui o simples scorer: reescreve o roteiro em loop
+    tentando atingir `min_score` antes de decidir aprovar/rejeitar.
     """
     if mode not in ("manual", "auto"):
         raise ValueError(f"Modo inválido: '{mode}'. Use 'manual' ou 'auto'.")
@@ -54,7 +61,21 @@ def generate_and_enqueue(
     for idea in ideas:
         idea.mode = mode
         reprovada = False
-        if scorer is not None:
+        if editor is not None:
+            try:
+                r = editor.refine(
+                    idea.title, idea.scenes,
+                    min_score=min_score, max_iterations=editor_max_iterations,
+                )
+                idea.scenes = r["scenes"]
+                idea.score = r["score"]
+                idea.note = (
+                    f"Editado: nota {r['score']} em {r['iterations']} iteração(ões)."
+                )
+                reprovada = not r["passed"]
+            except Exception as exc:  # noqa: BLE001 - falha do editor não derruba o lote
+                idea.note = f"Editor falhou: {exc}"
+        elif scorer is not None:
             try:
                 resultado = scorer(idea)
                 idea.score = resultado.get("score")

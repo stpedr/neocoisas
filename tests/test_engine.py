@@ -113,6 +113,41 @@ def test_quality_gate_rejeita_abaixo_do_limiar(tmp_path):
         assert idea.score in (8.0, 3.0)
 
 
+class FakeEditor:
+    """Editor falso: 'melhora' a nota conforme configurado."""
+
+    def __init__(self, final_score):
+        self.final_score = final_score
+
+    def refine(self, title, scenes, min_score=6.0, max_iterations=2):
+        return {
+            "scenes": scenes + [Scene("extra", "v", 2.0)],
+            "score": self.final_score,
+            "iterations": 1,
+            "passed": self.final_score >= min_score,
+            "history": [],
+        }
+
+
+def test_editor_recupera_ideia_que_passaria_a_ser_rejeitada(tmp_path):
+    q = ReviewQueue(tmp_path / "q.json")
+    generate_and_enqueue("p", q, FakeGenerator(), count=2, mode="manual",
+                         editor=FakeEditor(final_score=8.0), min_score=6.0)
+    # Editor elevou a nota -> entram pendentes (não rejeitadas).
+    assert q.counts()["pending"] == 2
+    assert q.counts()["rejected"] == 0
+    for idea in q.all():
+        assert idea.score == 8.0
+        assert len(idea.scenes) == 3  # cena extra do editor
+
+
+def test_editor_sem_atingir_limiar_rejeita(tmp_path):
+    q = ReviewQueue(tmp_path / "q.json")
+    generate_and_enqueue("p", q, FakeGenerator(), count=1, mode="manual",
+                         editor=FakeEditor(final_score=4.0), min_score=6.0)
+    assert q.counts()["rejected"] == 1
+
+
 def test_quality_gate_falha_do_scorer_nao_derruba(tmp_path):
     q = ReviewQueue(tmp_path / "q.json")
 

@@ -8,7 +8,7 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Agente revisor/editor de roteiros (loop de melhoria)',
         'description': 'Loop crítica→reescrita: reescreve o roteiro a partir do feedback do crítico e re-avalia até a nota mínima (máx N iterações), em vez de só rejeitar. Aceite: nota final ≥ limiar e nº de iterações/delta logados. Depende de: agente crítico (feito) + ScriptWriterAgent (feito).',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 6 · Automações',
         'labels': ['backend', 'conteúdo', 'prioridade:alta'],
     },

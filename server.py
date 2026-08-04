@@ -160,10 +160,19 @@ def _run_generation(req: GenerateRequest) -> dict:
         scorer = lambda idea: critic.score_idea(idea.title, idea.scenes)  # noqa: E731
         min_score = float(cfg.get("critic_min_score", 6.0))
 
+    # Agente revisor/editor (loop de melhoria) opcional — substitui o gate simples.
+    editor = None
+    if cfg.get("editor_enabled"):
+        from agents.editor import ScriptEditorAgent
+
+        editor = ScriptEditorAgent(CONFIG_PATH)
+        min_score = float(cfg.get("critic_min_score", 6.0))
+
     ideas = generate_and_enqueue(
         req.prompt, queue, generator,
         count=req.count, num_scenes=req.num_scenes, mode=req.mode,
         scorer=scorer, min_score=min_score,
+        editor=editor, editor_max_iterations=int(cfg.get("editor_max_iterations", 2)),
     )
     posted = 0
     if req.mode == "auto":
@@ -277,6 +286,32 @@ def get_video(idea_id: str, lang: str | None = None):
     if not path or not os.path.exists(path):
         raise HTTPException(404, "Vídeo ainda não renderizado para esta ideia/idioma.")
     return FileResponse(path, media_type="video/mp4")
+
+
+@app.post("/api/ideas/{idea_id}/refine")
+def refine_idea(idea_id: str) -> dict:
+    from agents.editor import OllamaError as _OE
+    from agents.editor import ScriptEditorAgent
+
+    queue = get_queue()
+    try:
+        idea = queue.get(idea_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    cfg = _app_config()
+    try:
+        result = ScriptEditorAgent(CONFIG_PATH).refine(
+            idea.title, idea.scenes,
+            min_score=float(cfg.get("critic_min_score", 6.0)),
+            max_iterations=int(cfg.get("editor_max_iterations", 2)),
+        )
+    except _OE as exc:
+        raise HTTPException(502, str(exc)) from exc
+    idea.scenes = result["scenes"]
+    idea.score = result["score"]
+    idea.note = f"Editado: nota {result['score']} em {result['iterations']} iteração(ões)."
+    queue._save()
+    return idea.to_dict()
 
 
 @app.post("/api/ideas/{idea_id}/titles")
