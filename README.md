@@ -207,6 +207,20 @@ Renderizar uma ideia aprovada: botão **Renderizar vídeo** no frontend, ou
 `GET /api/ideas/{id}/video`). Nada de automação de evasão — publicação só via
 APIs oficiais.
 
+## Bot do Telegram (opcional)
+
+`telegram_bot.py` opera toda a arquitetura pelo Telegram, falando com a API por
+HTTP. Comandos: `/gerar <prompt>` e `/auto <prompt>`, `/pendentes`, `/aprovadas`;
+aprovar/rejeitar e renderizar/postar por **botões inline**.
+
+Suba como serviço opt-in (com `TELEGRAM_BOT_TOKEN` no `.env`):
+
+```bash
+docker compose --profile bot up -d --build
+```
+
+Opcional: `TELEGRAM_ALLOWED_CHAT_IDS` (CSV) restringe quem pode usar o bot.
+
 ## Testes
 
 Os testes cobrem o parsing de JSON do Ollama e a montagem de cenas — tudo

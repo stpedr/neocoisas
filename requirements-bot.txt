@@ -1,0 +1,3 @@
+# Dependências do bot do Telegram (serviço à parte; só fala com a API por HTTP).
+requests>=2.31
+python-telegram-bot>=21.0

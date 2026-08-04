@@ -97,6 +97,21 @@ services:
       - api
     restart: unless-stopped
 
+  # Bot do Telegram (opt-in): sobe com `docker compose --profile bot up -d`.
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: ane-bot
+    profiles: ["bot"]
+    environment:
+      ANE_API_URL: http://api:8000
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_ALLOWED_CHAT_IDS: ${TELEGRAM_ALLOWED_CHAT_IDS:-}
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   ollama_models:
   ane_output:
