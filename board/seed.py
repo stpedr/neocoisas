@@ -97,16 +97,17 @@ SEED_CARDS: list[dict] = [
     # --------------------------------- Sprint 2 (geração de mídia) -----------
     {
         "title": "Gerador de imagem plugável",
-        "description": "Conectar Stable Diffusion local ou API no hook "
-        "image_generator do VideoPipeline.",
-        "column": "todo",
+        "description": "Fábrica agents/media: placeholder (FFmpeg) por padrão + "
+        "stub Stability (STABILITY_API_KEY). Selecionável por config/env.",
+        "column": "done",
         "sprint": "Sprint 2 · Geração de mídia",
         "labels": ["backend", "conteúdo"],
     },
     {
         "title": "Gerador de voz/TTS plugável",
-        "description": "Conectar TTS (local ou API) no hook voice_generator.",
-        "column": "todo",
+        "description": "Fábrica agents/media: placeholder (áudio) por padrão + "
+        "stub ElevenLabs (ELEVENLABS_API_KEY).",
+        "column": "done",
         "sprint": "Sprint 2 · Geração de mídia",
         "labels": ["backend", "conteúdo"],
     },
@@ -126,18 +127,18 @@ SEED_CARDS: list[dict] = [
     },
     {
         "title": "Ligar geração de vídeo à esteira de ideias",
-        "description": "Renderizar a Idea aprovada e anexar video_path para preview "
-        "no frontend.",
-        "column": "backlog",
+        "description": "render.py + POST /api/ideas/{id}/render anexa video_path; "
+        "frontend tem botão Renderizar e player de preview.",
+        "column": "done",
         "sprint": "Sprint 2 · Geração de mídia",
         "labels": ["backend", "frontend"],
     },
     # ------------------------- Sprint 3 (publicação via APIs) ----------------
     {
         "title": "Publisher via API oficial (1 plataforma)",
-        "description": "Começar por uma rede (ex: YouTube Data API) implementando o "
-        "gancho Publisher — dentro das regras da plataforma.",
-        "column": "backlog",
+        "description": "Scaffolding publishers/ + stub YouTube (valida render e "
+        "credenciais). Falta completar a chamada de upload (google-api-python-client).",
+        "column": "in_progress",
         "sprint": "Sprint 3 · Publicação",
         "labels": ["backend", "integração"],
     },

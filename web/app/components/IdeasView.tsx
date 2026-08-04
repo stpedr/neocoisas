@@ -95,12 +95,27 @@ export default function IdeasView() {
     return () => window.removeEventListener("keydown", onKey);
   }, [pending, leaving, decide]);
 
+  const [renderingId, setRenderingId] = useState<string | null>(null);
+
   async function markPosted(id: string) {
     try {
       await api.post(id);
       await refresh();
     } catch (e) {
       setError((e as Error).message);
+    }
+  }
+
+  async function renderVideo(id: string) {
+    setRenderingId(id);
+    setError("");
+    try {
+      await api.render(id);
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setRenderingId(null);
     }
   }
 
@@ -281,16 +296,35 @@ export default function IdeasView() {
         <p className="muted">Nenhuma ideia aprovada ainda.</p>
       ) : (
         approved.map((idea) => (
-          <div className="approved-item" key={idea.id}>
-            <div>
+          <div className="approved-item" key={idea.id} style={{ flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
               <strong>{idea.title}</strong>
               <div className="muted">
                 {idea.scenes.length} cenas · {idea.mode}
+                {idea.video_path ? " · 🎬 vídeo pronto" : ""}
               </div>
+              {idea.video_path && (
+                <video
+                  key={idea.video_path}
+                  controls
+                  style={{ marginTop: 8, width: 180, borderRadius: 8 }}
+                  src={api.videoUrl(idea.id)}
+                />
+              )}
             </div>
-            <button className="btn" onClick={() => markPosted(idea.id)}>
-              Marcar como postado
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                className="btn"
+                onClick={() => renderVideo(idea.id)}
+                disabled={renderingId === idea.id}
+              >
+                {renderingId === idea.id && <span className="spinner" />}
+                {idea.video_path ? "Re-renderizar" : "Renderizar vídeo"}
+              </button>
+              <button className="btn" onClick={() => markPosted(idea.id)}>
+                Marcar como postado
+              </button>
+            </div>
           </div>
         ))
       )}

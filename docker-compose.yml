@@ -60,6 +60,18 @@ services:
       ANE_CORS_ORIGINS: http://localhost:3000
       ANE_QUEUE: /app/output/review_queue.json
       ANE_BOARD: /app/output/board.json
+      ANE_OUTPUT_DIR: /app/output
+      # Provedores de mídia/publicação (padrão: placeholder / sem publicação).
+      ANE_IMAGE_PROVIDER: ${ANE_IMAGE_PROVIDER:-placeholder}
+      ANE_VOICE_PROVIDER: ${ANE_VOICE_PROVIDER:-placeholder}
+      ANE_PUBLISHER: ${ANE_PUBLISHER:-none}
+      # Chaves opcionais (passadas do host; vazias por padrão).
+      STABILITY_API_KEY: ${STABILITY_API_KEY:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-}
+      YOUTUBE_CLIENT_ID: ${YOUTUBE_CLIENT_ID:-}
+      YOUTUBE_CLIENT_SECRET: ${YOUTUBE_CLIENT_SECRET:-}
+      YOUTUBE_REFRESH_TOKEN: ${YOUTUBE_REFRESH_TOKEN:-}
     volumes:
       - ane_output:/app/output
     depends_on:

@@ -176,6 +176,29 @@ job = agent.build_video_job("Gatos Astronautas", num_scenes=5)  # -> VideoJob
 # job.scenes já pode ser passado ao VideoPipeline.render(job)
 ```
 
+## Geração de mídia e publicação (pré-configurado)
+
+Os geradores de imagem/voz e o publisher são **plugáveis** e escolhidos por
+config (`config.json`) ou variável de ambiente:
+
+| Config | Opções | Padrão |
+|---|---|---|
+| `image_provider` / `ANE_IMAGE_PROVIDER` | `placeholder`, `stability` | `placeholder` |
+| `voice_provider` / `ANE_VOICE_PROVIDER` | `placeholder`, `elevenlabs` | `placeholder` |
+| `publisher` / `ANE_PUBLISHER` | `none`, `youtube` | `none` |
+
+- **placeholder** usa só o FFmpeg (fundo colorido + áudio) — o vídeo renderiza
+  **out of the box**, sem chave nenhuma.
+- **stability / elevenlabs** exigem `STABILITY_API_KEY` / `ELEVENLABS_API_KEY`
+  (ver `.env.example`).
+- **youtube** é um stub pré-configurado (valida render + credenciais OAuth);
+  falta completar a chamada de upload — ver `publishers/youtube.py`.
+
+Renderizar uma ideia aprovada: botão **Renderizar vídeo** no frontend, ou
+`POST /api/ideas/{id}/render` (o vídeo fica em `POST` → preview via
+`GET /api/ideas/{id}/video`). Nada de automação de evasão — publicação só via
+APIs oficiais.
+
 ## Testes
 
 Os testes cobrem o parsing de JSON do Ollama e a montagem de cenas — tudo

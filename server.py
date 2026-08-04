@@ -16,6 +16,7 @@ import os
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from board.store import BoardStore
@@ -161,6 +162,36 @@ def mark_posted(idea_id: str) -> dict:
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
+
+
+@app.post("/api/ideas/{idea_id}/render")
+def render(idea_id: str) -> dict:
+    from render import render_idea
+
+    queue = get_queue()
+    try:
+        idea = queue.get(idea_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    try:
+        path = render_idea(idea)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(500, str(exc)) from exc
+    return queue.attach_video(idea_id, str(path)).to_dict()
+
+
+@app.get("/api/ideas/{idea_id}/video")
+def get_video(idea_id: str):
+    queue = get_queue()
+    try:
+        idea = queue.get(idea_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    if not idea.video_path or not os.path.exists(idea.video_path):
+        raise HTTPException(404, "Vídeo ainda não renderizado para esta ideia.")
+    return FileResponse(idea.video_path, media_type="video/mp4")
 
 
 @app.delete("/api/ideas/decided")

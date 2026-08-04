@@ -105,6 +105,11 @@ export const api = {
   post: (id: string) =>
     request<Idea>(`/api/ideas/${id}/post`, { method: "POST" }),
 
+  render: (id: string) =>
+    request<Idea>(`/api/ideas/${id}/render`, { method: "POST" }),
+
+  videoUrl: (id: string) => `${API_BASE}/api/ideas/${id}/video`,
+
   clearDecided: () =>
     request<{ removed: number }>("/api/ideas/decided", { method: "DELETE" }),
 

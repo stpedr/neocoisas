@@ -4,5 +4,8 @@
   "ollama_model": "llama3",
   "ollama_base_url": "http://localhost:11434",
   "request_timeout": 120,
-  "platforms_target": ["tiktok", "instagram", "youtube_shorts"]
+  "platforms_target": ["tiktok", "instagram", "youtube_shorts"],
+  "image_provider": "placeholder",
+  "voice_provider": "placeholder",
+  "publisher": "none"
 }

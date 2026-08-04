@@ -132,16 +132,27 @@ Concluído nesta fase (Sprints 0–1):
 - [x] **Testes** — 47 passando (parsing, fila, engine, board).
 - [x] **CI** — GitHub Actions (`.github/workflows/ci.yml`).
 
-Próximas fases (Sprints 2–4 — dependem de serviços/credenciais externas):
+Pré-configurado (Sprint 2 / início da 3):
 
-- [ ] **Gerador de imagem plugável** no hook `image_generator` (Stable Diffusion / API).
-- [ ] **Gerador de voz/TTS plugável** no hook `voice_generator`.
-- [ ] **Legendas/burn-in** (drawtext do FFmpeg) e **teste de integração** do
-      `VideoPipeline` (mockando FFmpeg).
-- [ ] **Ligar a renderização à esteira** — render da `Idea` aprovada → `video_path`.
-- [ ] **Publicação via API oficial** (o gancho `publisher` do `engine.py`) —
-      começar por uma plataforma; + OAuth e agendamento.
+- [x] **Geradores de imagem/voz plugáveis** (`agents/media/`): `placeholder`
+      (FFmpeg, funciona sem chave) + stubs `stability`/`elevenlabs`.
+- [x] **Renderização ligada à esteira**: `render.py` + `POST /api/ideas/{id}/render`
+      + botão/preview no frontend.
+- [~] **Publisher via API oficial**: scaffolding `publishers/` + stub YouTube
+      (falta completar o upload com google-api-python-client).
+
+Ainda em aberto (dependem de você/chaves/hospedagem):
+
+- [ ] Completar o upload do publisher (OAuth do YouTube) e adicionar outras redes.
+- [ ] **Legendas/burn-in** (drawtext) e **teste de integração** do `VideoPipeline`.
+- [ ] **Agendamento** de postagens.
 - [ ] **Deploy** do backend e do frontend (o Ollama roda na máquina do usuário).
+
+### Chaves/config (pré-configurado — só preencher)
+
+`config.json` ou variáveis (`.env.example`): `image_provider`/`ANE_IMAGE_PROVIDER`,
+`voice_provider`/`ANE_VOICE_PROVIDER`, `publisher`/`ANE_PUBLISHER` +
+`STABILITY_API_KEY`, `ELEVENLABS_API_KEY`, `YOUTUBE_*`.
 
 ## 7. Convenções
 
