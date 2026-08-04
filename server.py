@@ -92,6 +92,12 @@ class ScheduleUpdate(BaseModel):
     max_per_run: int | None = Field(None, ge=1, le=20)
     render_before: bool | None = None
     simulate: bool | None = None
+    # Geração automática de ideias
+    autogen_enabled: bool | None = None
+    autogen_prompt: str | None = None
+    autogen_every_minutes: int | None = Field(None, ge=1, le=1440)
+    autogen_count: int | None = Field(None, ge=1, le=12)
+    autogen_mode: str | None = Field(None, pattern="^(manual|auto)$")
 
 
 # -------------------------------------------------------------------- rotas ---
@@ -128,6 +134,17 @@ def generate(req: GenerateRequest) -> dict:
     except FileNotFoundError as exc:
         raise HTTPException(400, str(exc)) from exc
 
+    # Agente crítico (quality gate) opcional, ligado por config.
+    scorer = None
+    min_score = 0.0
+    cfg = generator.config
+    if cfg.get("critic_enabled"):
+        from agents.critic import ScriptCriticAgent
+
+        critic = ScriptCriticAgent(CONFIG_PATH)
+        scorer = lambda idea: critic.score_idea(idea.title, idea.scenes)  # noqa: E731
+        min_score = float(cfg.get("critic_min_score", 6.0))
+
     try:
         ideas = generate_and_enqueue(
             req.prompt,
@@ -136,6 +153,8 @@ def generate(req: GenerateRequest) -> dict:
             count=req.count,
             num_scenes=req.num_scenes,
             mode=req.mode,
+            scorer=scorer,
+            min_score=min_score,
         )
     except OllamaError as exc:
         raise HTTPException(502, str(exc)) from exc
@@ -274,6 +293,7 @@ def _schedule_payload() -> dict:
     data = ScheduleStore().get()
     data["running"] = manager._sched is not None
     data["next_run"] = manager.next_run()
+    data["next_autogen"] = manager.next_autogen()
     return data
 
 
@@ -292,3 +312,10 @@ def update_schedule(patch: ScheduleUpdate) -> dict:
 @app.post("/api/schedule/run-now")
 def run_schedule_now() -> dict:
     return run_tick()
+
+
+@app.post("/api/schedule/autogen-now")
+def run_autogen_now() -> dict:
+    from scheduler import run_autogen_tick
+
+    return run_autogen_tick()

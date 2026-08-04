@@ -33,12 +33,18 @@ def generate_and_enqueue(
     count: int = 5,
     num_scenes: int = 5,
     mode: str = "manual",
+    scorer=None,
+    min_score: float = 0.0,
 ) -> list[Idea]:
     """Gera ideias para o prompt e as coloca na fila conforme o modo.
 
     `generator` é qualquer objeto com `.generate(prompt, count, num_scenes, mode)`
     (tipicamente `agents.idea_generator.IdeaGenerator`), injetado para permitir
     testes sem Ollama.
+
+    `scorer` (opcional) é um callable `scorer(idea) -> {"score", "reason"}`
+    (agente crítico). Ideias com nota abaixo de `min_score` entram como
+    **rejeitadas** (quality gate), independentemente do modo.
     """
     if mode not in ("manual", "auto"):
         raise ValueError(f"Modo inválido: '{mode}'. Use 'manual' ou 'auto'.")
@@ -47,7 +53,20 @@ def generate_and_enqueue(
 
     for idea in ideas:
         idea.mode = mode
-        if mode == "auto":
+        reprovada = False
+        if scorer is not None:
+            try:
+                resultado = scorer(idea)
+                idea.score = resultado.get("score")
+                if resultado.get("reason"):
+                    idea.note = resultado["reason"]
+                reprovada = (idea.score or 0) < min_score
+            except Exception as exc:  # noqa: BLE001 - falha do crítico não derruba o lote
+                idea.note = f"Crítico falhou: {exc}"
+
+        if reprovada:
+            idea.status = IdeaStatus.REJECTED
+        elif mode == "auto":
             # Sem revisão manual: já entra aprovada (pronta para postar).
             idea.status = IdeaStatus.APPROVED
         else:

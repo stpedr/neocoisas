@@ -30,7 +30,17 @@ _DEFAULTS = {
     "simulate": True,          # sem publisher, marca como postada (não publica)
     "last_run": None,
     "last_result": None,
+    # Geração automática de ideias (esteira sempre cheia).
+    "autogen_enabled": False,
+    "autogen_prompt": "",
+    "autogen_every_minutes": 120,
+    "autogen_count": 3,
+    "autogen_mode": "manual",
+    "autogen_last_run": None,
+    "autogen_last_result": None,
 }
+
+_INT_FIELDS = ("every_minutes", "max_per_run", "autogen_every_minutes", "autogen_count")
 
 
 def _now_iso() -> str:
@@ -52,13 +62,12 @@ class ScheduleStore:
 
     def update(self, **fields) -> dict:
         data = self.get()
-        for key in ("enabled", "every_minutes", "max_per_run", "render_before",
-                    "simulate", "last_run", "last_result"):
+        for key in _DEFAULTS:
             if key in fields and fields[key] is not None:
                 data[key] = fields[key]
-        # Sanidade
-        data["every_minutes"] = max(1, int(data["every_minutes"]))
-        data["max_per_run"] = max(1, int(data["max_per_run"]))
+        # Sanidade dos inteiros (mínimo 1).
+        for key in _INT_FIELDS:
+            data[key] = max(1, int(data[key]))
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
@@ -153,6 +162,48 @@ def run_tick() -> dict:
     return resumo
 
 
+def run_autogen_tick() -> dict:
+    """Gera ideias automaticamente a partir do prompt configurado."""
+    from engine import generate_and_enqueue
+    from agents.idea_generator import IdeaGenerator
+
+    store = ScheduleStore()
+    cfg = store.get()
+    prompt = (cfg.get("autogen_prompt") or "").strip()
+    if not prompt:
+        resumo = {"generated": 0, "skipped": "sem autogen_prompt"}
+        store.update(autogen_last_run=_now_iso(),
+                     autogen_last_result=json.dumps(resumo, ensure_ascii=False))
+        return resumo
+
+    app_config = _load_config()
+    queue = ReviewQueue(QUEUE_PATH)
+
+    # Quality gate opcional (mesma config do endpoint /generate).
+    scorer = None
+    min_score = 0.0
+    if app_config.get("critic_enabled"):
+        from agents.critic import ScriptCriticAgent
+
+        critic = ScriptCriticAgent(CONFIG_PATH)
+        scorer = lambda idea: critic.score_idea(idea.title, idea.scenes)  # noqa: E731
+        min_score = float(app_config.get("critic_min_score", 6.0))
+
+    ideas = generate_and_enqueue(
+        prompt,
+        queue,
+        IdeaGenerator(CONFIG_PATH),
+        count=cfg["autogen_count"],
+        mode=cfg["autogen_mode"],
+        scorer=scorer,
+        min_score=min_score,
+    )
+    resumo = {"generated": len(ideas), "prompt": prompt, "mode": cfg["autogen_mode"]}
+    store.update(autogen_last_run=_now_iso(),
+                 autogen_last_result=json.dumps(resumo, ensure_ascii=False))
+    return resumo
+
+
 class SchedulerManager:
     """Gerencia o job periódico do APScheduler dentro do processo da API."""
 
@@ -178,10 +229,11 @@ class SchedulerManager:
             return
         from apscheduler.triggers.interval import IntervalTrigger
 
-        try:
-            self._sched.remove_job("auto_post")
-        except Exception:  # noqa: BLE001 - job pode não existir
-            pass
+        for job_id in ("auto_post", "auto_gen"):
+            try:
+                self._sched.remove_job(job_id)
+            except Exception:  # noqa: BLE001 - job pode não existir
+                pass
         cfg = ScheduleStore().get()
         if cfg["enabled"]:
             self._sched.add_job(
@@ -192,14 +244,29 @@ class SchedulerManager:
                 max_instances=1,
                 coalesce=True,
             )
+        if cfg["autogen_enabled"]:
+            self._sched.add_job(
+                run_autogen_tick,
+                IntervalTrigger(minutes=cfg["autogen_every_minutes"]),
+                id="auto_gen",
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+            )
 
-    def next_run(self) -> str | None:
+    def _next(self, job_id: str) -> str | None:
         if self._sched is None:
             return None
-        job = self._sched.get_job("auto_post")
+        job = self._sched.get_job(job_id)
         if job and job.next_run_time:
             return job.next_run_time.isoformat()
         return None
+
+    def next_run(self) -> str | None:
+        return self._next("auto_post")
+
+    def next_autogen(self) -> str | None:
+        return self._next("auto_gen")
 
 
 # Singleton usado pela API.

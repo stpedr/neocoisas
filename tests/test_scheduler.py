@@ -37,6 +37,19 @@ def test_store_sanitiza_valores(tmp_path):
     assert s["max_per_run"] == 1
 
 
+def test_store_autogen_defaults_e_update(tmp_path):
+    path = tmp_path / "s.json"
+    d = ScheduleStore(path).get()
+    assert d["autogen_enabled"] is False
+    assert d["autogen_count"] == 3
+    s = ScheduleStore(path).update(
+        autogen_enabled=True, autogen_prompt="gatos", autogen_every_minutes=0
+    )
+    assert s["autogen_enabled"] is True
+    assert s["autogen_prompt"] == "gatos"
+    assert s["autogen_every_minutes"] == 1  # sanitizado
+
+
 # ---------------------------------------------------- run_scheduled_posts ----
 def test_simulado_marca_postado(tmp_path):
     q = _approved_queue(tmp_path, 3)

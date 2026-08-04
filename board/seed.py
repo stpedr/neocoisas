@@ -217,4 +217,116 @@ SEED_CARDS: list[dict] = [
         "sprint": "Sprint 5 · Bot do Telegram",
         "labels": ["backend", "integração"],
     },
+    # --------------------------- Sprint 6 (automações) ----------------------
+    {
+        "title": "Agente crítico (quality gate)",
+        "description": "agents/critic.py dá nota 0-10 à ideia; abaixo do limiar "
+        "(critic_min_score) é auto-rejeitada antes da revisão. Liga por critic_enabled.",
+        "column": "done",
+        "sprint": "Sprint 6 · Automações",
+        "labels": ["backend", "conteúdo"],
+    },
+    {
+        "title": "Geração automática de ideias (agendada)",
+        "description": "Scheduler gera ideias sozinho por intervalo a partir de um "
+        "prompt fixo (autogen_*), mantendo a esteira cheia. Aba Agendamento.",
+        "column": "done",
+        "sprint": "Sprint 6 · Automações",
+        "labels": ["backend", "frontend"],
+    },
+    {
+        "title": "Notificações no Telegram",
+        "description": "Bot avisa proativamente quando surgem ideias pendentes "
+        "(JobQueue + TELEGRAM_NOTIFY_CHAT_ID).",
+        "column": "done",
+        "sprint": "Sprint 6 · Automações",
+        "labels": ["backend", "integração"],
+    },
+    {
+        "title": "Publisher Instagram Reels",
+        "description": "publishers/instagram.py (Graph API) — scaffold; falta URL "
+        "pública do vídeo + chamada final. IG_USER_ID/IG_ACCESS_TOKEN.",
+        "column": "review",
+        "sprint": "Sprint 6 · Automações",
+        "labels": ["backend", "integração"],
+    },
+    {
+        "title": "Publisher TikTok",
+        "description": "publishers/tiktok.py (Content Posting API) — scaffold; falta "
+        "completar o fluxo de upload. TIKTOK_ACCESS_TOKEN.",
+        "column": "review",
+        "sprint": "Sprint 6 · Automações",
+        "labels": ["backend", "integração"],
+    },
+    {
+        "title": "Agente analista (feedback loop)",
+        "description": "Puxa métricas dos posts (views/engajamento) e realimenta a "
+        "estratégia de nicho, favorecendo formatos que performam.",
+        "column": "backlog",
+        "sprint": "Sprint 6 · Automações",
+        "labels": ["backend", "integração"],
+    },
+    {
+        "title": "Thumbnails + A/B de títulos",
+        "description": "Gerar capa (provedor de imagem) e 2-3 títulos alternativos; "
+        "escolher via agente analista/crítico.",
+        "column": "backlog",
+        "sprint": "Sprint 6 · Automações",
+        "labels": ["backend", "conteúdo"],
+    },
+    {
+        "title": "Legendas multi-idioma",
+        "description": "Traduzir a narração (LLM) e renderizar variantes localizadas "
+        "(PT/EN/ES) para canais diferentes.",
+        "column": "backlog",
+        "sprint": "Sprint 6 · Automações",
+        "labels": ["backend", "conteúdo"],
+    },
+    {
+        "title": "Trilha sonora royalty-free",
+        "description": "Adicionar música de fundo por cena/vídeo (mix com a narração).",
+        "column": "backlog",
+        "sprint": "Sprint 6 · Automações",
+        "labels": ["backend", "conteúdo"],
+    },
+    # --------------------- Sprint 7 (robustez & produção) -------------------
+    {
+        "title": "Autenticação da API/web",
+        "description": "Token/login para proteger a API e o painel caso saiam do "
+        "localhost.",
+        "column": "backlog",
+        "sprint": "Sprint 7 · Robustez",
+        "labels": ["backend", "infra"],
+    },
+    {
+        "title": "Geração assíncrona (jobs + status)",
+        "description": "Tornar /api/generate um job em background com polling de "
+        "status, evitando timeouts em lotes grandes.",
+        "column": "backlog",
+        "sprint": "Sprint 7 · Robustez",
+        "labels": ["backend"],
+    },
+    {
+        "title": "Testes de integração HTTP",
+        "description": "Cobrir os endpoints do server.py ponta a ponta (TestClient).",
+        "column": "backlog",
+        "sprint": "Sprint 7 · Robustez",
+        "labels": ["testes"],
+    },
+    {
+        "title": "Persistência em SQLite",
+        "description": "Migrar fila/board dos JSON para SQLite, evitando corridas sob "
+        "concorrência.",
+        "column": "backlog",
+        "sprint": "Sprint 7 · Robustez",
+        "labels": ["backend"],
+    },
+    {
+        "title": "Retry/backoff nas APIs externas",
+        "description": "Reexecução com backoff em Ollama/Gemini/publishers e "
+        "tratamento de falha de render.",
+        "column": "backlog",
+        "sprint": "Sprint 7 · Robustez",
+        "labels": ["backend"],
+    },
 ]

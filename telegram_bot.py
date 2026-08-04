@@ -45,6 +45,12 @@ def is_allowed(chat_id, allowed_csv: str | None) -> bool:
     return str(chat_id) in permitidos
 
 
+def select_new(current_ids: list[str], seen) -> list[str]:
+    """Ids presentes agora que ainda não foram vistos (para notificar 1x)."""
+    seen = seen or set()
+    return [i for i in current_ids if i not in seen]
+
+
 def format_idea(idea: dict) -> str:
     """Monta o texto de uma ideia para o chat (texto simples)."""
     cenas = idea.get("scenes", [])
@@ -209,6 +215,29 @@ def main() -> None:
     app.add_handler(CommandHandler("pendentes", cmd_pendentes))
     app.add_handler(CommandHandler("aprovadas", cmd_aprovadas))
     app.add_handler(CallbackQueryHandler(on_callback))
+
+    # Notificações proativas: avisa quando surgem novas ideias pendentes.
+    notify_chat = os.environ.get("TELEGRAM_NOTIFY_CHAT_ID")
+    interval = int(os.environ.get("TELEGRAM_NOTIFY_INTERVAL", "120"))
+    if notify_chat and app.job_queue is not None:
+        async def notify_job(ctx: ContextTypes.DEFAULT_TYPE):
+            seen = ctx.bot_data.setdefault("seen_pending", set())
+            try:
+                ideas = api_list("pending")
+            except Exception:  # noqa: BLE001 - API pode estar reiniciando
+                return
+            novas = select_new([i["id"] for i in ideas], seen)
+            for idea in ideas:
+                if idea["id"] in novas:
+                    await ctx.bot.send_message(
+                        chat_id=notify_chat,
+                        text="🆕 Nova ideia para revisar:\n\n" + format_idea(idea),
+                        reply_markup=review_keyboard(idea["id"]),
+                    )
+            seen.update(i["id"] for i in ideas)
+
+        app.job_queue.run_repeating(notify_job, interval=interval, first=10)
+        print(f"[telegram] notificações ativas (chat {notify_chat}, {interval}s)")
 
     print(f"[telegram] bot iniciado; API em {API_URL}")
     app.run_polling()

@@ -59,6 +59,14 @@ export type Schedule = {
   last_result: string | null;
   running: boolean;
   next_run: string | null;
+  // Geração automática de ideias
+  autogen_enabled: boolean;
+  autogen_prompt: string;
+  autogen_every_minutes: number;
+  autogen_count: number;
+  autogen_mode: "manual" | "auto";
+  autogen_last_run: string | null;
+  next_autogen: string | null;
 };
 
 export type RunResult = {
@@ -167,4 +175,9 @@ export const api = {
 
   runSchedule: () =>
     request<RunResult>("/api/schedule/run-now", { method: "POST" }),
+
+  runAutogen: () =>
+    request<{ generated: number }>("/api/schedule/autogen-now", {
+      method: "POST",
+    }),
 };

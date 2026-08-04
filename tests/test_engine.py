@@ -96,3 +96,30 @@ def test_run_prompt_manual_nao_posta(tmp_path):
     resumo = run_prompt("p", q, FakeGenerator(), mode="manual", count=2)
     assert resumo["generated"] == 2
     assert resumo["posted"] == 0
+
+
+def test_quality_gate_rejeita_abaixo_do_limiar(tmp_path):
+    q = ReviewQueue(tmp_path / "q.json")
+    # Notas alternadas: par = 8 (passa), ímpar = 3 (reprova).
+    def scorer(idea):
+        n = int(idea.title.split()[-1])
+        return {"score": 8.0 if n % 2 == 0 else 3.0, "reason": "teste"}
+
+    generate_and_enqueue("p", q, FakeGenerator(), count=4, mode="manual",
+                         scorer=scorer, min_score=6.0)
+    assert q.counts()["pending"] == 2   # Ideia 0 e 2
+    assert q.counts()["rejected"] == 2  # Ideia 1 e 3
+    for idea in q.all():
+        assert idea.score in (8.0, 3.0)
+
+
+def test_quality_gate_falha_do_scorer_nao_derruba(tmp_path):
+    q = ReviewQueue(tmp_path / "q.json")
+
+    def scorer(idea):
+        raise RuntimeError("crítico offline")
+
+    generate_and_enqueue("p", q, FakeGenerator(), count=2, mode="manual",
+                         scorer=scorer, min_score=6.0)
+    # Falha do crítico não reprova: seguem pendentes.
+    assert q.counts()["pending"] == 2

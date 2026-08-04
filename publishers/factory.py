@@ -9,12 +9,16 @@ from __future__ import annotations
 import os
 from typing import Callable, Optional
 
+from .instagram import instagram_publisher
+from .tiktok import tiktok_publisher
 from .youtube import youtube_publisher
 
 Publisher = Callable[[object], str]
 
 _PUBLISHERS: dict[str, Publisher] = {
     "youtube": youtube_publisher,
+    "instagram": instagram_publisher,
+    "tiktok": tiktok_publisher,
 }
 
 

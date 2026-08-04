@@ -41,6 +41,7 @@ class Idea:
     status: str = IdeaStatus.PENDING
     mode: str = "manual"           # "manual" (revisão) ou "auto" (prompta-e-posta)
     video_path: str | None = None
+    score: float | None = None     # nota do agente crítico (0-10), se avaliado
     note: str = ""
     created_at: str = field(default_factory=_now_iso)
     decided_at: str | None = None
@@ -61,6 +62,7 @@ class Idea:
             "status": self.status,
             "mode": self.mode,
             "video_path": self.video_path,
+            "score": self.score,
             "note": self.note,
             "created_at": self.created_at,
             "decided_at": self.decided_at,
@@ -84,6 +86,7 @@ class Idea:
             status=data.get("status", IdeaStatus.PENDING),
             mode=data.get("mode", "manual"),
             video_path=data.get("video_path"),
+            score=data.get("score"),
             note=data.get("note", ""),
             created_at=data.get("created_at", _now_iso()),
             decided_at=data.get("decided_at"),

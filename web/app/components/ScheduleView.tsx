@@ -8,7 +8,9 @@ export default function ScheduleView() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const [genRunning, setGenRunning] = useState(false);
   const [lastRun, setLastRun] = useState<RunResult | null>(null);
+  const [genMsg, setGenMsg] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -45,6 +47,21 @@ export default function ScheduleView() {
       setError((e as Error).message);
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function runAutogen() {
+    setGenRunning(true);
+    setError("");
+    setGenMsg("");
+    try {
+      const r = await api.runAutogen();
+      setGenMsg(`${r.generated} ideias geradas.`);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setGenRunning(false);
     }
   }
 
@@ -153,6 +170,96 @@ export default function ScheduleView() {
               ? `Próxima execução: ${fmt(sched.next_run)}`
               : "Agendador desativado"}
           </span>
+        </div>
+      </div>
+
+      <div className="panel" style={{ marginTop: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 14,
+          }}
+        >
+          <div>
+            <strong>Geração automática de ideias</strong>
+            <div className="muted">
+              Cria ideias novas sozinho, por intervalo, a partir de um prompt fixo.
+            </div>
+          </div>
+          <div className="mode-toggle">
+            <button
+              className={sched.autogen_enabled ? "on" : ""}
+              onClick={() => save({ autogen_enabled: true })}
+              disabled={saving}
+            >
+              Ativado
+            </button>
+            <button
+              className={!sched.autogen_enabled ? "on" : ""}
+              onClick={() => save({ autogen_enabled: false })}
+              disabled={saving}
+            >
+              Desativado
+            </button>
+          </div>
+        </div>
+
+        <div className="field">
+          <label>Prompt fixo</label>
+          <input
+            className="input"
+            placeholder="Ex: curiosidades de ciência para crianças"
+            value={sched.autogen_prompt}
+            onChange={(e) =>
+              setSched({ ...sched, autogen_prompt: e.target.value })
+            }
+            onBlur={(e) => save({ autogen_prompt: e.target.value })}
+          />
+        </div>
+        <div className="row">
+          <div className="field">
+            <label>Intervalo (min)</label>
+            <input
+              className="input"
+              type="number"
+              min={1}
+              max={1440}
+              value={sched.autogen_every_minutes}
+              onChange={(e) =>
+                setSched({ ...sched, autogen_every_minutes: Number(e.target.value) })
+              }
+              onBlur={(e) =>
+                save({ autogen_every_minutes: Number(e.target.value) })
+              }
+            />
+          </div>
+          <div className="field">
+            <label>Ideias por rodada</label>
+            <input
+              className="input"
+              type="number"
+              min={1}
+              max={12}
+              value={sched.autogen_count}
+              onChange={(e) =>
+                setSched({ ...sched, autogen_count: Number(e.target.value) })
+              }
+              onBlur={(e) => save({ autogen_count: Number(e.target.value) })}
+            />
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 12, marginTop: 8, alignItems: "center" }}>
+          <button
+            className="btn"
+            onClick={runAutogen}
+            disabled={genRunning || !sched.autogen_prompt.trim()}
+          >
+            {genRunning && <span className="spinner" />}
+            {genRunning ? "Gerando…" : "✨ Gerar agora"}
+          </button>
+          {genMsg && <span className="muted">{genMsg}</span>}
         </div>
       </div>
 

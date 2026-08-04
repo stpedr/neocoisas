@@ -1,6 +1,13 @@
 """Testes das funções puras do bot do Telegram (sem a lib do Telegram/rede)."""
 
-from telegram_bot import format_idea, is_allowed, parse_callback
+from telegram_bot import format_idea, is_allowed, parse_callback, select_new
+
+
+def test_select_new():
+    assert select_new(["a", "b", "c"], {"a"}) == ["b", "c"]
+    assert select_new(["a"], {"a"}) == []
+    assert select_new(["x", "y"], set()) == ["x", "y"]
+    assert select_new(["x"], None) == ["x"]
 
 
 def test_parse_callback():

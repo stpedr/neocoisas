@@ -84,6 +84,11 @@ def test_publisher_youtube():
     assert get_publisher({"publisher": "youtube"}) is youtube_publisher
 
 
+def test_publisher_instagram_e_tiktok():
+    assert get_publisher({"publisher": "instagram"}).__name__ == "instagram_publisher"
+    assert get_publisher({"publisher": "tiktok"}).__name__ == "tiktok_publisher"
+
+
 def test_publisher_invalido_levanta():
     with pytest.raises(ValueError):
         get_publisher({"publisher": "xpto"})

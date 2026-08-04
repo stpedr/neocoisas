@@ -207,6 +207,21 @@ Renderizar uma ideia aprovada: botão **Renderizar vídeo** no frontend, ou
 `GET /api/ideas/{id}/video`). Nada de automação de evasão — publicação só via
 APIs oficiais.
 
+## Automações
+
+- **Agente crítico (quality gate)** — `agents/critic.py`: dá nota 0–10 à ideia; com
+  `critic_enabled` no config, ideias abaixo de `critic_min_score` são
+  auto-rejeitadas antes da revisão.
+- **Geração automática de ideias** — o scheduler cria ideias sozinho por intervalo
+  a partir de um prompt fixo (`autogen_*`), mantendo a esteira cheia (aba
+  Agendamento / `POST /api/schedule/autogen-now`).
+- **Agendamento de postagens** — publica as aprovadas por intervalo (modo simulado
+  sem token).
+- **Notificações no Telegram** — o bot avisa quando surgem ideias pendentes
+  (`TELEGRAM_NOTIFY_CHAT_ID`).
+- **Publishers** — YouTube (upload real), Instagram/TikTok (scaffold, requerem
+  credenciais).
+
 ## Bot do Telegram (opcional)
 
 `telegram_bot.py` opera toda a arquitetura pelo Telegram, falando com a API por

@@ -109,6 +109,8 @@ services:
       ANE_API_URL: http://api:8000
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_ALLOWED_CHAT_IDS: ${TELEGRAM_ALLOWED_CHAT_IDS:-}
+      TELEGRAM_NOTIFY_CHAT_ID: ${TELEGRAM_NOTIFY_CHAT_ID:-}
+      TELEGRAM_NOTIFY_INTERVAL: ${TELEGRAM_NOTIFY_INTERVAL:-120}
     depends_on:
       - api
     restart: unless-stopped
