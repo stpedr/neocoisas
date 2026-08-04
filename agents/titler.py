@@ -35,16 +35,20 @@ class TitlerAgent:
     def __init__(self, config_path: str = "config.json"):
         self.client = OllamaClient(config_path)
 
-    def suggest_titles(self, topic: str, n: int = 3) -> list[str]:
+    def suggest_titles(self, topic: str, n: int = 3, retries: int = 2) -> list[str]:
         prompt = f"""
         Você escreve títulos virais para vídeos curtos.
         Tópico: '{topic}'.
         Gere {n} títulos DIFERENTES, curtos e com forte gancho (em português).
-        Retorne APENAS um JSON: uma lista de strings.
+        Retorne APENAS um JSON: uma lista de strings. Sem texto fora do JSON.
         """
-        raw = self.client.generate(prompt)
-        try:
-            data = self.client.extract_json(raw)
-        except json.JSONDecodeError:
-            return []
-        return parse_titles(data)[:n]
+        # O modelo local é não-determinístico; tenta de novo se vier vazio.
+        for _ in range(max(1, retries)):
+            raw = self.client.generate(prompt)
+            try:
+                titulos = parse_titles(self.client.extract_json(raw))
+            except json.JSONDecodeError:
+                titulos = []
+            if titulos:
+                return titulos[:n]
+        return []
