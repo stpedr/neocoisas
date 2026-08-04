@@ -75,22 +75,22 @@ SEED_CARDS: list[dict] = [
         "title": "Interface Next.js — aba Ideias (Tinder)",
         "description": "Prompt + modo (manual/auto), cartões de aprovação (❌/✅), "
         "lista de aprovadas prontas para postar.",
-        "column": "in_progress",
+        "column": "done",
         "sprint": "Sprint 1 · Esteira de aprovação",
         "labels": ["frontend"],
     },
     {
         "title": "Interface Next.js — aba Kanban",
         "description": "Quadro de sprints com arrastar-e-soltar entre colunas.",
-        "column": "in_progress",
+        "column": "done",
         "sprint": "Sprint 1 · Esteira de aprovação",
         "labels": ["frontend"],
     },
     {
         "title": "Testes da fila de revisão e do gerador",
-        "description": "Cobrir ReviewQueue (aprovar/rejeitar/postar/persistência) e "
-        "build_idea_concepts.",
-        "column": "todo",
+        "description": "ReviewQueue, engine, BoardStore e build_idea_concepts — "
+        "47 testes no total.",
+        "column": "done",
         "sprint": "Sprint 1 · Esteira de aprovação",
         "labels": ["testes"],
     },
@@ -158,15 +158,16 @@ SEED_CARDS: list[dict] = [
     # ---------------------- Sprint 4 (deploy e publicação do projeto) --------
     {
         "title": "Dockerfile do backend + build do frontend",
-        "description": "Empacotar API (uvicorn) e gerar build de produção do Next.js.",
-        "column": "backlog",
+        "description": "API (uvicorn) + build standalone do Next.js + docker-compose "
+        "com o Ollama containerizado.",
+        "column": "done",
         "sprint": "Sprint 4 · Deploy & Publicação",
         "labels": ["infra"],
     },
     {
         "title": "CI no GitHub Actions",
-        "description": "Rodar pytest e next build a cada push/PR.",
-        "column": "backlog",
+        "description": "Roda pytest e next build a cada push/PR (.github/workflows/ci.yml).",
+        "column": "done",
         "sprint": "Sprint 4 · Deploy & Publicação",
         "labels": ["infra", "testes"],
     },

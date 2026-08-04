@@ -41,21 +41,26 @@ regras de cada rede.
 ```
 neocoisas/
 ├── main.py                   # Orquestrador CLI: estratégia + (--script) roteiro
+├── server.py                 # ✅ API FastAPI (ideias + Kanban) p/ o frontend
+├── engine.py                 # ✅ Orquestração: prompt → ideias → (revisão|post)
+├── docker-compose.yml        # ✅ Stack: ollama + api + web
+├── Dockerfile.api            # ✅ Imagem da API
 ├── config.example.json       # Modelo de config (copiar → config.json)
-├── requirements.txt          # streamlit, requests
+├── requirements.txt          # streamlit, requests, fastapi, uvicorn
+├── requirements-api.txt      # deps enxutas da API (Docker)
 ├── requirements-dev.txt      # pytest (testes)
-├── .gitignore                # ignora config.json, output/, __pycache__
-├── README.md
-├── HANDOFF.md                # este arquivo
+├── .github/workflows/ci.yml  # ✅ CI: pytest + next build
 ├── agents/
-│   ├── __init__.py
-│   ├── ollama_client.py      # ✅ Cliente Ollama compartilhado (query + parse JSON)
-│   ├── niche_creator.py      # ✅ Agente de estratégia via Ollama (GPU local)
-│   ├── script_writer.py      # ✅ Agente roteirista cena-a-cena (Ollama)
+│   ├── ollama_client.py      # ✅ Cliente Ollama (query + parse JSON, overrides por env)
+│   ├── niche_creator.py      # ✅ Agente de estratégia via Ollama
+│   ├── script_writer.py      # ✅ Agente roteirista cena-a-cena
+│   ├── idea_generator.py     # ✅ Brainstorm de conceitos + roteiro → list[Idea]
 │   └── video_pipeline.py     # ✅ Esqueleto de montagem de vídeo (FFmpeg)
-├── dashboard/
-│   └── app.py                # ✅ Painel do Criador (Streamlit)
-└── tests/                    # ✅ Testes offline (14) de parsing JSON e de cenas
+├── review/                   # ✅ Idea + ReviewQueue (fila de aprovação, JSON)
+├── board/                    # ✅ Card + BoardStore + seed (Kanban de sprints)
+├── dashboard/app.py          # ✅ Painel do Criador (Streamlit legado)
+├── web/                      # ✅ Frontend Next.js 14 (abas Ideias/Tinder e Kanban)
+└── tests/                    # ✅ 47 testes offline (parsing, fila, engine, board)
 ```
 
 ### Detalhes do que já está pronto
@@ -78,11 +83,21 @@ neocoisas/
   dispara geração de estratégia, mostra o JSON.
 - **`main.py`** — entrada CLI: `python main.py "Nicho"`. Com `--script`, encadeia
   estratégia → roteiro do 1º `trending_topic`.
-- **`tests/`** — 14 testes offline (pytest) do parsing de JSON (`OllamaClient`)
-  e da montagem de cenas (`build_scenes`). Rodar: `pytest`.
+- **`review/`** — `Idea` (com estados) + `ReviewQueue` (persistência JSON,
+  aprovar/rejeitar/postar). **`board/`** — `Card` + `BoardStore` + `seed` do
+  Kanban (auto-semeia o plano de sprints).
+- **`engine.py`** — `generate_and_enqueue` + `post_approved` (modos manual/auto;
+  `publisher` é gancho para APIs oficiais). **`server.py`** — API FastAPI.
+- **`agents/idea_generator.py`** — `IdeaGenerator` (brainstorm + roteiro por
+  conceito); `build_idea_concepts` puro/testado.
+- **`web/`** — frontend Next.js 14: aba **Ideias** (Tinder: aprovar/rejeitar,
+  modos manual/auto) e aba **Kanban** (arrastar-e-soltar, plano de sprints).
+- **Docker** — `docker compose up -d --build` sobe ollama + api + web.
+- **`tests/`** — 47 testes offline (pytest): parsing, `ReviewQueue`, `engine`,
+  `BoardStore`, `build_idea_concepts`. Rodar: `pytest`.
 
-Estado: tudo compila; os testes passam (`14 passed`); CLI falha de forma limpa
-quando o Ollama não está no ar.
+Estado: tudo compila; os testes passam (`47 passed`); stack roda em Docker com
+o Ollama containerizado; geração validada ponta-a-ponta.
 
 ## 5. Ponto de atenção: Ollama roda no PC do usuário
 
@@ -105,19 +120,28 @@ nuvem e deixado pronto.
 
 ## 6. Próximos passos (candidatos)
 
-- [x] **Agente de roteiro cena-a-cena** — feito em `agents/script_writer.py`
-      (`ScriptWriterAgent` → `list[Scene]` / `VideoJob`).
-- [x] **Testes automatizados dos parses de JSON** — feito em `tests/`
-      (`OllamaClient.extract_json` e `build_scenes`).
-- [ ] **Gerador de imagem plugável** (ex: Stable Diffusion local / API) no hook
-      `image_generator`.
-- [ ] **Gerador de voz plugável** (TTS: ElevenLabs ou alternativa local) no
-      hook `voice_generator`.
-- [ ] **Legendas/burn-in** de texto no vídeo (drawtext do FFmpeg).
-- [ ] **Publicação via API oficial** de uma plataforma (começar por uma só).
-- [ ] Testes do **fluxo do pipeline** (render/concat) — hoje só o parsing tem
-      cobertura; falta um teste de integração do `VideoPipeline` (mockando
-      FFmpeg ou os geradores).
+Concluído nesta fase (Sprints 0–1):
+
+- [x] **Agente de roteiro cena-a-cena** (`agents/script_writer.py`).
+- [x] **Esteira de aprovação** — `review/`, `agents/idea_generator.py`, `engine.py`
+      (modos manual/auto).
+- [x] **API FastAPI** (`server.py`) + **frontend Next.js** (`web/`): abas
+      Ideias (Tinder) e Kanban.
+- [x] **Kanban** com o plano de sprints (`board/`).
+- [x] **Docker** (ollama + api + web) — `docker compose up -d --build`.
+- [x] **Testes** — 47 passando (parsing, fila, engine, board).
+- [x] **CI** — GitHub Actions (`.github/workflows/ci.yml`).
+
+Próximas fases (Sprints 2–4 — dependem de serviços/credenciais externas):
+
+- [ ] **Gerador de imagem plugável** no hook `image_generator` (Stable Diffusion / API).
+- [ ] **Gerador de voz/TTS plugável** no hook `voice_generator`.
+- [ ] **Legendas/burn-in** (drawtext do FFmpeg) e **teste de integração** do
+      `VideoPipeline` (mockando FFmpeg).
+- [ ] **Ligar a renderização à esteira** — render da `Idea` aprovada → `video_path`.
+- [ ] **Publicação via API oficial** (o gancho `publisher` do `engine.py`) —
+      começar por uma plataforma; + OAuth e agendamento.
+- [ ] **Deploy** do backend e do frontend (o Ollama roda na máquina do usuário).
 
 ## 7. Convenções
 
