@@ -64,6 +64,7 @@ services:
       # Provedores de mídia/publicação (padrão: placeholder / sem publicação).
       ANE_IMAGE_PROVIDER: ${ANE_IMAGE_PROVIDER:-placeholder}
       ANE_VOICE_PROVIDER: ${ANE_VOICE_PROVIDER:-placeholder}
+      ANE_BURN_SUBTITLES: ${ANE_BURN_SUBTITLES:-true}
       ANE_PUBLISHER: ${ANE_PUBLISHER:-none}
       # Chaves opcionais (passadas do host; vazias por padrão).
       STABILITY_API_KEY: ${STABILITY_API_KEY:-}

@@ -3,9 +3,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# FFmpeg é necessário para renderizar os vídeos (pipeline + placeholders).
+# FFmpeg (render) + fonte DejaVu (legendas/burn-in via drawtext).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
+    && apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Dependências primeiro (melhor cache de camadas).

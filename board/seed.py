@@ -113,15 +113,17 @@ SEED_CARDS: list[dict] = [
     },
     {
         "title": "Legendas / burn-in no vídeo",
-        "description": "drawtext do FFmpeg para queimar as legendas por cena.",
-        "column": "backlog",
+        "description": "drawtext do FFmpeg queima a narração por cena (config "
+        "burn_subtitles); escape de fonte cross-platform (Windows/Linux).",
+        "column": "done",
         "sprint": "Sprint 2 · Geração de mídia",
         "labels": ["backend", "conteúdo"],
     },
     {
         "title": "Teste de integração do VideoPipeline",
-        "description": "Cobrir render/concat mockando FFmpeg e os geradores.",
-        "column": "backlog",
+        "description": "tests/test_video_pipeline.py cobre render/concat/legendas "
+        "mockando FFmpeg e os geradores.",
+        "column": "done",
         "sprint": "Sprint 2 · Geração de mídia",
         "labels": ["testes"],
     },

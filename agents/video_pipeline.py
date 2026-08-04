@@ -13,10 +13,39 @@ FFmpeg, que precisa estar instalado e disponível no PATH.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
+import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
+
+# Fontes comuns para o burn-in de legendas (drawtext precisa de um fontfile).
+_FONT_CANDIDATES = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Debian/Ubuntu (Docker)
+    "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+    "/Library/Fonts/Arial.ttf",                          # macOS
+    "C:/Windows/Fonts/arial.ttf",                        # Windows
+]
+
+
+def _detect_font() -> str | None:
+    """Acha um arquivo de fonte para as legendas (env tem prioridade)."""
+    env_font = os.environ.get("ANE_SUBTITLE_FONT")
+    candidates = [env_font, *_FONT_CANDIDATES] if env_font else _FONT_CANDIDATES
+    for path in candidates:
+        if path and Path(path).exists():
+            return path
+    return None
+
+
+def _ff_escape(path) -> str:
+    """Escapa um caminho para uso dentro de um filtro FFmpeg (drawtext).
+
+    Usa barras normais e escapa o `:` do drive do Windows (ex: `C:/...` →
+    `C\\:/...`), que o parser de filtro interpretaria como separador de opção.
+    """
+    return Path(path).as_posix().replace(":", r"\:")
 
 
 @dataclass
@@ -45,12 +74,26 @@ class VideoJob:
 class VideoPipeline:
     """Coordena as etapas de produção de um vídeo curto localmente."""
 
-    def __init__(self, image_generator=None, voice_generator=None):
+    def __init__(
+        self,
+        image_generator=None,
+        voice_generator=None,
+        burn_subtitles: bool = False,
+        font_path: str | None = None,
+    ):
         # Pontos de extensão: funções que você fornece para gerar mídia.
         #   image_generator(visual_prompt: str, dest: Path) -> Path
         #   voice_generator(narration: str, dest: Path) -> Path
         self.image_generator = image_generator
         self.voice_generator = voice_generator
+        # Legendas queimadas no vídeo (drawtext). Requer um arquivo de fonte
+        # existente; se a fonte informada não existir, tenta auto-detectar, e
+        # se nada for encontrado o burn-in é ignorado silenciosamente.
+        if font_path and Path(font_path).exists():
+            self.font_path = font_path
+        else:
+            self.font_path = _detect_font()
+        self.burn_subtitles = burn_subtitles and self.font_path is not None
         self._check_ffmpeg()
 
     @staticmethod
@@ -94,6 +137,27 @@ class VideoPipeline:
             )
         return self.voice_generator(scene.narration, dest)
 
+    def _build_vf(self, scene: Scene, assets_dir: Path, idx: int) -> str:
+        """Monta o filtro de vídeo (escala/crop + legenda opcional)."""
+        vf = (
+            "scale=1080:1920:force_original_aspect_ratio=increase,"
+            "crop=1080:1920"
+        )
+        if self.burn_subtitles and scene.narration.strip():
+            # `textfile` evita quase toda a dor de escape do drawtext.
+            sub_file = assets_dir / f"sub_{idx:02d}.txt"
+            wrapped = "\n".join(textwrap.wrap(scene.narration.strip(), width=32))
+            sub_file.write_text(wrapped or scene.narration.strip(), encoding="utf-8")
+            drawtext = (
+                f"drawtext=fontfile='{_ff_escape(self.font_path)}':"
+                f"textfile='{_ff_escape(sub_file)}':"
+                "fontcolor=white:fontsize=46:line_spacing=8:"
+                "box=1:boxcolor=black@0.55:boxborderw=18:"
+                "x=(w-text_w)/2:y=h-text_h-140"
+            )
+            vf = f"{vf},{drawtext}"
+        return vf
+
     def _compose_clip(
         self, scene: Scene, image_path: Path, audio_path: Path, assets_dir: Path, idx: int
     ) -> Path:
@@ -107,8 +171,7 @@ class VideoPipeline:
             "-c:a", "aac", "-b:a", "192k",
             "-pix_fmt", "yuv420p",
             "-shortest",
-            "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,"
-                   "crop=1080:1920",
+            "-vf", self._build_vf(scene, assets_dir, idx),
             str(clip_path),
         ]
         subprocess.run(cmd, check=True, capture_output=True)
