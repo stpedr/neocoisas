@@ -46,6 +46,13 @@ def require_key(request: Request) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Reaplica a seleção de modelos salva (troca via UI) no ambiente do processo.
+    try:
+        import settings as _settings
+
+        _settings.apply_saved()
+    except Exception:  # noqa: BLE001 - não impede o start
+        pass
     # Sobe o agendador de postagens (job periódico conforme output/schedule.json).
     manager.start()
     yield
@@ -139,6 +146,24 @@ def models_available() -> dict:
     from registry import available_models
 
     return available_models(_app_config())
+
+
+class ModelSelect(BaseModel):
+    capability: str
+    provider: str
+    model: str | None = None
+
+
+@app.put("/api/models/select")
+def select_model(sel: ModelSelect) -> dict:
+    """Troca provider/modelo de uma capacidade (persiste e aplica em runtime)."""
+    import settings as _settings
+    from registry import describe, validate
+
+    if not validate(sel.capability, sel.provider):
+        raise HTTPException(400, f"Seleção inválida: {sel.capability}/{sel.provider}.")
+    _settings.set_selection(sel.capability, sel.provider, sel.model)
+    return describe(_app_config())
 
 
 @app.get("/api/ideas")

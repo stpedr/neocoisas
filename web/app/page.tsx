@@ -4,8 +4,9 @@ import { useState } from "react";
 import IdeasView from "./components/IdeasView";
 import KanbanView from "./components/KanbanView";
 import ScheduleView from "./components/ScheduleView";
+import ModelsView from "./components/ModelsView";
 
-type Tab = "ideas" | "kanban" | "schedule";
+type Tab = "ideas" | "kanban" | "schedule" | "models";
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>("ideas");
@@ -36,12 +37,19 @@ export default function Home() {
           >
             ⏱️ Agendamento
           </button>
+          <button
+            className={`tab ${tab === "models" ? "active" : ""}`}
+            onClick={() => setTab("models")}
+          >
+            ⚙️ Modelos
+          </button>
         </div>
       </div>
 
       {tab === "ideas" && <IdeasView />}
       {tab === "kanban" && <KanbanView />}
       {tab === "schedule" && <ScheduleView />}
+      {tab === "models" && <ModelsView />}
     </div>
   );
 }

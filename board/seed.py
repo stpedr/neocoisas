@@ -64,7 +64,7 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Painel de troca de modelos (UI)',
         'description': 'Aba de config no frontend p/ escolher provider+modelo por capacidade. Aceite: trocar modelo pela UI reflete no backend. Depende de: registry + descoberta de modelos.',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 9 · Troca de modelos',
         'labels': ['frontend', 'prioridade:média'],
     },

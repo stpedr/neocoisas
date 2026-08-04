@@ -49,6 +49,17 @@ export type Card = {
 
 export type BoardPayload = { columns: Column[]; cards: Card[] };
 
+export type Capability = {
+  providers: string[];
+  current: { provider: string; model: string | null };
+  requires: Record<string, string[]>;
+  configured: Record<string, boolean>;
+  models: Record<string, string[]>;
+};
+
+export type ModelsPayload = { capabilities: Record<string, Capability> };
+export type AvailableModels = Record<string, Record<string, string[]>>;
+
 export type Schedule = {
   enabled: boolean;
   every_minutes: number;
@@ -183,5 +194,16 @@ export const api = {
   runAutogen: () =>
     request<{ generated: number }>("/api/schedule/autogen-now", {
       method: "POST",
+    }),
+
+  // Modelos --------------------------------------------------------------
+  getModels: () => request<ModelsPayload>("/api/models"),
+
+  getAvailableModels: () => request<AvailableModels>("/api/models/available"),
+
+  selectModel: (body: { capability: string; provider: string; model?: string | null }) =>
+    request<ModelsPayload>("/api/models/select", {
+      method: "PUT",
+      body: JSON.stringify(body),
     }),
 };
