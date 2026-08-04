@@ -49,6 +49,26 @@ export type Card = {
 
 export type BoardPayload = { columns: Column[]; cards: Card[] };
 
+export type Schedule = {
+  enabled: boolean;
+  every_minutes: number;
+  max_per_run: number;
+  render_before: boolean;
+  simulate: boolean;
+  last_run: string | null;
+  last_result: string | null;
+  running: boolean;
+  next_run: string | null;
+};
+
+export type RunResult = {
+  processed: number;
+  posted: number;
+  simulated: number;
+  errors: number;
+  details: { id: string; status: string; info: string | null }[];
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
@@ -135,4 +155,16 @@ export const api = {
 
   resetBoard: () =>
     request<BoardPayload>("/api/board/reset", { method: "POST" }),
+
+  // Agendamento --------------------------------------------------------
+  getSchedule: () => request<Schedule>("/api/schedule"),
+
+  updateSchedule: (body: Partial<Schedule>) =>
+    request<Schedule>("/api/schedule", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+
+  runSchedule: () =>
+    request<RunResult>("/api/schedule/run-now", { method: "POST" }),
 };

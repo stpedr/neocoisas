@@ -153,10 +153,11 @@ SEED_CARDS: list[dict] = [
     },
     {
         "title": "Agendamento de postagens",
-        "description": "Agendar publicação das ideias aprovadas.",
-        "column": "backlog",
+        "description": "Scheduler local (APScheduler) publica ideias aprovadas por "
+        "intervalo; aba Agendamento no frontend + endpoints. Modo simulado sem token.",
+        "column": "done",
         "sprint": "Sprint 3 · Publicação",
-        "labels": ["backend"],
+        "labels": ["backend", "frontend"],
     },
     # ---------------------- Sprint 4 (deploy e publicação do projeto) --------
     {

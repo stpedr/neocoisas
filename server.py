@@ -13,6 +13,7 @@ Executar:
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,12 +24,21 @@ from board.store import BoardStore
 from engine import generate_and_enqueue, post_approved
 from review.models import IdeaStatus
 from review.queue import ReviewQueue
+from scheduler import ScheduleStore, manager, run_tick
 
 CONFIG_PATH = os.environ.get("ANE_CONFIG", "config.json")
 QUEUE_PATH = os.environ.get("ANE_QUEUE", "output/review_queue.json")
 BOARD_PATH = os.environ.get("ANE_BOARD", "output/board.json")
 
-app = FastAPI(title="Auto Niche Engine API", version="1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Sobe o agendador de postagens (job periódico conforme output/schedule.json).
+    manager.start()
+    yield
+    manager.shutdown()
+
+
+app = FastAPI(title="Auto Niche Engine API", version="1.0", lifespan=lifespan)
 
 # Libera o frontend Next.js em desenvolvimento.
 app.add_middleware(
@@ -74,6 +84,14 @@ class CardUpdate(BaseModel):
     sprint: str | None = None
     labels: list[str] | None = None
     order: float | None = None
+
+
+class ScheduleUpdate(BaseModel):
+    enabled: bool | None = None
+    every_minutes: int | None = Field(None, ge=1, le=1440)
+    max_per_run: int | None = Field(None, ge=1, le=20)
+    render_before: bool | None = None
+    simulate: bool | None = None
 
 
 # -------------------------------------------------------------------- rotas ---
@@ -249,3 +267,28 @@ def reset_board() -> dict:
     board = get_board()
     board.seed(force=True)
     return board.as_payload()
+
+
+# --------------------------------------------------------- Agendamento -------
+def _schedule_payload() -> dict:
+    data = ScheduleStore().get()
+    data["running"] = manager._sched is not None
+    data["next_run"] = manager.next_run()
+    return data
+
+
+@app.get("/api/schedule")
+def get_schedule() -> dict:
+    return _schedule_payload()
+
+
+@app.put("/api/schedule")
+def update_schedule(patch: ScheduleUpdate) -> dict:
+    ScheduleStore().update(**patch.model_dump(exclude_none=True))
+    manager.reconfigure()
+    return _schedule_payload()
+
+
+@app.post("/api/schedule/run-now")
+def run_schedule_now() -> dict:
+    return run_tick()
