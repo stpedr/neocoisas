@@ -51,7 +51,50 @@ neocoisas/
 └── tests/                    # Testes offline (parsing de JSON e de cenas)
 ```
 
-## Como executar localmente
+## Rodar com Docker (recomendado)
+
+Sobe a stack inteira — **Ollama + API (FastAPI) + frontend (Next.js)** — com um
+comando. O Ollama roda no próprio Docker e baixa o modelo no primeiro start.
+
+```bash
+docker compose up -d --build
+```
+
+- Interface: http://localhost:3000
+- API: http://localhost:8000/api/health
+- Modelo: defina `OLLAMA_MODEL` (padrão `llama3`), ex.:
+  `OLLAMA_MODEL=llama3 docker compose up -d --build`
+- **GPU NVIDIA:** descomente o bloco `deploy` do serviço `ollama` no
+  `docker-compose.yml` (requer o NVIDIA Container Toolkit).
+
+Serviços: `ollama` (LLM local), `ollama-pull` (baixa o modelo uma vez), `api`
+(aponta para `http://ollama:11434` via `ANE_OLLAMA_BASE_URL`) e `web`. O estado
+(fila de ideias e Kanban) persiste no volume `ane_output`.
+
+## Interface web (Next.js) + API (FastAPI)
+
+Além do painel Streamlit, o projeto tem uma interface **Next.js** (`web/`) com
+duas abas, servida pela API em `server.py`:
+
+- **💡 Ideias** — solte um prompt e escolha o modo: **Manual (Tinder)**, onde
+  você aprova/rejeita cada ideia (❌/♥, ou setas ← →) antes de postar; ou
+  **Auto (prompta-e-posta)**, em que as ideias já entram aprovadas e a postagem
+  fica num gancho para as APIs oficiais.
+- **🗂️ Kanban** — planejamento em sprints do projeto (arrastar-e-soltar,
+  adicionar/remover cartões), rumo a finalizar e publicar.
+
+Sem Docker, em desenvolvimento (dois terminais):
+
+```bash
+# 1) API (mesma máquina do Ollama)
+pip install -r requirements.txt
+uvicorn server:app --reload --port 8000
+
+# 2) Frontend
+cd web && npm install && npm run dev
+```
+
+## Como executar localmente (CLI / Streamlit)
 
 1. **Suba o Ollama** na sua máquina, usando a GPU:
 

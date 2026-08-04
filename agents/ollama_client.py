@@ -13,9 +13,15 @@ Assim, `LocalNicheAgent` e `ScriptWriterAgent` não repetem esse encanamento.
 """
 
 import json
+import os
 from pathlib import Path
 
 import requests
+
+# Padrões usados quando não há config.json nem variáveis de ambiente.
+_DEFAULT_BASE_URL = "http://localhost:11434"
+_DEFAULT_MODEL = "llama3"
+_DEFAULT_TIMEOUT = 120
 
 
 class OllamaError(RuntimeError):
@@ -34,14 +40,36 @@ class OllamaClient:
 
     @staticmethod
     def _load_config(config_path: str) -> dict:
+        """Carrega a config do arquivo e sobrepõe com variáveis de ambiente.
+
+        As variáveis `ANE_OLLAMA_BASE_URL`, `ANE_OLLAMA_MODEL` e
+        `ANE_REQUEST_TIMEOUT` têm prioridade — é assim que o docker-compose
+        aponta a API para o serviço `ollama` (http://ollama:11434). Se não
+        houver `config.json` nem a variável de base URL, o erro amigável de
+        sempre é levantado (fluxo local via CLI/painel).
+        """
         path = Path(config_path)
-        if not path.exists():
+        cfg: dict = {}
+        if path.exists():
+            with path.open("r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        elif not os.environ.get("ANE_OLLAMA_BASE_URL"):
             raise FileNotFoundError(
                 f"Arquivo de configuração '{config_path}' não encontrado. "
                 "Copie 'config.example.json' para 'config.json' e ajuste os valores."
             )
-        with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+
+        cfg.setdefault("ollama_base_url", _DEFAULT_BASE_URL)
+        cfg.setdefault("ollama_model", _DEFAULT_MODEL)
+        cfg.setdefault("request_timeout", _DEFAULT_TIMEOUT)
+
+        if os.environ.get("ANE_OLLAMA_BASE_URL"):
+            cfg["ollama_base_url"] = os.environ["ANE_OLLAMA_BASE_URL"]
+        if os.environ.get("ANE_OLLAMA_MODEL"):
+            cfg["ollama_model"] = os.environ["ANE_OLLAMA_MODEL"]
+        if os.environ.get("ANE_REQUEST_TIMEOUT"):
+            cfg["request_timeout"] = int(os.environ["ANE_REQUEST_TIMEOUT"])
+        return cfg
 
     def generate(self, prompt: str) -> str:
         """Envia um prompt ao Ollama local e devolve o texto gerado."""

@@ -1,0 +1,4 @@
+# Dependências da API (imagem Docker enxuta — sem streamlit).
+fastapi>=0.111
+uvicorn[standard]>=0.30
+requests>=2.31

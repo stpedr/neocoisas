@@ -1,0 +1,85 @@
+# Auto Niche Engine — stack completa em Docker.
+#
+#   docker compose up -d --build
+#
+# Serviços:
+#   - ollama : servidor de LLM local (baixa o modelo no primeiro start)
+#   - api    : FastAPI (server.py) — aponta para o ollama do compose
+#   - web    : frontend Next.js
+#
+# Acesso:  web  -> http://localhost:3000
+#          api  -> http://localhost:8000/api/health
+#
+# Modelo: defina OLLAMA_MODEL (padrão llama3). Ex.: OLLAMA_MODEL=llama3 docker compose up -d
+# GPU NVIDIA: descomente o bloco `deploy` do serviço ollama (requer NVIDIA Container Toolkit).
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ane-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+    # --- GPU NVIDIA (opcional) ---------------------------------------------
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # Baixa o modelo uma vez, quando o ollama fica saudável.
+  ollama-pull:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c", "ollama pull ${OLLAMA_MODEL:-llama3}"]
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: ane-api
+    ports:
+      - "8000:8000"
+    environment:
+      ANE_OLLAMA_BASE_URL: http://ollama:11434
+      ANE_OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
+      ANE_CORS_ORIGINS: http://localhost:3000
+      ANE_QUEUE: /app/output/review_queue.json
+      ANE_BOARD: /app/output/board.json
+    volumes:
+      - ane_output:/app/output
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    container_name: ane-web
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  ollama_models:
+  ane_output:

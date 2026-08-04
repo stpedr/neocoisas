@@ -1,0 +1,19 @@
+# Contexto de build da API (Dockerfile.api).
+.git
+.gitignore
+__pycache__
+*.pyc
+.pytest_cache
+.venv
+venv
+
+# Frontend tem seu próprio build/contexto.
+web
+
+# Estado local e config (a API usa variáveis de ambiente no compose).
+output
+config.json
+
+# Docs e node
+*.md
+node_modules
