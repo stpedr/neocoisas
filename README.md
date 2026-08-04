@@ -20,8 +20,11 @@ monta vídeos curtos localmente com FFmpeg.
 [Prompt do Criador / Nicho Ativo]
               │
               ▼
-   Agente Roteirista/Estrategista  (Ollama, GPU local)
-              │
+   Agente Estrategista de Nicho  (Ollama, GPU local)
+              │  (tópicos em alta)
+              ▼
+   Agente Roteirista cena-a-cena  (Ollama, GPU local)
+              │  (lista de Scene → VideoJob)
               ▼
    Pipeline de Vídeo  (prompts visuais → mídia → TTS → FFmpeg)
               │
@@ -36,12 +39,16 @@ neocoisas/
 ├── main.py                   # Orquestrador central (entrada via CLI)
 ├── config.example.json       # Modelo de configuração (copie para config.json)
 ├── requirements.txt
+├── requirements-dev.txt      # Dependências de teste (pytest)
 ├── agents/
 │   ├── __init__.py
+│   ├── ollama_client.py      # Cliente compartilhado do Ollama (query + parse JSON)
 │   ├── niche_creator.py      # Agente de estratégia de nicho (Ollama)
+│   ├── script_writer.py      # Agente roteirista cena-a-cena (Ollama)
 │   └── video_pipeline.py     # Pipeline de geração de vídeo (esqueleto)
-└── dashboard/
-    └── app.py                # Painel do Criador (Streamlit)
+├── dashboard/
+│   └── app.py                # Painel do Criador (Streamlit)
+└── tests/                    # Testes offline (parsing de JSON e de cenas)
 ```
 
 ## Como executar localmente
@@ -67,8 +74,9 @@ neocoisas/
 4. **Rode pela linha de comando**:
 
    ```bash
-   python main.py                      # usa o nicho de config.json
-   python main.py "Gatos Astronautas"  # sobrescreve o nicho pontualmente
+   python main.py                       # usa o nicho de config.json
+   python main.py "Gatos Astronautas"   # sobrescreve o nicho pontualmente
+   python main.py "Gatos" --script      # plano + roteiro do 1º tópico em alta
    ```
 
    **ou abra o painel**:
@@ -109,3 +117,28 @@ pipeline.render(job)
 ```
 
 Requer o **FFmpeg** instalado e disponível no `PATH`.
+
+## Agente roteirista (cena-a-cena)
+
+`agents/script_writer.py` transforma um tópico em alta num roteiro concreto:
+uma lista de `Scene` (narração + prompt visual + duração) pronta para virar um
+`VideoJob`. Ele conversa com o mesmo Ollama local; a conversão da resposta em
+cenas (`build_scenes`) é pura e coberta por testes.
+
+```python
+from agents.script_writer import ScriptWriterAgent
+
+agent = ScriptWriterAgent()
+job = agent.build_video_job("Gatos Astronautas", num_scenes=5)  # -> VideoJob
+# job.scenes já pode ser passado ao VideoPipeline.render(job)
+```
+
+## Testes
+
+Os testes cobrem o parsing de JSON do Ollama e a montagem de cenas — tudo
+**offline**, sem precisar do Ollama no ar:
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```

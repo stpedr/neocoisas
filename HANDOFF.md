@@ -40,36 +40,49 @@ regras de cada rede.
 
 ```
 neocoisas/
-├── main.py                   # Orquestrador CLI: roda a estratégia de nicho
+├── main.py                   # Orquestrador CLI: estratégia + (--script) roteiro
 ├── config.example.json       # Modelo de config (copiar → config.json)
 ├── requirements.txt          # streamlit, requests
+├── requirements-dev.txt      # pytest (testes)
 ├── .gitignore                # ignora config.json, output/, __pycache__
 ├── README.md
 ├── HANDOFF.md                # este arquivo
 ├── agents/
 │   ├── __init__.py
+│   ├── ollama_client.py      # ✅ Cliente Ollama compartilhado (query + parse JSON)
 │   ├── niche_creator.py      # ✅ Agente de estratégia via Ollama (GPU local)
+│   ├── script_writer.py      # ✅ Agente roteirista cena-a-cena (Ollama)
 │   └── video_pipeline.py     # ✅ Esqueleto de montagem de vídeo (FFmpeg)
-└── dashboard/
-    └── app.py                # ✅ Painel do Criador (Streamlit)
+├── dashboard/
+│   └── app.py                # ✅ Painel do Criador (Streamlit)
+└── tests/                    # ✅ Testes offline (14) de parsing JSON e de cenas
 ```
 
 ### Detalhes do que já está pronto
 
-- **`agents/niche_creator.py`** — `LocalNicheAgent`: conecta no Ollama local,
-  monta o prompt de estratégia e devolve JSON (`account_profile`,
-  `trending_topics`, `hashtags`). Melhorias sobre o manual: timeout
-  configurável, erros claros via `OllamaError` (sem traceback), extração de
-  JSON tolerante a cercas de código e texto extra.
+- **`agents/ollama_client.py`** — `OllamaClient`: encanamento comum a todos os
+  agentes (carrega config, `generate()` com erros claros via `OllamaError`,
+  `extract_json()` tolerante a cercas de código, texto extra e a topo `{}`/`[]`).
+- **`agents/niche_creator.py`** — `LocalNicheAgent`: usa o `OllamaClient` para
+  gerar o plano de estratégia em JSON (`account_profile`, `trending_topics`,
+  `hashtags`). `OllamaError` segue reexportado daqui (compat. com `main.py`).
+- **`agents/script_writer.py`** — `ScriptWriterAgent`: transforma um tópico num
+  roteiro cena-a-cena. `write_script()` devolve `list[Scene]`; `build_video_job()`
+  já embrulha num `VideoJob` pronto para o `VideoPipeline`. `build_scenes()` é a
+  função pura (sem Ollama) que normaliza os campos e é coberta por testes.
 - **`agents/video_pipeline.py`** — `VideoPipeline` + dataclasses `Scene` e
   `VideoJob`. Sequência real com FFmpeg: imagem + narração → clipe →
   concatenação em 1080×1920. Geradores de **imagem** e **voz** são pontos de
   extensão (`hooks`) a conectar. Ainda **não** tem geradores reais plugados.
 - **`dashboard/app.py`** — painel Streamlit: define nicho, salva config,
   dispara geração de estratégia, mostra o JSON.
-- **`main.py`** — entrada CLI: `python main.py "Nicho"`.
+- **`main.py`** — entrada CLI: `python main.py "Nicho"`. Com `--script`, encadeia
+  estratégia → roteiro do 1º `trending_topic`.
+- **`tests/`** — 14 testes offline (pytest) do parsing de JSON (`OllamaClient`)
+  e da montagem de cenas (`build_scenes`). Rodar: `pytest`.
 
-Estado: tudo compila; CLI falha de forma limpa quando o Ollama não está no ar.
+Estado: tudo compila; os testes passam (`14 passed`); CLI falha de forma limpa
+quando o Ollama não está no ar.
 
 ## 5. Ponto de atenção: Ollama roda no PC do usuário
 
@@ -92,15 +105,19 @@ nuvem e deixado pronto.
 
 ## 6. Próximos passos (candidatos)
 
-- [ ] **Agente de roteiro cena-a-cena** que transforma um `trending_topic` em
-      uma lista de `Scene` (narração + prompt visual) pronta para o `VideoJob`.
+- [x] **Agente de roteiro cena-a-cena** — feito em `agents/script_writer.py`
+      (`ScriptWriterAgent` → `list[Scene]` / `VideoJob`).
+- [x] **Testes automatizados dos parses de JSON** — feito em `tests/`
+      (`OllamaClient.extract_json` e `build_scenes`).
 - [ ] **Gerador de imagem plugável** (ex: Stable Diffusion local / API) no hook
       `image_generator`.
 - [ ] **Gerador de voz plugável** (TTS: ElevenLabs ou alternativa local) no
       hook `voice_generator`.
 - [ ] **Legendas/burn-in** de texto no vídeo (drawtext do FFmpeg).
 - [ ] **Publicação via API oficial** de uma plataforma (começar por uma só).
-- [ ] Testes automatizados dos parses de JSON e do fluxo do pipeline.
+- [ ] Testes do **fluxo do pipeline** (render/concat) — hoje só o parsing tem
+      cobertura; falta um teste de integração do `VideoPipeline` (mockando
+      FFmpeg ou os geradores).
 
 ## 7. Convenções
 
