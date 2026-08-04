@@ -371,4 +371,47 @@ SEED_CARDS: list[dict] = [
         "sprint": "Sprint 8 · Métricas & Escala",
         "labels": ["backend", "frontend", "integração"],
     },
+    # -------------------- Sprint 9 (troca de modelos) -----------------------
+    {
+        "title": "Abstração de provedor de LLM (texto)",
+        "description": "Generalizar o padrão de agents/media para o texto: "
+        "get_text_generator(config) com providers (ollama padrão + futuros "
+        "gemini/openai/anthropic). OllamaClient vira uma implementação do contrato.",
+        "column": "backlog",
+        "sprint": "Sprint 9 · Troca de modelos",
+        "labels": ["backend"],
+    },
+    {
+        "title": "Registry unificado de modelos",
+        "description": "Ponto único (config + GET /api/models) descrevendo cada "
+        "capacidade (texto/imagem/voz/vídeo), providers e modelos, com os padrões "
+        "atuais. Base para validar seleções e alimentar a UI.",
+        "column": "backlog",
+        "sprint": "Sprint 9 · Troca de modelos",
+        "labels": ["backend"],
+    },
+    {
+        "title": "Override de modelo por agente",
+        "description": "Permitir modelo diferente por agente (ex.: crítico mais forte, "
+        "ideias mais rápido) sobrepondo o padrão global.",
+        "column": "backlog",
+        "sprint": "Sprint 9 · Troca de modelos",
+        "labels": ["backend"],
+    },
+    {
+        "title": "Descoberta de modelos disponíveis",
+        "description": "Listar modelos do Ollama (/api/tags) e dos provedores "
+        "configurados para popular a UI de seleção.",
+        "column": "backlog",
+        "sprint": "Sprint 9 · Troca de modelos",
+        "labels": ["backend", "integração"],
+    },
+    {
+        "title": "Painel de troca de modelos (UI)",
+        "description": "Aba de configurações no frontend para escolher provider+modelo "
+        "por capacidade (texto/imagem/voz/vídeo) sem editar .env/config na mão.",
+        "column": "backlog",
+        "sprint": "Sprint 9 · Troca de modelos",
+        "labels": ["frontend"],
+    },
 ]
