@@ -1,6 +1,9 @@
 # Configuração local com credenciais/nicho ativo
 config.json
 
+# Variáveis de ambiente (chaves de API)
+.env
+
 # Saídas de renderização
 output/
 

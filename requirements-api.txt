@@ -1,0 +1,14 @@
+# Dependências da API (imagem Docker enxuta — sem streamlit).
+fastapi>=0.111
+uvicorn[standard]>=0.30
+requests>=2.31
+
+# Agendamento de postagens (job periódico na API).
+apscheduler>=3.10
+
+# Gemini (imagem via Imagen, vídeo via Veo) — usado só se provider=gemini.
+google-genai>=0.3
+
+# Publicação no YouTube (Data API v3) — usada só se ANE_PUBLISHER=youtube.
+google-api-python-client>=2.100
+google-auth>=2.30

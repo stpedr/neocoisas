@@ -1,8 +1,22 @@
 {
   "creator_name": "Admin",
   "active_niche": "League of Legends Memes",
+  "text_provider": "ollama",
   "ollama_model": "llama3",
   "ollama_base_url": "http://localhost:11434",
+  "gemini_text_model": "gemini-1.5-flash",
   "request_timeout": 120,
-  "platforms_target": ["tiktok", "instagram", "youtube_shorts"]
+  "platforms_target": ["tiktok", "instagram", "youtube_shorts"],
+  "image_provider": "placeholder",
+  "voice_provider": "placeholder",
+  "video_provider": "none",
+  "burn_subtitles": true,
+  "critic_enabled": false,
+  "critic_min_score": 6.0,
+  "editor_enabled": false,
+  "editor_max_iterations": 2,
+  "agent_models": {},
+  "music_path": "",
+  "music_volume": 0.2,
+  "publisher": "none"
 }

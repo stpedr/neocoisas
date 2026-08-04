@@ -13,10 +13,39 @@ FFmpeg, que precisa estar instalado e disponível no PATH.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
+import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
+
+# Fontes comuns para o burn-in de legendas (drawtext precisa de um fontfile).
+_FONT_CANDIDATES = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # Debian/Ubuntu (Docker)
+    "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+    "/Library/Fonts/Arial.ttf",                          # macOS
+    "C:/Windows/Fonts/arial.ttf",                        # Windows
+]
+
+
+def _detect_font() -> str | None:
+    """Acha um arquivo de fonte para as legendas (env tem prioridade)."""
+    env_font = os.environ.get("ANE_SUBTITLE_FONT")
+    candidates = [env_font, *_FONT_CANDIDATES] if env_font else _FONT_CANDIDATES
+    for path in candidates:
+        if path and Path(path).exists():
+            return path
+    return None
+
+
+def _ff_escape(path) -> str:
+    """Escapa um caminho para uso dentro de um filtro FFmpeg (drawtext).
+
+    Usa barras normais e escapa o `:` do drive do Windows (ex: `C:/...` →
+    `C\\:/...`), que o parser de filtro interpretaria como separador de opção.
+    """
+    return Path(path).as_posix().replace(":", r"\:")
 
 
 @dataclass
@@ -45,12 +74,36 @@ class VideoJob:
 class VideoPipeline:
     """Coordena as etapas de produção de um vídeo curto localmente."""
 
-    def __init__(self, image_generator=None, voice_generator=None):
+    def __init__(
+        self,
+        image_generator=None,
+        voice_generator=None,
+        scene_video_generator=None,
+        burn_subtitles: bool = False,
+        font_path: str | None = None,
+        music_path: str | None = None,
+        music_volume: float = 0.2,
+    ):
         # Pontos de extensão: funções que você fornece para gerar mídia.
         #   image_generator(visual_prompt: str, dest: Path) -> Path
         #   voice_generator(narration: str, dest: Path) -> Path
+        #   scene_video_generator(visual_prompt: str, dest: Path) -> Path (.mp4)
+        # Se `scene_video_generator` for fornecido, cada cena vira um clipe de
+        # vídeo (ex: Veo/Gemini) em vez de uma imagem estática.
         self.image_generator = image_generator
         self.voice_generator = voice_generator
+        self.scene_video_generator = scene_video_generator
+        # Legendas queimadas no vídeo (drawtext). Requer um arquivo de fonte
+        # existente; se a fonte informada não existir, tenta auto-detectar, e
+        # se nada for encontrado o burn-in é ignorado silenciosamente.
+        if font_path and Path(font_path).exists():
+            self.font_path = font_path
+        else:
+            self.font_path = _detect_font()
+        self.burn_subtitles = burn_subtitles and self.font_path is not None
+        # Trilha sonora de fundo (opcional): só usa se o arquivo existir.
+        self.music_path = music_path if (music_path and Path(music_path).exists()) else None
+        self.music_volume = music_volume
         self._check_ffmpeg()
 
     @staticmethod
@@ -69,12 +122,63 @@ class VideoPipeline:
 
         rendered_clips: list[Path] = []
         for idx, scene in enumerate(job.scenes):
-            image_path = self._generate_image(scene, assets_dir, idx)
             audio_path = self._generate_voice(scene, assets_dir, idx)
-            clip_path = self._compose_clip(scene, image_path, audio_path, assets_dir, idx)
+            if self.scene_video_generator is not None:
+                video_src = self._generate_scene_video(scene, assets_dir, idx)
+                clip_path = self._compose_clip_from_video(
+                    scene, video_src, audio_path, assets_dir, idx
+                )
+            else:
+                image_path = self._generate_image(scene, assets_dir, idx)
+                clip_path = self._compose_clip(scene, image_path, audio_path, assets_dir, idx)
             rendered_clips.append(clip_path)
 
-        return self._concat_clips(rendered_clips, job.output_path)
+        final = self._concat_clips(rendered_clips, job.output_path)
+        if self.music_path:
+            final = self._mix_music(final)
+        return final
+
+    def _mix_music(self, video_path: Path) -> Path:
+        """Mixa uma trilha de fundo (em loop, volume reduzido) sob a narração."""
+        mixed = video_path.parent / f"{video_path.stem}_music.mp4"
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(video_path),
+            "-stream_loop", "-1", "-i", str(self.music_path),
+            "-filter_complex",
+            f"[1:a]volume={self.music_volume}[bg];"
+            "[0:a][bg]amix=inputs=2:duration=first:dropout_transition=0[a]",
+            "-map", "0:v", "-map", "[a]",
+            "-c:v", "copy", "-c:a", "aac", "-shortest",
+            str(mixed),
+        ]
+        subprocess.run(cmd, check=True, capture_output=True)
+        import os as _os
+        _os.replace(mixed, video_path)
+        return video_path
+
+    def _generate_scene_video(self, scene: Scene, assets_dir: Path, idx: int) -> Path:
+        dest = assets_dir / f"scenevid_{idx:02d}.mp4"
+        return self.scene_video_generator(scene.visual_prompt, dest)
+
+    def _compose_clip_from_video(
+        self, scene: Scene, video_path: Path, audio_path: Path, assets_dir: Path, idx: int
+    ) -> Path:
+        """Combina um clipe de vídeo (gerado) com a narração e a legenda."""
+        clip_path = assets_dir / f"clip_{idx:02d}.mp4"
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(video_path),
+            "-i", str(audio_path),
+            "-map", "0:v:0", "-map", "1:a:0",
+            "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k",
+            "-pix_fmt", "yuv420p",
+            "-shortest",
+            "-vf", self._build_vf(scene, assets_dir, idx),
+            str(clip_path),
+        ]
+        subprocess.run(cmd, check=True, capture_output=True)
+        return clip_path
 
     def _generate_image(self, scene: Scene, assets_dir: Path, idx: int) -> Path:
         dest = assets_dir / f"scene_{idx:02d}.png"
@@ -94,6 +198,27 @@ class VideoPipeline:
             )
         return self.voice_generator(scene.narration, dest)
 
+    def _build_vf(self, scene: Scene, assets_dir: Path, idx: int) -> str:
+        """Monta o filtro de vídeo (escala/crop + legenda opcional)."""
+        vf = (
+            "scale=1080:1920:force_original_aspect_ratio=increase,"
+            "crop=1080:1920"
+        )
+        if self.burn_subtitles and scene.narration.strip():
+            # `textfile` evita quase toda a dor de escape do drawtext.
+            sub_file = assets_dir / f"sub_{idx:02d}.txt"
+            wrapped = "\n".join(textwrap.wrap(scene.narration.strip(), width=32))
+            sub_file.write_text(wrapped or scene.narration.strip(), encoding="utf-8")
+            drawtext = (
+                f"drawtext=fontfile='{_ff_escape(self.font_path)}':"
+                f"textfile='{_ff_escape(sub_file)}':"
+                "fontcolor=white:fontsize=46:line_spacing=8:"
+                "box=1:boxcolor=black@0.55:boxborderw=18:"
+                "x=(w-text_w)/2:y=h-text_h-140"
+            )
+            vf = f"{vf},{drawtext}"
+        return vf
+
     def _compose_clip(
         self, scene: Scene, image_path: Path, audio_path: Path, assets_dir: Path, idx: int
     ) -> Path:
@@ -107,8 +232,7 @@ class VideoPipeline:
             "-c:a", "aac", "-b:a", "192k",
             "-pix_fmt", "yuv420p",
             "-shortest",
-            "-vf", "scale=1080:1920:force_original_aspect_ratio=increase,"
-                   "crop=1080:1920",
+            "-vf", self._build_vf(scene, assets_dir, idx),
             str(clip_path),
         ]
         subprocess.run(cmd, check=True, capture_output=True)

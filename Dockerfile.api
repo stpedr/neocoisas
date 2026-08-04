@@ -1,0 +1,24 @@
+# API FastAPI do Auto Niche Engine.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# FFmpeg (render) + fonte DejaVu (legendas/burn-in via drawtext).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
+# Dependências primeiro (melhor cache de camadas).
+COPY requirements-api.txt .
+RUN pip install --no-cache-dir -r requirements-api.txt
+
+# Código da aplicação (o .dockerignore exclui web/, output/, etc.).
+COPY . .
+
+# Diretório de estado persistido (montado como volume no compose).
+RUN mkdir -p /app/output
+
+EXPOSE 8000
+
+# 0.0.0.0 para ser acessível fora do container.
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
