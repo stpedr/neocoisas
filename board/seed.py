@@ -243,6 +243,15 @@ SEED_CARDS: list[dict] = [
         "labels": ["backend", "integração"],
     },
     {
+        "title": "Agente revisor/editor de roteiros (loop de melhoria)",
+        "description": "Além do quality gate (nota), um agente reescreve o roteiro a "
+        "partir da crítica e re-avalia em loop até atingir a nota mínima — em vez de "
+        "só rejeitar. Melhora a taxa de aproveitamento das ideias.",
+        "column": "backlog",
+        "sprint": "Sprint 6 · Automações",
+        "labels": ["backend", "conteúdo"],
+    },
+    {
         "title": "Publisher Instagram Reels",
         "description": "publishers/instagram.py (Graph API) — scaffold; falta URL "
         "pública do vídeo + chamada final. IG_USER_ID/IG_ACCESS_TOKEN.",
