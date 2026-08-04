@@ -108,7 +108,7 @@ def run_scheduled_posts(
             except Exception as exc:  # noqa: BLE001
                 errors += 1
                 idea.note = f"Falha ao renderizar: {exc}"
-                queue._save()
+                queue.update(idea)
                 detalhes.append({"id": idea.id, "status": "render_error", "info": str(exc)})
                 continue
 
@@ -116,16 +116,18 @@ def run_scheduled_posts(
             try:
                 url = publisher(idea)
                 idea.note = f"Postado: {url}" if url else "Postado."
+                queue.update(idea)
                 queue.mark_posted(idea.id)
                 posted += 1
                 detalhes.append({"id": idea.id, "status": "posted", "info": url})
             except Exception as exc:  # noqa: BLE001
                 errors += 1
                 idea.note = f"Falha ao postar: {exc}"
-                queue._save()
+                queue.update(idea)
                 detalhes.append({"id": idea.id, "status": "post_error", "info": str(exc)})
         elif simulate:
             idea.note = "Postagem simulada (sem publisher configurado)."
+            queue.update(idea)
             queue.mark_posted(idea.id)
             simulated += 1
             detalhes.append({"id": idea.id, "status": "simulated", "info": None})

@@ -78,6 +78,20 @@ def test_persistencia(tmp_path):
     assert b2.all()[0].column == "review"
 
 
+def test_migra_json_legado_para_sqlite(tmp_path):
+    import json
+
+    path = tmp_path / "b.json"
+    path.write_text(
+        json.dumps({"cards": [{"id": "c1", "title": "Legado", "column": "todo"}]}),
+        encoding="utf-8",
+    )
+    b = BoardStore(path, auto_seed=False)  # migra e não semeia
+    assert len(b.all()) == 1
+    assert b.get("c1").title == "Legado"
+    assert path.open("rb").read(1) != b"{"
+
+
 def test_seed_force_substitui(tmp_path):
     b = BoardStore(tmp_path / "b.json", auto_seed=False)
     b.add("Manual")

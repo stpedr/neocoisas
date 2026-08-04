@@ -368,8 +368,7 @@ def refine_idea(idea_id: str) -> dict:
     idea.scenes = result["scenes"]
     idea.score = result["score"]
     idea.note = f"Editado: nota {result['score']} em {result['iterations']} iteração(ões)."
-    queue._save()
-    return idea.to_dict()
+    return queue.update(idea).to_dict()
 
 
 @app.post("/api/ideas/{idea_id}/titles")

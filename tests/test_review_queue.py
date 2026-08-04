@@ -80,6 +80,28 @@ def test_attach_video(tmp_path):
     assert q.get(idea.id).video_path == "output/x.mp4"
 
 
+def test_migra_json_legado_para_sqlite(tmp_path):
+    import json
+
+    path = tmp_path / "q.json"
+    # Escreve um arquivo JSON no formato antigo.
+    legado = {
+        "ideas": [
+            {"id": "abc123", "title": "legada", "prompt": "p", "status": "approved",
+             "scenes": [{"narration": "n", "visual_prompt": "v", "duration_s": 3.0}]}
+        ]
+    }
+    path.write_text(json.dumps(legado), encoding="utf-8")
+
+    q = ReviewQueue(path)  # deve migrar para SQLite
+    assert len(q.all()) == 1
+    idea = q.get("abc123")
+    assert idea.title == "legada" and idea.status == "approved"
+    assert idea.scenes[0].narration == "n"
+    # O arquivo agora é um banco SQLite (header binário, não '{').
+    assert path.open("rb").read(1) != b"{"
+
+
 def test_clear_decided_mantem_pendentes_e_aprovadas(tmp_path):
     q = ReviewQueue(tmp_path / "q.json")
     pend = q.add(_idea("pend"))

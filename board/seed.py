@@ -22,7 +22,7 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Persistência em SQLite',
         'description': 'Migrar fila/board dos JSON para SQLite mantendo a interface pública. Aceite: testes verdes; escrita/leitura concorrente sem corrupção; migra o JSON existente. Mitigação atual: escrita atômica (tmp+os.replace).',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 7 · Robustez',
         'labels': ['backend', 'prioridade:alta'],
     },

@@ -115,11 +115,12 @@ def post_approved(
         try:
             result = publisher(idea)
             idea.note = f"Postado: {result}" if result else "Postado."
-            queue.mark_posted(idea.id)
+            queue.update(idea)              # persiste a nota
+            queue.mark_posted(idea.id)      # relê (com nota) e marca postada
             posted.append(idea)
         except Exception as exc:  # noqa: BLE001 - falha de rede/API não deve abortar o lote
             idea.note = f"Falha ao postar: {exc}"
-            queue._save()  # persiste a nota mesmo sem mudar o status
+            queue.update(idea)              # persiste a nota mesmo sem mudar status
     return posted
 
 

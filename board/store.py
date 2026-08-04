@@ -1,14 +1,15 @@
-"""Persistência do quadro Kanban em JSON.
+"""Persistência do quadro Kanban em SQLite.
 
-Guarda os cartões em `output/board.json`. Na primeira leitura de um board vazio,
-semeia automaticamente com o planejamento de sprints (`board.seed`), para o
-quadro nunca aparecer em branco.
+Guarda os cartões em SQLite (por padrão `output/board.json`, migrando um JSON
+legado no mesmo caminho). Na primeira leitura de um board vazio, semeia
+automaticamente com o planejamento de sprints (`board.seed`). A interface pública
+é idêntica à versão em JSON.
 """
 
 from __future__ import annotations
 
 import json
-import os
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -21,31 +22,64 @@ def _now_iso() -> str:
 
 
 class BoardStore:
-    """Coleção persistente de `Card` com operações de quadro."""
+    """Coleção persistente de `Card` com operações de quadro (SQLite)."""
 
     def __init__(self, path: str | Path = "output/board.json", auto_seed: bool = True):
         self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         self._cards: list[Card] = []
+        self._migrate_legacy_json()
         self._load()
         if auto_seed and not self._cards:
             self.seed()
 
     # ------------------------------------------------------------------ IO ---
+    def _conn(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.path, timeout=10)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("CREATE TABLE IF NOT EXISTS cards (id TEXT PRIMARY KEY, data TEXT)")
+        return conn
+
+    def _migrate_legacy_json(self) -> None:
+        if not self.path.exists() or self.path.stat().st_size == 0:
+            return
+        with self.path.open("rb") as f:
+            head = f.read(1)
+        if head != b"{":  # já é SQLite
+            return
+        data = json.loads(self.path.read_text(encoding="utf-8") or "{}")
+        cards = data.get("cards", [])
+        self.path.unlink()
+        conn = self._conn()
+        try:
+            conn.executemany(
+                "INSERT OR REPLACE INTO cards VALUES (?,?)",
+                [(c["id"], json.dumps(c, ensure_ascii=False)) for c in cards],
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
     def _load(self) -> None:
-        if self.path.exists():
-            with self.path.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-            self._cards = [Card.from_dict(c) for c in data.get("cards", [])]
-        else:
-            self._cards = []
+        conn = self._conn()
+        try:
+            rows = conn.execute("SELECT data FROM cards").fetchall()
+        finally:
+            conn.close()
+        self._cards = [Card.from_dict(json.loads(r["data"])) for r in rows]
 
     def _save(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"cards": [c.to_dict() for c in self._cards]}
-        tmp = self.path.with_suffix(self.path.suffix + ".tmp")
-        with tmp.open("w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2, ensure_ascii=False)
-        os.replace(tmp, self.path)
+        conn = self._conn()
+        try:
+            conn.execute("DELETE FROM cards")
+            conn.executemany(
+                "INSERT INTO cards VALUES (?,?)",
+                [(c.id, json.dumps(c.to_dict(), ensure_ascii=False)) for c in self._cards],
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
     # ------------------------------------------------------------- consultas -
     def all(self) -> list[Card]:

@@ -1,17 +1,18 @@
-"""Fila de revisão de ideias, persistida em JSON.
+"""Fila de revisão de ideias, persistida em SQLite.
 
 Guarda as ideias geradas e seus estados. É a fonte de verdade tanto do modo
 manual ("Tinder": aprovar/rejeitar) quanto do automático (prompta-e-posta).
 
-Persistência simples em um arquivo JSON (por padrão em `output/`, que está no
-`.gitignore`). Cada mutação salva no disco, para o painel e a CLI enxergarem o
-mesmo estado.
+Persistência em SQLite (por padrão em `output/`, no `.gitignore`), com WAL para
+suportar leitura/escrita concorrente sem corrupção. Um arquivo JSON legado no
+mesmo caminho é **migrado automaticamente** na primeira abertura. A interface
+pública é idêntica à versão anterior.
 """
 
 from __future__ import annotations
 
 import json
-import os
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -23,73 +24,143 @@ def _now_iso() -> str:
 
 
 class ReviewQueue:
-    """Coleção persistente de `Idea` com operações de aprovação."""
+    """Coleção persistente de `Idea` com operações de aprovação (SQLite)."""
 
     def __init__(self, path: str | Path = "output/review_queue.json"):
         self.path = Path(path)
-        self._ideas: list[Idea] = []
-        self._load()
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._migrate_legacy_json()
+        self._init_db()
 
     # ------------------------------------------------------------------ IO ---
-    def _load(self) -> None:
-        if self.path.exists():
-            with self.path.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-            self._ideas = [Idea.from_dict(d) for d in data.get("ideas", [])]
-        else:
-            self._ideas = []
+    def _conn(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.path, timeout=10)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        return conn
 
-    def _save(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"ideas": [idea.to_dict() for idea in self._ideas]}
-        # Escrita atômica: grava em tmp e substitui, evitando arquivo corrompido
-        # em caso de escrita concorrente/interrompida.
-        tmp = self.path.with_suffix(self.path.suffix + ".tmp")
-        with tmp.open("w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2, ensure_ascii=False)
-        os.replace(tmp, self.path)
+    def _init_db(self) -> None:
+        conn = self._conn()
+        try:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS ideas ("
+                "id TEXT PRIMARY KEY, status TEXT, created_at TEXT, data TEXT)"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def _migrate_legacy_json(self) -> None:
+        """Se o arquivo for JSON legado, importa para SQLite no mesmo caminho."""
+        if not self.path.exists() or self.path.stat().st_size == 0:
+            return
+        with self.path.open("rb") as f:
+            head = f.read(1)
+        if head != b"{":  # já é SQLite (header binário) — nada a fazer
+            return
+        data = json.loads(self.path.read_text(encoding="utf-8") or "{}")
+        ideas = data.get("ideas", [])
+        self.path.unlink()  # remove o JSON para o SQLite recriar no mesmo caminho
+        self._init_db()
+        if ideas:
+            conn = self._conn()
+            try:
+                conn.executemany(
+                    "INSERT OR REPLACE INTO ideas VALUES (?,?,?,?)",
+                    [
+                        (d["id"], d.get("status"), d.get("created_at"),
+                         json.dumps(d, ensure_ascii=False))
+                        for d in ideas
+                    ],
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+    @staticmethod
+    def _to_idea(row: sqlite3.Row) -> Idea:
+        return Idea.from_dict(json.loads(row["data"]))
+
+    def _put(self, idea: Idea) -> None:
+        conn = self._conn()
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO ideas VALUES (?,?,?,?)",
+                (idea.id, idea.status, idea.created_at,
+                 json.dumps(idea.to_dict(), ensure_ascii=False)),
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
     # ------------------------------------------------------------- consultas -
     def all(self) -> list[Idea]:
-        return list(self._ideas)
+        conn = self._conn()
+        try:
+            rows = conn.execute("SELECT data FROM ideas ORDER BY rowid").fetchall()
+        finally:
+            conn.close()
+        return [self._to_idea(r) for r in rows]
 
     def get(self, idea_id: str) -> Idea:
-        for idea in self._ideas:
-            if idea.id == idea_id:
-                return idea
-        raise KeyError(f"Ideia '{idea_id}' não encontrada na fila.")
+        conn = self._conn()
+        try:
+            row = conn.execute(
+                "SELECT data FROM ideas WHERE id = ?", (idea_id,)
+            ).fetchone()
+        finally:
+            conn.close()
+        if row is None:
+            raise KeyError(f"Ideia '{idea_id}' não encontrada na fila.")
+        return self._to_idea(row)
 
     def by_status(self, status: str) -> list[Idea]:
-        return [i for i in self._ideas if i.status == status]
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                "SELECT data FROM ideas WHERE status = ? ORDER BY rowid", (status,)
+            ).fetchall()
+        finally:
+            conn.close()
+        return [self._to_idea(r) for r in rows]
 
     def pending(self) -> list[Idea]:
-        """Ideias aguardando decisão, mais antigas primeiro (ordem da fila)."""
         return sorted(self.by_status(IdeaStatus.PENDING), key=lambda i: i.created_at)
 
     def approved(self) -> list[Idea]:
-        """Ideias aprovadas e ainda não postadas (prontas para publicar)."""
         return self.by_status(IdeaStatus.APPROVED)
 
     def counts(self) -> dict:
-        """Contagem por estado — útil para o cabeçalho do painel."""
-        return {status: len(self.by_status(status)) for status in sorted(IdeaStatus.ALL)}
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                "SELECT status, COUNT(*) AS n FROM ideas GROUP BY status"
+            ).fetchall()
+        finally:
+            conn.close()
+        contagem = {r["status"]: r["n"] for r in rows}
+        return {status: contagem.get(status, 0) for status in sorted(IdeaStatus.ALL)}
 
     # --------------------------------------------------------------- mutações -
     def add(self, idea: Idea) -> Idea:
-        self._ideas.append(idea)
-        self._save()
+        self._put(idea)
+        return idea
+
+    def update(self, idea: Idea) -> Idea:
+        """Persiste um objeto `Idea` mutado (upsert por id)."""
+        self._put(idea)
         return idea
 
     def add_many(self, ideas: list[Idea]) -> list[Idea]:
-        self._ideas.extend(ideas)
-        self._save()
+        for idea in ideas:
+            self._put(idea)
         return ideas
 
     def _set_status(self, idea_id: str, status: str) -> Idea:
         idea = self.get(idea_id)
         idea.status = status
         idea.decided_at = _now_iso()
-        self._save()
+        self._put(idea)
         return idea
 
     def approve(self, idea_id: str) -> Idea:
@@ -110,33 +181,39 @@ class ReviewQueue:
     def attach_video(self, idea_id: str, video_path: str) -> Idea:
         idea = self.get(idea_id)
         idea.video_path = video_path
-        self._save()
+        self._put(idea)
         return idea
 
     def attach_thumbnail(self, idea_id: str, thumbnail_path: str) -> Idea:
         idea = self.get(idea_id)
         idea.thumbnail_path = thumbnail_path
-        self._save()
+        self._put(idea)
         return idea
 
     def add_variant(self, idea_id: str, lang: str, video_path: str) -> Idea:
         idea = self.get(idea_id)
         idea.video_variants[lang] = video_path
-        self._save()
+        self._put(idea)
         return idea
 
     def set_metrics(self, idea_id: str, metrics: dict) -> Idea:
         idea = self.get(idea_id)
         idea.metrics.update(metrics)
-        self._save()
+        self._put(idea)
         return idea
 
     def clear_decided(self) -> int:
-        """Remove ideias já resolvidas (rejeitadas/postadas). Devolve quantas saíram."""
-        before = len(self._ideas)
-        self._ideas = [
-            i for i in self._ideas
-            if i.status in (IdeaStatus.PENDING, IdeaStatus.APPROVED)
-        ]
-        self._save()
-        return before - len(self._ideas)
+        conn = self._conn()
+        try:
+            cur = conn.execute(
+                "DELETE FROM ideas WHERE status IN (?, ?)",
+                (IdeaStatus.REJECTED, IdeaStatus.POSTED),
+            )
+            conn.commit()
+            return cur.rowcount
+        finally:
+            conn.close()
+
+    # Compat.: quem chamava _save() (persistência já é por operação).
+    def _save(self) -> None:  # pragma: no cover - no-op mantido por compatibilidade
+        pass
