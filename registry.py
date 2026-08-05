@@ -42,9 +42,12 @@ REQUIRES: dict[str, list[str]] = {
 
 # Modelos conhecidos por (capacidade, provider) — sugestões para a UI.
 KNOWN_MODELS: dict[str, dict[str, list[str]]] = {
-    "text": {"ollama": ["llama3"], "gemini": ["gemini-1.5-flash", "gemini-1.5-pro"]},
-    "image": {"gemini": ["imagen-3.0-generate-002"], "stability": ["core"]},
-    "video": {"gemini": ["veo-2.0-generate-001"]},
+    "text": {"ollama": ["llama3"], "gemini": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"]},
+    "image": {
+        "gemini": ["imagen-4.0-fast-generate-001", "imagen-4.0-generate-001", "imagen-4.0-ultra-generate-001"],
+        "stability": ["core"],
+    },
+    "video": {"gemini": ["veo-3.1-fast-generate-preview", "veo-3.1-generate-preview"]},
 }
 
 

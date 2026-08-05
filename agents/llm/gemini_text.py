@@ -18,7 +18,7 @@ class GeminiTextClient:
     def __init__(self, config_path: str = "config.json"):
         self.config = self._load_config(config_path)
         self.model = os.environ.get(
-            "GEMINI_TEXT_MODEL", self.config.get("gemini_text_model", "gemini-1.5-flash")
+            "GEMINI_TEXT_MODEL", self.config.get("gemini_text_model", "gemini-2.5-flash")
         )
 
     @staticmethod

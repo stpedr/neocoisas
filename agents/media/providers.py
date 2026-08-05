@@ -92,7 +92,7 @@ def gemini_image(visual_prompt: str, dest: Path) -> Path:
         ) from exc
 
     client = genai.Client(api_key=key)
-    model = os.environ.get("GEMINI_IMAGE_MODEL", "imagen-3.0-generate-002")
+    model = os.environ.get("GEMINI_IMAGE_MODEL", "imagen-4.0-fast-generate-001")
     resp = client.models.generate_images(
         model=model,
         prompt=visual_prompt,
@@ -132,7 +132,7 @@ def gemini_video(visual_prompt: str, dest: Path) -> Path:
         ) from exc
 
     client = genai.Client(api_key=key)
-    model = os.environ.get("GEMINI_VIDEO_MODEL", "veo-2.0-generate-001")
+    model = os.environ.get("GEMINI_VIDEO_MODEL", "veo-3.1-fast-generate-preview")
     operation = client.models.generate_videos(
         model=model,
         prompt=visual_prompt,

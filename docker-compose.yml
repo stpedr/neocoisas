@@ -73,8 +73,8 @@ services:
       ANE_PUBLISHER: ${ANE_PUBLISHER:-none}
       # Chaves opcionais (passadas do host; vazias por padrão).
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_IMAGE_MODEL: ${GEMINI_IMAGE_MODEL:-imagen-3.0-generate-002}
-      GEMINI_VIDEO_MODEL: ${GEMINI_VIDEO_MODEL:-veo-2.0-generate-001}
+      GEMINI_IMAGE_MODEL: ${GEMINI_IMAGE_MODEL:-imagen-4.0-fast-generate-001}
+      GEMINI_VIDEO_MODEL: ${GEMINI_VIDEO_MODEL:-veo-3.1-fast-generate-preview}
       STABILITY_API_KEY: ${STABILITY_API_KEY:-}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
       ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-}
