@@ -9,6 +9,14 @@ import DashboardView from "./components/DashboardView";
 
 type Tab = "ideas" | "kanban" | "schedule" | "models" | "dashboard";
 
+const TABS: { id: Tab; label: string }[] = [
+  { id: "ideas", label: "💡 Ideias" },
+  { id: "kanban", label: "🗂️ Kanban" },
+  { id: "schedule", label: "⏱️ Agendamento" },
+  { id: "models", label: "⚙️ Modelos" },
+  { id: "dashboard", label: "📊 Dashboard" },
+];
+
 export default function Home() {
   const [tab, setTab] = useState<Tab>("ideas");
 
@@ -16,48 +24,31 @@ export default function Home() {
     <div className="container">
       <div className="topbar">
         <div className="brand">
-          <span className="logo">🎬</span>
+          <span className="logo" aria-hidden>🎬</span>
           <span>Auto Niche Engine</span>
         </div>
-        <div className="tabs" role="tablist">
-          <button
-            className={`tab ${tab === "ideas" ? "active" : ""}`}
-            onClick={() => setTab("ideas")}
-          >
-            💡 Ideias
-          </button>
-          <button
-            className={`tab ${tab === "kanban" ? "active" : ""}`}
-            onClick={() => setTab("kanban")}
-          >
-            🗂️ Kanban
-          </button>
-          <button
-            className={`tab ${tab === "schedule" ? "active" : ""}`}
-            onClick={() => setTab("schedule")}
-          >
-            ⏱️ Agendamento
-          </button>
-          <button
-            className={`tab ${tab === "models" ? "active" : ""}`}
-            onClick={() => setTab("models")}
-          >
-            ⚙️ Modelos
-          </button>
-          <button
-            className={`tab ${tab === "dashboard" ? "active" : ""}`}
-            onClick={() => setTab("dashboard")}
-          >
-            📊 Dashboard
-          </button>
+        <div className="tabs" role="tablist" aria-label="Seções">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
+              className={`tab ${tab === t.id ? "active" : ""}`}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {tab === "ideas" && <IdeasView />}
-      {tab === "kanban" && <KanbanView />}
-      {tab === "schedule" && <ScheduleView />}
-      {tab === "models" && <ModelsView />}
-      {tab === "dashboard" && <DashboardView />}
+      <div role="tabpanel">
+        {tab === "ideas" && <IdeasView />}
+        {tab === "kanban" && <KanbanView />}
+        {tab === "schedule" && <ScheduleView />}
+        {tab === "models" && <ModelsView />}
+        {tab === "dashboard" && <DashboardView />}
+      </div>
     </div>
   );
 }
