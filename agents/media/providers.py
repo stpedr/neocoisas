@@ -92,22 +92,22 @@ def gemini_image(visual_prompt: str, dest: Path) -> Path:
         ) from exc
 
     client = genai.Client(api_key=key)
-    model = os.environ.get("GEMINI_IMAGE_MODEL", "imagen-4.0-fast-generate-001")
-    resp = client.models.generate_images(
+    # API atual: generate_content com um modelo de imagem (o generate_images/Imagen
+    # foi descontinuado para novos usuários).
+    model = os.environ.get("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
+    resp = client.models.generate_content(
         model=model,
-        prompt=visual_prompt,
-        config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="9:16"),
+        contents=f"{visual_prompt}. Vertical 9:16, sem texto.",
+        config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
     )
-    if not getattr(resp, "generated_images", None):
-        raise RuntimeError("Gemini não retornou imagem.")
-    image = resp.generated_images[0].image
     dest = Path(dest)
-    data = getattr(image, "image_bytes", None)
-    if data:
-        dest.write_bytes(data)
-    else:  # o SDK também expõe .save()
-        image.save(str(dest))
-    return dest
+    for cand in (resp.candidates or []):
+        for part in (getattr(cand.content, "parts", None) or []):
+            data = getattr(getattr(part, "inline_data", None), "data", None)
+            if data:
+                dest.write_bytes(data)
+                return dest
+    raise RuntimeError("Gemini não retornou imagem (modalidade IMAGE).")
 
 
 def gemini_video(visual_prompt: str, dest: Path) -> Path:

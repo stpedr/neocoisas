@@ -44,7 +44,7 @@ REQUIRES: dict[str, list[str]] = {
 KNOWN_MODELS: dict[str, dict[str, list[str]]] = {
     "text": {"ollama": ["llama3"], "gemini": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"]},
     "image": {
-        "gemini": ["imagen-4.0-fast-generate-001", "imagen-4.0-generate-001", "imagen-4.0-ultra-generate-001"],
+        "gemini": ["gemini-2.5-flash-image"],
         "stability": ["core"],
     },
     "video": {"gemini": ["veo-3.1-fast-generate-preview", "veo-3.1-generate-preview"]},
@@ -80,18 +80,18 @@ def current(cap: str, config: dict) -> dict:
     if cap == "text":
         provider = os.environ.get("ANE_TEXT_PROVIDER") or c.get("text_provider", "ollama")
         if provider == "gemini":
-            model = _env_or_cfg("GEMINI_TEXT_MODEL", c, "gemini_text_model", "gemini-1.5-flash")
+            model = _env_or_cfg("GEMINI_TEXT_MODEL", c, "gemini_text_model", "gemini-2.5-flash")
         else:
             model = _env_or_cfg("ANE_OLLAMA_MODEL", c, "ollama_model", "llama3")
     elif cap == "image":
         provider = os.environ.get("ANE_IMAGE_PROVIDER") or c.get("image_provider", "placeholder")
-        model = os.environ.get("GEMINI_IMAGE_MODEL", "imagen-3.0-generate-002") if provider == "gemini" else None
+        model = os.environ.get("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image") if provider == "gemini" else None
     elif cap == "voice":
         provider = os.environ.get("ANE_VOICE_PROVIDER") or c.get("voice_provider", "placeholder")
         model = os.environ.get("ELEVENLABS_VOICE_ID") if provider == "elevenlabs" else None
     elif cap == "video":
         provider = os.environ.get("ANE_VIDEO_PROVIDER") or c.get("video_provider", "none")
-        model = os.environ.get("GEMINI_VIDEO_MODEL", "veo-2.0-generate-001") if provider == "gemini" else None
+        model = os.environ.get("GEMINI_VIDEO_MODEL", "veo-3.1-fast-generate-preview") if provider == "gemini" else None
     elif cap == "publisher":
         provider = os.environ.get("ANE_PUBLISHER") or c.get("publisher", "none")
         model = None

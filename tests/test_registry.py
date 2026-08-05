@@ -75,7 +75,7 @@ def test_available_models_descobre_ollama(monkeypatch):
     )
     av = registry.available_models({})
     assert av["text"]["ollama"] == ["llama3", "mistral"]
-    assert "gemini-1.5-flash" in av["text"]["gemini"]
+    assert "gemini-2.5-flash" in av["text"]["gemini"]
 
 
 def test_available_models_fallback_quando_ollama_cai(monkeypatch):
