@@ -130,6 +130,31 @@ services:
       - api
     restart: unless-stopped
 
+  # Stable Diffusion (AUTOMATIC1111) — geração de imagem local/grátis.
+  # Opt-in: `docker compose --profile sd up -d`. Requer GPU NVIDIA no Docker
+  # (NVIDIA Container Toolkit) e um checkpoint de modelo (baixado no volume).
+  # Ao usar este serviço, defina no .env: A1111_URL=http://a1111:7860
+  a1111:
+    image: ghcr.io/neggles/sd-webui-docker:latest
+    container_name: ane-a1111
+    profiles: ["sd"]
+    command: ["--api", "--listen", "--port", "7860", "--xformers"]
+    ports:
+      - "7860:7860"
+    volumes:
+      - a1111_data:/data          # modelos/checkpoints, embeddings, etc.
+      - a1111_out:/output
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
 volumes:
   ollama_models:
   ane_output:
+  a1111_data:
+  a1111_out:

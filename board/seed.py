@@ -355,4 +355,18 @@ SEED_CARDS: list[dict] = [
         'sprint': 'Sprint 7 · Robustez',
         'labels': ['backend'],
     },
+    {
+        'title': 'Stable Diffusion (A1111) no docker-compose',
+        'description': 'Subir o AUTOMATIC1111 (--api) como serviço no compose (profile sd, GPU NVIDIA, volume de modelos) e apontar A1111_URL para o serviço. Imagem real local, grátis.',
+        'column': 'done',
+        'sprint': 'Sprint 2 · Geração de mídia',
+        'labels': ['infra', 'conteúdo', 'prioridade:alta'],
+    },
+    {
+        'title': 'Validar render com imagem real (SD local)',
+        'description': 'Com A1111 no ar, image_provider=a1111 e conferir que o vídeo sai com imagem gerada + narração Piper + legenda.',
+        'column': 'todo',
+        'sprint': 'Sprint 2 · Geração de mídia',
+        'labels': ['conteúdo', 'testes', 'prioridade:alta'],
+    },
 ]
