@@ -12,11 +12,45 @@ o seu provedor antes de usar em produção.
 from __future__ import annotations
 
 import os
+import subprocess
 from pathlib import Path
 
 import requests
 
 _TIMEOUT = 120
+
+
+def piper_voice(narration: str, dest: Path) -> Path:
+    """Narração via Piper (TTS local, offline). Voz PT-BR, sem chave/API.
+
+    Requer o binário `piper` no PATH e um modelo de voz (.onnx) — ambos incluídos
+    na imagem Docker. O caminho do modelo vem de `PIPER_MODEL`.
+    """
+    model = os.environ.get("PIPER_MODEL", "/app/voices/pt_BR-faber-medium.onnx")
+    if not Path(model).exists():
+        raise RuntimeError(
+            f"Modelo Piper não encontrado em '{model}'. Defina PIPER_MODEL ou use "
+            "a imagem Docker (que já baixa a voz PT-BR)."
+        )
+    dest = Path(dest)
+    wav = dest.with_suffix(".wav")
+    try:
+        proc = subprocess.run(
+            ["piper", "--model", model, "--output_file", str(wav)],
+            input=(narration or " "),
+            text=True,
+            capture_output=True,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            "Binário 'piper' não encontrado. Instale com `pip install piper-tts`."
+        ) from exc
+    if proc.returncode != 0:
+        raise RuntimeError(f"Piper falhou: {proc.stderr[:200]}")
+    # Converte o WAV do Piper para o mp3 esperado pelo pipeline.
+    subprocess.run(["ffmpeg", "-y", "-i", str(wav), str(dest)], check=True, capture_output=True)
+    wav.unlink(missing_ok=True)
+    return dest
 
 
 def stability_image(visual_prompt: str, dest: Path) -> Path:

@@ -56,6 +56,10 @@ def test_provider_invalido_levanta():
         get_voice_generator({"voice_provider": "xpto"})
 
 
+def test_voice_provider_piper():
+    assert get_voice_generator({"voice_provider": "piper"}).__name__ == "piper_voice"
+
+
 def test_env_tem_prioridade_sobre_config(monkeypatch):
     monkeypatch.setenv("ANE_IMAGE_PROVIDER", "placeholder")
     assert get_image_generator({"image_provider": "stability"}) is placeholder_image

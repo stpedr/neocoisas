@@ -3,14 +3,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# FFmpeg (render) + fonte DejaVu (legendas/burn-in via drawtext).
+# FFmpeg (render) + fonte DejaVu (legendas) + curl (baixar a voz do Piper).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core \
+    && apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Dependências primeiro (melhor cache de camadas).
 COPY requirements-api.txt .
 RUN pip install --no-cache-dir -r requirements-api.txt
+
+# TTS local (Piper) + voz PT-BR (offline, sem chave).
+ARG PIPER_VOICE_BASE=https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium
+RUN mkdir -p /app/voices \
+    && curl -fsSL -o /app/voices/pt_BR-faber-medium.onnx "${PIPER_VOICE_BASE}/pt_BR-faber-medium.onnx" \
+    && curl -fsSL -o /app/voices/pt_BR-faber-medium.onnx.json "${PIPER_VOICE_BASE}/pt_BR-faber-medium.onnx.json"
 
 # Código da aplicação (o .dockerignore exclui web/, output/, etc.).
 COPY . .

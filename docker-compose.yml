@@ -67,6 +67,7 @@ services:
       # Provedores de mídia/publicação (padrão: placeholder / sem publicação).
       ANE_IMAGE_PROVIDER: ${ANE_IMAGE_PROVIDER:-placeholder}
       ANE_VOICE_PROVIDER: ${ANE_VOICE_PROVIDER:-placeholder}
+      PIPER_MODEL: ${PIPER_MODEL:-/app/voices/pt_BR-faber-medium.onnx}
       ANE_VIDEO_PROVIDER: ${ANE_VIDEO_PROVIDER:-none}
       ANE_BURN_SUBTITLES: ${ANE_BURN_SUBTITLES:-true}
       ANE_PUBLISHER: ${ANE_PUBLISHER:-none}

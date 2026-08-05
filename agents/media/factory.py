@@ -12,7 +12,13 @@ from typing import Callable
 from pathlib import Path
 
 from .placeholder import placeholder_image, placeholder_voice
-from .providers import elevenlabs_voice, gemini_image, gemini_video, stability_image
+from .providers import (
+    elevenlabs_voice,
+    gemini_image,
+    gemini_video,
+    piper_voice,
+    stability_image,
+)
 
 Generator = Callable[[str, Path], Path]
 
@@ -24,6 +30,7 @@ _IMAGE_PROVIDERS: dict[str, Generator] = {
 
 _VOICE_PROVIDERS: dict[str, Generator] = {
     "placeholder": placeholder_voice,
+    "piper": piper_voice,
     "elevenlabs": elevenlabs_voice,
 }
 

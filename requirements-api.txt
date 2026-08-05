@@ -3,6 +3,9 @@ fastapi>=0.111
 uvicorn[standard]>=0.30
 requests>=2.31
 
+# TTS local (voz PT-BR offline, provider "piper").
+piper-tts>=1.2
+
 # Agendamento de postagens (job periódico na API).
 apscheduler>=3.10
 
