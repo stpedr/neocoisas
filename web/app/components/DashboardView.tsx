@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Analysis, api, MetricsSummary } from "../lib/api";
+import { useToast } from "./Toast";
 
 export default function DashboardView() {
   const [data, setData] = useState<MetricsSummary | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [error, setError] = useState("");
+  const toast = useToast();
+  const setError = (m: string) => toast(m, "error");
 
   const load = useCallback(async () => {
     try {
@@ -34,14 +36,13 @@ export default function DashboardView() {
     }
   }
 
-  if (!data) return <p className="muted">{error || "Carregando métricas…"}</p>;
+  if (!data) return <p className="muted">Carregando métricas…</p>;
 
   const c = data.counts;
   const maxViews = Math.max(1, ...data.ideas.map((i) => Number(i.metrics.views || 0)));
 
   return (
     <div>
-      {error && <div className="alert error">{error}</div>}
 
       {/* KPIs da esteira */}
       <div className="stats">

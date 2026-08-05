@@ -386,7 +386,7 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Feedback: toasts + skeletons + loading',
         'description': 'Sprint 10 de design/UX — ver levantamento.',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 10 · Design & UX',
         'labels': ['frontend', 'prioridade:alta'],
     },

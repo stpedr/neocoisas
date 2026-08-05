@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, RunResult, Schedule } from "../lib/api";
+import { useToast } from "./Toast";
 
 export default function ScheduleView() {
   const [sched, setSched] = useState<Schedule | null>(null);
-  const [error, setError] = useState("");
+  const toast = useToast();
+  const setError = (m: string) => toast(m, "error");
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [genRunning, setGenRunning] = useState(false);
@@ -66,7 +68,7 @@ export default function ScheduleView() {
   }
 
   if (!sched) {
-    return <p className="muted">{error || "Carregando agendamento…"}</p>;
+    return <p className="muted">Carregando agendamento…</p>;
   }
 
   const fmt = (iso: string | null) =>
@@ -74,7 +76,6 @@ export default function ScheduleView() {
 
   return (
     <div>
-      {error && <div className="alert error">{error}</div>}
 
       <div className="panel">
         <div

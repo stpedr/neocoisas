@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, AvailableModels, ModelsPayload } from "../lib/api";
+import { useToast } from "./Toast";
 
 const CAP_LABEL: Record<string, string> = {
   text: "Texto (LLM)",
@@ -14,7 +15,8 @@ const CAP_LABEL: Record<string, string> = {
 export default function ModelsView() {
   const [models, setModels] = useState<ModelsPayload | null>(null);
   const [available, setAvailable] = useState<AvailableModels>({});
-  const [error, setError] = useState("");
+  const toast = useToast();
+  const setError = (m: string) => toast(m, "error");
   const [saving, setSaving] = useState("");
 
   const load = useCallback(async () => {
@@ -61,11 +63,10 @@ export default function ModelsView() {
     titler: "Títulos", translator: "Tradutor", analyst: "Analista", niche: "Nicho",
   };
 
-  if (!models) return <p className="muted">{error || "Carregando modelos…"}</p>;
+  if (!models) return <p className="muted">Carregando modelos…</p>;
 
   return (
     <div>
-      {error && <div className="alert error">{error}</div>}
       <p className="muted" style={{ marginBottom: 16 }}>
         Escolha o provedor e o modelo de cada capacidade. A troca vale na hora e é
         persistida. Chaves ausentes aparecem sinalizadas.

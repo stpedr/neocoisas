@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, Counts, Idea } from "../lib/api";
+import { useToast } from "./Toast";
 
 export default function IdeasView() {
   const [prompt, setPrompt] = useState("");
@@ -17,8 +18,9 @@ export default function IdeasView() {
   );
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [ok, setOk] = useState("");
+  const toast = useToast();
+  const setError = (m: string) => toast(m, "error");
+  const setOk = (m: string) => toast(m, "ok");
 
   const refresh = useCallback(async () => {
     try {
@@ -190,8 +192,6 @@ export default function IdeasView() {
           {loading && <span className="spinner" />}
           {loading ? "Gerando na sua GPU (Ollama)..." : "Gerar ideias"}
         </button>
-        {error && <div className="alert error">{error}</div>}
-        {ok && <div className="alert ok">{ok}</div>}
       </div>
 
       {/* Contadores */}

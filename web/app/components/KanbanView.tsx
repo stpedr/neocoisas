@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, BoardPayload, Card, Column } from "../lib/api";
+import { Skeleton, useToast } from "./Toast";
 
 export default function KanbanView() {
   const [columns, setColumns] = useState<Column[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
-  const [error, setError] = useState("");
+  const toast = useToast();
+  const setError = (m: string) => toast(m, "error");
   const [loading, setLoading] = useState(true);
 
   const [dragId, setDragId] = useState<string | null>(null);
@@ -90,11 +92,21 @@ export default function KanbanView() {
   const done = cards.filter((c) => c.column === "done").length;
   const pct = total ? Math.round((done / total) * 100) : 0;
 
-  if (loading) return <p className="muted">Carregando quadro…</p>;
+  if (loading)
+    return (
+      <div className="board">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div className="kcol" key={i}>
+            <Skeleton height={18} width="50%" />
+            <Skeleton height={64} />
+            <Skeleton height={64} />
+          </div>
+        ))}
+      </div>
+    );
 
   return (
     <div>
-      {error && <div className="alert error">{error}</div>}
 
       <div className="topbar" style={{ marginBottom: 8 }}>
         <div>

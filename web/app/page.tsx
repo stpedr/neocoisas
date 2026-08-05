@@ -6,6 +6,7 @@ import KanbanView from "./components/KanbanView";
 import ScheduleView from "./components/ScheduleView";
 import ModelsView from "./components/ModelsView";
 import DashboardView from "./components/DashboardView";
+import { ToastProvider } from "./components/Toast";
 
 type Tab = "ideas" | "kanban" | "schedule" | "models" | "dashboard";
 
@@ -21,6 +22,7 @@ export default function Home() {
   const [tab, setTab] = useState<Tab>("ideas");
 
   return (
+    <ToastProvider>
     <div className="container">
       <div className="topbar">
         <div className="brand">
@@ -50,5 +52,6 @@ export default function Home() {
         {tab === "dashboard" && <DashboardView />}
       </div>
     </div>
+    </ToastProvider>
   );
 }
