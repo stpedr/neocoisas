@@ -77,6 +77,9 @@ services:
       GEMINI_IMAGE_MODEL: ${GEMINI_IMAGE_MODEL:-gemini-2.5-flash-image}
       GEMINI_VIDEO_MODEL: ${GEMINI_VIDEO_MODEL:-veo-3.1-fast-generate-preview}
       A1111_URL: ${A1111_URL:-http://host.docker.internal:7860}
+      COMFYUI_URL: ${COMFYUI_URL:-http://host.docker.internal:8188}
+      COMFYUI_IMAGE_WORKFLOW: ${COMFYUI_IMAGE_WORKFLOW:-}
+      COMFYUI_VIDEO_WORKFLOW: ${COMFYUI_VIDEO_WORKFLOW:-}
       STABILITY_API_KEY: ${STABILITY_API_KEY:-}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
       ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-}
@@ -85,7 +88,8 @@ services:
       YOUTUBE_REFRESH_TOKEN: ${YOUTUBE_REFRESH_TOKEN:-}
     volumes:
       - ane_output:/app/output
-    # Permite alcançar serviços no host (ex.: Stable Diffusion/A1111 em :7860).
+      - ./comfyui:/app/comfyui:ro   # workflows do ComfyUI (formato API) c/ %prompt%
+    # Permite alcançar serviços no host (ex.: A1111 :7860, ComfyUI :8188).
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

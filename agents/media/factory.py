@@ -11,6 +11,7 @@ import os
 from typing import Callable
 from pathlib import Path
 
+from .comfyui import comfyui_image, comfyui_video
 from .placeholder import placeholder_image, placeholder_voice
 from .providers import (
     a1111_image,
@@ -26,6 +27,7 @@ Generator = Callable[[str, Path], Path]
 _IMAGE_PROVIDERS: dict[str, Generator] = {
     "placeholder": placeholder_image,
     "a1111": a1111_image,        # Stable Diffusion local (grátis, GPU do usuário)
+    "comfyui": comfyui_image,    # ComfyUI local (grátis, workflow do usuário)
     "stability": stability_image,
     "gemini": gemini_image,
 }
@@ -38,6 +40,7 @@ _VOICE_PROVIDERS: dict[str, Generator] = {
 
 # Geradores de vídeo por cena (produzem um .mp4). "none" = usa imagem estática.
 _VIDEO_PROVIDERS: dict[str, Generator] = {
+    "comfyui": comfyui_video,    # text-to-video local (AnimateDiff/LTX via ComfyUI)
     "gemini": gemini_video,
 }
 

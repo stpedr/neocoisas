@@ -39,6 +39,14 @@ def test_image_provider_a1111_local():
     assert get_image_generator({"image_provider": "a1111"}).__name__ == "a1111_image"
 
 
+def test_image_provider_comfyui():
+    assert get_image_generator({"image_provider": "comfyui"}).__name__ == "comfyui_image"
+
+
+def test_video_provider_comfyui():
+    assert get_video_generator({"video_provider": "comfyui"}).__name__ == "comfyui_video"
+
+
 def test_video_generator_none_por_padrao():
     assert get_video_generator({}) is None
     assert get_video_generator({"video_provider": "none"}) is None
