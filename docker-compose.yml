@@ -70,11 +70,13 @@ services:
       PIPER_MODEL: ${PIPER_MODEL:-/app/voices/pt_BR-faber-medium.onnx}
       ANE_VIDEO_PROVIDER: ${ANE_VIDEO_PROVIDER:-none}
       ANE_BURN_SUBTITLES: ${ANE_BURN_SUBTITLES:-true}
+      ANE_MOTION: ${ANE_MOTION:-true}
       ANE_PUBLISHER: ${ANE_PUBLISHER:-none}
       # Chaves opcionais (passadas do host; vazias por padrão).
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_IMAGE_MODEL: ${GEMINI_IMAGE_MODEL:-gemini-2.5-flash-image}
       GEMINI_VIDEO_MODEL: ${GEMINI_VIDEO_MODEL:-veo-3.1-fast-generate-preview}
+      A1111_URL: ${A1111_URL:-http://host.docker.internal:7860}
       STABILITY_API_KEY: ${STABILITY_API_KEY:-}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
       ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-}
@@ -83,6 +85,9 @@ services:
       YOUTUBE_REFRESH_TOKEN: ${YOUTUBE_REFRESH_TOKEN:-}
     volumes:
       - ane_output:/app/output
+    # Permite alcançar serviços no host (ex.: Stable Diffusion/A1111 em :7860).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       ollama:
         condition: service_healthy

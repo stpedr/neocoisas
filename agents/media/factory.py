@@ -13,6 +13,7 @@ from pathlib import Path
 
 from .placeholder import placeholder_image, placeholder_voice
 from .providers import (
+    a1111_image,
     elevenlabs_voice,
     gemini_image,
     gemini_video,
@@ -24,6 +25,7 @@ Generator = Callable[[str, Path], Path]
 
 _IMAGE_PROVIDERS: dict[str, Generator] = {
     "placeholder": placeholder_image,
+    "a1111": a1111_image,        # Stable Diffusion local (grátis, GPU do usuário)
     "stability": stability_image,
     "gemini": gemini_image,
 }

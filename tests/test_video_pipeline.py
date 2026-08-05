@@ -103,6 +103,23 @@ def test_musica_inexistente_e_ignorada(tmp_path, monkeypatch):
     assert pipe.music_path is None
 
 
+def test_motion_ken_burns_usa_zoompan(fake_ffmpeg, tmp_path, monkeypatch):
+    monkeypatch.setattr(VideoPipeline, "_audio_duration", staticmethod(lambda p: 4.0))
+    image, voice = _generators()
+    pipe = VideoPipeline(image_generator=image, voice_generator=voice, motion=True)
+    job = VideoJob(title="v", scenes=[Scene("n", "v", 3.0)], output_dir=tmp_path)
+    pipe.render(job)
+    assert any("zoompan" in arg for cmd in fake_ffmpeg for arg in cmd if isinstance(arg, str))
+
+
+def test_sem_motion_nao_usa_zoompan(fake_ffmpeg, tmp_path):
+    image, voice = _generators()
+    pipe = VideoPipeline(image_generator=image, voice_generator=voice, motion=False)
+    job = VideoJob(title="v", scenes=[Scene("n", "v", 3.0)], output_dir=tmp_path)
+    pipe.render(job)
+    assert not any("zoompan" in arg for cmd in fake_ffmpeg for arg in cmd if isinstance(arg, str))
+
+
 def test_sem_gerador_de_imagem_levanta(fake_ffmpeg, tmp_path):
     _, voice = _generators()
     pipe = VideoPipeline(voice_generator=voice)  # sem image_generator

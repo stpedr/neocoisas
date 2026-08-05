@@ -75,6 +75,42 @@ def stability_image(visual_prompt: str, dest: Path) -> Path:
     return dest
 
 
+def a1111_image(visual_prompt: str, dest: Path) -> Path:
+    """Imagem via Stable Diffusion local (API do AUTOMATIC1111). Grátis/offline.
+
+    Requer o AUTOMATIC1111 rodando com `--api` na máquina (como o Ollama). A URL
+    vem de `A1111_URL` (padrão `http://host.docker.internal:7860`, que alcança o
+    host a partir do container).
+    """
+    import base64
+
+    base = os.environ.get("A1111_URL", "http://host.docker.internal:7860").rstrip("/")
+    payload = {
+        "prompt": visual_prompt,
+        "negative_prompt": os.environ.get("A1111_NEGATIVE", "text, watermark, logo, blurry"),
+        "width": int(os.environ.get("A1111_WIDTH", "768")),
+        "height": int(os.environ.get("A1111_HEIGHT", "1344")),  # ~9:16
+        "steps": int(os.environ.get("A1111_STEPS", "22")),
+        "cfg_scale": float(os.environ.get("A1111_CFG", "7")),
+        "sampler_name": os.environ.get("A1111_SAMPLER", "DPM++ 2M Karras"),
+    }
+    try:
+        r = requests.post(f"{base}/sdapi/v1/txt2img", json=payload, timeout=600)
+    except requests.exceptions.RequestException as exc:
+        raise RuntimeError(
+            f"Não foi possível falar com o Stable Diffusion em {base}. "
+            "Rode o AUTOMATIC1111 com --api (ou ajuste A1111_URL)."
+        ) from exc
+    if r.status_code != 200:
+        raise RuntimeError(f"AUTOMATIC1111 falhou ({r.status_code}): {r.text[:200]}")
+    images = r.json().get("images") or []
+    if not images:
+        raise RuntimeError("AUTOMATIC1111 não retornou imagem.")
+    dest = Path(dest)
+    dest.write_bytes(base64.b64decode(images[0].split(",", 1)[-1]))
+    return dest
+
+
 def gemini_image(visual_prompt: str, dest: Path) -> Path:
     """Gera imagem via Gemini API (Imagen). Requer GEMINI_API_KEY."""
     key = os.environ.get("GEMINI_API_KEY")

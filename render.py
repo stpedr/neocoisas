@@ -20,11 +20,15 @@ from agents.video_pipeline import Scene, VideoJob, VideoPipeline
 _OUTPUT_DIR = os.environ.get("ANE_OUTPUT_DIR", "output")
 
 
-def _burn_subtitles(config: dict) -> bool:
-    env = os.environ.get("ANE_BURN_SUBTITLES")
+def _flag(env_name: str, config: dict, key: str, default: bool) -> bool:
+    env = os.environ.get(env_name)
     if env is not None:
         return env.strip().lower() in ("1", "true", "yes", "sim")
-    return bool(config.get("burn_subtitles", True))
+    return bool(config.get(key, default))
+
+
+def _burn_subtitles(config: dict) -> bool:
+    return _flag("ANE_BURN_SUBTITLES", config, "burn_subtitles", True)
 
 
 def _idea_dir(idea) -> Path:
@@ -65,6 +69,8 @@ def render_idea(idea, config: dict | None = None, lang: str | None = None) -> Pa
         burn_subtitles=_burn_subtitles(config),
         music_path=config.get("music_path") or None,
         music_volume=float(config.get("music_volume", 0.2)),
+        # Ken Burns por padrão em imagens estáticas (não se aplica a vídeo por cena).
+        motion=(_flag("ANE_MOTION", config, "motion", True) and not video_gen),
     )
     job = VideoJob(title=title, scenes=scenes, output_dir=_idea_dir(idea))
     return pipeline.render(job)

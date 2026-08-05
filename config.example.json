@@ -11,6 +11,7 @@
   "voice_provider": "placeholder",
   "video_provider": "none",
   "burn_subtitles": true,
+  "motion": true,
   "critic_enabled": false,
   "critic_min_score": 6.0,
   "editor_enabled": false,

@@ -83,6 +83,7 @@ class VideoPipeline:
         font_path: str | None = None,
         music_path: str | None = None,
         music_volume: float = 0.2,
+        motion: bool = False,
     ):
         # Pontos de extensão: funções que você fornece para gerar mídia.
         #   image_generator(visual_prompt: str, dest: Path) -> Path
@@ -104,7 +105,23 @@ class VideoPipeline:
         # Trilha sonora de fundo (opcional): só usa se o arquivo existir.
         self.music_path = music_path if (music_path and Path(music_path).exists()) else None
         self.music_volume = music_volume
+        # Movimento Ken Burns (zoom/pan) nas imagens estáticas — dá "vida" ao
+        # vídeo sem modelo de vídeo. Só se aplica ao caminho de imagem.
+        self.motion = motion
         self._check_ffmpeg()
+
+    @staticmethod
+    def _audio_duration(audio_path: Path) -> float:
+        """Duração do áudio em segundos (via ffprobe); 4.0 em caso de falha."""
+        try:
+            out = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                 "-of", "default=nw=1:nk=1", str(audio_path)],
+                capture_output=True, text=True, check=True,
+            )
+            return float(out.stdout.strip())
+        except Exception:  # noqa: BLE001
+            return 4.0
 
     @staticmethod
     def _check_ffmpeg() -> None:
@@ -198,32 +215,43 @@ class VideoPipeline:
             )
         return self.voice_generator(scene.narration, dest)
 
-    def _build_vf(self, scene: Scene, assets_dir: Path, idx: int) -> str:
-        """Monta o filtro de vídeo (escala/crop + legenda opcional)."""
-        vf = (
-            "scale=1080:1920:force_original_aspect_ratio=increase,"
-            "crop=1080:1920"
+    def _subtitle_clause(self, scene: Scene, assets_dir: Path, idx: int) -> str:
+        """Sufixo `,drawtext=...` com a legenda, ou '' se desativada."""
+        if not (self.burn_subtitles and scene.narration.strip()):
+            return ""
+        sub_file = assets_dir / f"sub_{idx:02d}.txt"  # `textfile` evita escape
+        wrapped = "\n".join(textwrap.wrap(scene.narration.strip(), width=32))
+        sub_file.write_text(wrapped or scene.narration.strip(), encoding="utf-8")
+        return (
+            f",drawtext=fontfile='{_ff_escape(self.font_path)}':"
+            f"textfile='{_ff_escape(sub_file)}':"
+            "fontcolor=white:fontsize=46:line_spacing=8:"
+            "box=1:boxcolor=black@0.55:boxborderw=18:"
+            "x=(w-text_w)/2:y=h-text_h-140"
         )
-        if self.burn_subtitles and scene.narration.strip():
-            # `textfile` evita quase toda a dor de escape do drawtext.
-            sub_file = assets_dir / f"sub_{idx:02d}.txt"
-            wrapped = "\n".join(textwrap.wrap(scene.narration.strip(), width=32))
-            sub_file.write_text(wrapped or scene.narration.strip(), encoding="utf-8")
-            drawtext = (
-                f"drawtext=fontfile='{_ff_escape(self.font_path)}':"
-                f"textfile='{_ff_escape(sub_file)}':"
-                "fontcolor=white:fontsize=46:line_spacing=8:"
-                "box=1:boxcolor=black@0.55:boxborderw=18:"
-                "x=(w-text_w)/2:y=h-text_h-140"
-            )
-            vf = f"{vf},{drawtext}"
-        return vf
+
+    def _build_vf(self, scene: Scene, assets_dir: Path, idx: int) -> str:
+        """Filtro estático (escala/crop) + legenda — usado no caminho de vídeo."""
+        base = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"
+        return base + self._subtitle_clause(scene, assets_dir, idx)
 
     def _compose_clip(
         self, scene: Scene, image_path: Path, audio_path: Path, assets_dir: Path, idx: int
     ) -> Path:
         """Combina uma imagem estática e uma narração em um clipe .mp4."""
         clip_path = assets_dir / f"clip_{idx:02d}.mp4"
+        legenda = self._subtitle_clause(scene, assets_dir, idx)
+        if self.motion:
+            # Ken Burns: zoom lento sobre a imagem (frames = duração do áudio).
+            frames = max(1, int(self._audio_duration(audio_path) * 30))
+            vf = (
+                "scale=1350:2400,"
+                f"zoompan=z='min(zoom+0.0012,1.15)':d={frames}:s=1080x1920:fps=30:"
+                "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'" + legenda
+            )
+        else:
+            vf = ("scale=1080:1920:force_original_aspect_ratio=increase,"
+                  "crop=1080:1920" + legenda)
         cmd = [
             "ffmpeg", "-y",
             "-loop", "1", "-i", str(image_path),
@@ -232,7 +260,7 @@ class VideoPipeline:
             "-c:a", "aac", "-b:a", "192k",
             "-pix_fmt", "yuv420p",
             "-shortest",
-            "-vf", self._build_vf(scene, assets_dir, idx),
+            "-vf", vf,
             str(clip_path),
         ]
         subprocess.run(cmd, check=True, capture_output=True)
