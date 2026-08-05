@@ -365,7 +365,7 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Validar render com imagem real (SD local)',
         'description': 'Com A1111 no ar, image_provider=a1111 e conferir que o vídeo sai com imagem gerada + narração Piper + legenda.',
-        'column': 'todo',
+        'column': 'done',
         'sprint': 'Sprint 2 · Geração de mídia',
         'labels': ['conteúdo', 'testes', 'prioridade:alta'],
     },

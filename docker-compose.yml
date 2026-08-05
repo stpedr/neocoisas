@@ -138,7 +138,10 @@ services:
     image: ghcr.io/neggles/sd-webui-docker:latest
     container_name: ane-a1111
     profiles: ["sd"]
-    command: ["--api", "--listen", "--port", "7860", "--xformers"]
+    environment:
+      SD_WEBUI_VARIANT: auto      # AUTOMATIC1111
+      WEBUI_PORT: "7860"
+      CLI_ARGS: "--api"           # habilita a API (--listen/--port já no CMD)
     ports:
       - "7860:7860"
     volumes:
