@@ -88,8 +88,20 @@ a { color: var(--accent-2); }
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 22px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--bg);
+  padding: 10px 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
 }
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.status-dot.on { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+.status-dot.off { background: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+.status-dot.unknown { background: var(--text-dim); }
+.brand small { color: var(--text-dim); font-weight: 500; font-size: 12px; }
 
 .brand {
   display: flex;
