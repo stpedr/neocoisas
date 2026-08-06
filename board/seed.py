@@ -393,21 +393,21 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Acessibilidade (a11y)',
         'description': 'Sprint 10 de design/UX — ver levantamento.',
-        'column': 'in_progress',
+        'column': 'done',
         'sprint': 'Sprint 10 · Design & UX',
         'labels': ['frontend', 'prioridade:média'],
     },
     {
         'title': 'Player de vídeo + thumbnail',
         'description': 'Sprint 10 de design/UX — ver levantamento.',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 10 · Design & UX',
         'labels': ['frontend', 'prioridade:média'],
     },
     {
         'title': 'Kanban visual',
         'description': 'Sprint 10 de design/UX — ver levantamento.',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 10 · Design & UX',
         'labels': ['frontend', 'prioridade:média'],
     },
@@ -428,7 +428,7 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Branding + favicon + header',
         'description': 'Sprint 10 de design/UX — ver levantamento.',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 10 · Design & UX',
         'labels': ['frontend', 'prioridade:baixa'],
     },
