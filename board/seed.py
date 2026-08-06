@@ -414,14 +414,14 @@ SEED_CARDS: list[dict] = [
     {
         'title': 'Dashboard com gráficos SVG',
         'description': 'Sprint 10 de design/UX — ver levantamento.',
-        'column': 'backlog',
+        'column': 'done',
         'sprint': 'Sprint 10 · Design & UX',
         'labels': ['frontend', 'prioridade:baixa'],
     },
     {
         'title': 'Tema claro + alternador',
         'description': 'Sprint 10 de design/UX — ver levantamento.',
-        'column': 'in_progress',
+        'column': 'done',
         'sprint': 'Sprint 10 · Design & UX',
         'labels': ['frontend', 'prioridade:baixa'],
     },
