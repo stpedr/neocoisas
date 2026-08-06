@@ -4,6 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { api, BoardPayload, Card, Column } from "../lib/api";
 import { Skeleton, useToast } from "./Toast";
 
+const PRIO_MAP: Record<string, string> = {
+  alta: "alta", "média": "media", media: "media", baixa: "baixa",
+};
+function cardPriority(labels: string[]): string | null {
+  const l = labels.find((x) => x.startsWith("prioridade:"));
+  return l ? PRIO_MAP[l.split(":")[1]] ?? null : null;
+}
+
 export default function KanbanView() {
   const [columns, setColumns] = useState<Column[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -184,10 +192,12 @@ export default function KanbanView() {
                 <span>{col.label}</span>
                 <span className="kcol-count">{colCards.length}</span>
               </div>
-              {colCards.map((card) => (
+              {colCards.map((card) => {
+                const prio = cardPriority(card.labels);
+                return (
                 <div
                   key={card.id}
-                  className={`kcard ${dragId === card.id ? "dragging" : ""}`}
+                  className={`kcard ${dragId === card.id ? "dragging" : ""} ${prio ? `prio-${prio}` : ""}`}
                   draggable
                   onDragStart={() => setDragId(card.id)}
                   onDragEnd={() => {
@@ -201,11 +211,16 @@ export default function KanbanView() {
                   )}
                   <div className="kcard-foot">
                     <div className="chips">
-                      {card.labels.map((l) => (
-                        <span className="chip" key={l}>
-                          {l}
-                        </span>
-                      ))}
+                      {prio && (
+                        <span className={`chip chip-${prio}`}>{prio}</span>
+                      )}
+                      {card.labels
+                        .filter((l) => !l.startsWith("prioridade:"))
+                        .map((l) => (
+                          <span className="chip" key={l}>
+                            {l}
+                          </span>
+                        ))}
                     </div>
                     <button
                       className="kcard-del"
@@ -221,7 +236,8 @@ export default function KanbanView() {
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           );
         })}

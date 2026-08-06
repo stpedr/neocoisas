@@ -19,6 +19,10 @@ export type Idea = {
   status: IdeaStatus;
   mode: "manual" | "auto";
   video_path: string | null;
+  thumbnail_path: string | null;
+  video_variants: Record<string, string>;
+  metrics: Record<string, number>;
+  score: number | null;
   note: string;
   created_at: string;
   decided_at: string | null;
@@ -164,6 +168,8 @@ export const api = {
     request<Idea>(`/api/ideas/${id}/render`, { method: "POST" }),
 
   videoUrl: (id: string) => `${API_BASE}/api/ideas/${id}/video`,
+
+  thumbnailUrl: (id: string) => `${API_BASE}/api/ideas/${id}/thumbnail`,
 
   clearDecided: () =>
     request<{ removed: number }>("/api/ideas/decided", { method: "DELETE" }),

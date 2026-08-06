@@ -98,6 +98,7 @@ export default function IdeasView() {
   }, [pending, leaving, decide]);
 
   const [renderingId, setRenderingId] = useState<string | null>(null);
+  const [playing, setPlaying] = useState<Idea | null>(null);
 
   async function markPosted(id: string) {
     try {
@@ -304,12 +305,17 @@ export default function IdeasView() {
                 {idea.video_path ? " · 🎬 vídeo pronto" : ""}
               </div>
               {idea.video_path && (
-                <video
-                  key={idea.video_path}
-                  controls
-                  style={{ marginTop: 8, width: 180, borderRadius: 8 }}
-                  src={api.videoUrl(idea.id)}
-                />
+                <div style={{ marginTop: 8 }}>
+                  <video
+                    className="vthumb"
+                    preload="metadata"
+                    muted
+                    poster={idea.thumbnail_path ? api.thumbnailUrl(idea.id) : undefined}
+                    src={api.videoUrl(idea.id)}
+                    onClick={() => setPlaying(idea)}
+                    title="Clique para ampliar"
+                  />
+                </div>
               )}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -327,6 +333,34 @@ export default function IdeasView() {
             </div>
           </div>
         ))
+      )}
+
+      {playing && (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setPlaying(null)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <strong>{playing.title}</strong>
+              <button
+                className="modal-close"
+                aria-label="Fechar"
+                onClick={() => setPlaying(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <video
+              controls
+              autoPlay
+              poster={playing.thumbnail_path ? api.thumbnailUrl(playing.id) : undefined}
+              src={api.videoUrl(playing.id)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
