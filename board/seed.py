@@ -738,6 +738,13 @@ SEED_CARDS: list[dict] = [
         'labels': ['infra', 'integração', 'prioridade:alta'],
     },
     {
+        'title': 'Acervo próprio como few-shot (substitui fine-tuning)',
+        'description': 'Selecionar os N posts de melhor desempenho DAQUELA marca (analyst + Idea.metrics já existem) e injetá-los como exemplos na geração do próximo. Dado primário, por cliente, melhora sozinho e funciona em qualquer provider. Decisão registrada: NÃO fazer fine-tuning agora — ver arquitetura-ia-modelos-locais.md §8-bis.',
+        'column': 'backlog',
+        'sprint': 'Sprint 13 · Regionalização & Trends',
+        'labels': ['backend', 'conteúdo', 'prioridade:alta'],
+    },
+    {
         'title': 'Registry: capacidade vision + workflow IP-Adapter',
         'description': 'Expor a capacidade de visão em registry.py/GET /api/models e na UI de troca; workflow ComfyUI de referência de estilo (IP-Adapter) para o nível forte do Brand Kit.',
         'column': 'backlog',

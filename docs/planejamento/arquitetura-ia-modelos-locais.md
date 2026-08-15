@@ -144,6 +144,71 @@ Tudo degrada com elegância: sem GPU, `placeholder`/`none` mantêm o pipeline ro
 - **Nuvem é opt-in:** só ativa com chave no `.env` (`GEMINI_API_KEY`, etc.), nunca no git/chat.
 - **Publicação sempre por API oficial** (regra do `CLAUDE.md`).
 
+## 8-bis. Decisão: **não** fazer fine-tuning agora
+
+**Pergunta:** vale montar um dataset de "bons posts" para afinar os modelos?
+**Decisão:** **não** — nem agora, nem tão cedo. Registro aqui o porquê para não revisitarmos
+a cada sprint.
+
+### Por que o dataset não existe (de forma utilizável)
+
+Não há dataset público, limpo e licenciado de "bons posts" com rótulo de engajamento. O que
+o mercado oferece são **fornecedores de scraping**, e por dois motivos isso não serve:
+
+1. **Direitos indefinidos.** Dados raspados chegam sem proveniência nem clareza de licença
+   para treinar modelo.
+2. **O meio de coleta é proibido no projeto.** O Instagram bloqueia scraping direto, e os
+   fornecedores contornam com **rotação de fingerprint** e evasão de bloqueio — exatamente o
+   que o [`CLAUDE.md`](../../CLAUDE.md) veta ("sem automação de evasão de detecção"). Usar
+   esse dado contradiz a regra que sustenta o resto da arquitetura.
+
+### Por que fine-tuning não resolve o nosso gargalo
+
+O gargalo **não é a habilidade de escrever** do modelo — modelos atuais já escrevem bem.
+O que falta é **contexto de marca**: paleta, tom, produtos, público, o que funcionou *naquela*
+conta. Isso é **entrada**, não **peso**. Um modelo afinado em "bons posts em geral" produz
+posts genericamente bons — o oposto do que a
+[Bia](./personas.md#3-bia--diretora-de-arte--a-guardiã-do-padrão) precisa.
+
+Fine-tuning ainda **briga com a arquitetura**: o repo é *contrato + factory* com provider
+trocável por config. Um fine-tune amarra o sistema a um modelo/provider — trocar a base em seis
+meses significa retreinar. E congela um estilo que **envelhece**, enquanto "bom post" muda por
+marca e por época.
+
+### A escada mais barata (nesta ordem)
+
+| # | Intervenção | Custo | Estado no repo |
+|---|---|---|---|
+| 1 | **Prompt melhor + few-shot** | ~zero | a fazer |
+| 2 | **Saída estruturada** (JSON/esquema) | baixo | parcial (`extract_json`) |
+| 3 | **Loop crítico→editor** (qualidade em inferência) | baixo | **já existe** (`critic.py`, `editor.py`) |
+| 4 | **Acervo próprio como few-shot** ⭐ | baixo | **quase pronto** (`analyst.py` + `Idea.metrics`) |
+| 5 | Base maior/melhor (`llama3.1`/`qwen2.5`) | médio | trocar config |
+| 6 | LoRA em dado primário | alto | futuro condicional |
+
+**O item 4 é o verdadeiro substituto do fine-tuning** — e o mais subestimado. O `analyst.py`
+já coleta métricas e `Idea.metrics` já as guarda. Basta selecionar os **N posts de melhor
+desempenho daquela marca** e injetá-los como exemplos na geração do próximo. Vantagens sobre
+um fine-tune global:
+
+- é **dado primário** (do próprio cliente) — sem problema de licença ou ToS;
+- é **por cliente**: cada marca converge para o próprio estilo, o que um modelo único não faz;
+- **melhora sozinho** com o tempo, sem retreino;
+- funciona **igual em qualquer provider** (local ou nuvem), preservando o factory.
+
+### Quando revisitar
+
+Reabrir a discussão **apenas** se as três condições ocorrerem juntas:
+
+1. **Escala de dado primário** — centenas de clientes × meses de posts com engajamento
+   (dado nosso, dos próprios clientes, com consentimento de uso).
+2. **Tarefa estreita e repetitiva** onde prompt + few-shot comprovadamente estabilizam menos
+   que o desejado (ex.: manter a estrutura de slides sempre válida).
+3. **LoRA/adapter, não fine-tune completo** — barato, reversível e compatível com o registry
+   (o adapter vira mais uma opção do provider local).
+
+Até lá: **contexto vence peso**.
+
 ## 9. Referências
 
 **Artigos** (padrões multi-agente, calendário editorial, Graph API), com a contribuição de
