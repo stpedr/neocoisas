@@ -404,6 +404,9 @@ os handoffs são estados da `Idea`/`PlanSlot`. Apresentação visual do time:
 
 ## 15. Referências
 
+> Lista completa, com a contribuição de cada fonte e ressalvas de acesso:
+> [`referencias-artigos.md`](./referencias-artigos.md).
+
 - [Meta — Publish Content (Instagram Platform)](https://developers.facebook.com/docs/instagram-platform/content-publishing/)
 - [Sprout Social — Social media calendar](https://sproutsocial.com/insights/social-media-calendar/)
 - [SocialBee — Yearly content calendar](https://socialbee.com/blog/social-media-content-calendar/)

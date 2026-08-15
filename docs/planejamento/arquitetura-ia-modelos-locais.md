@@ -144,7 +144,12 @@ Tudo degrada com elegância: sem GPU, `placeholder`/`none` mantêm o pipeline ro
 - **Nuvem é opt-in:** só ativa com chave no `.env` (`GEMINI_API_KEY`, etc.), nunca no git/chat.
 - **Publicação sempre por API oficial** (regra do `CLAUDE.md`).
 
-## 9. Referências (código)
+## 9. Referências
+
+**Artigos** (padrões multi-agente, calendário editorial, Graph API), com a contribuição de
+cada fonte: [`referencias-artigos.md`](./referencias-artigos.md).
+
+**Código:**
 
 - `agents/llm/factory.py`, `agents/media/factory.py`, `publishers/factory.py`
 - `registry.py` (capacidades, `REQUIRES`, `KNOWN_MODELS`, `current`)

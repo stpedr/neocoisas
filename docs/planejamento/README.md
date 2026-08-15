@@ -1,0 +1,56 @@
+# Planejamento — Geração automática de posts (marketing + IA)
+
+Índice da proposta: uma ferramenta que planeja e produz o conteúdo de **qualquer empresa**
+para o **ano inteiro**, com um **time de marketing completo** modelado como agentes, rodando
+com **modelos locais**.
+
+> **Status:** planejamento aprovado para detalhamento — nada implementado ainda.
+> Quando os cards forem executados, cada entrega vira um `docs/entregas/<slug>.md`
+> (regra do [`CLAUDE.md`](../../CLAUDE.md)).
+
+## Documentos
+
+| # | Documento | O que cobre |
+|---|---|---|
+| 1 | [`calendario-posts-loja-instagram.md`](./calendario-posts-loja-instagram.md) | Escopo inicial: calendário **mensal** de uma loja no Instagram. Modelo de dados (`StoreProfile`, extensão da `Idea`), agente de calendário, endpoints, aba Calendário. |
+| 2 | [`arquitetura-planejamento-anual.md`](./arquitetura-planejamento-anual.md) | Arquitetura **anual**: hierarquia de 5 níveis, esqueleto barato + materialização *lazy*, **onboarding + Brand Kit**, **regionalização**, **trends**, **agência virtual** (17 papéis). |
+| 3 | [`arquitetura-ia-modelos-locais.md`](./arquitetura-ia-modelos-locais.md) | Arquitetura de **IA local-first**: capacidade → factory → providers, stack 100% offline, capacidades novas (**visão**, **referência de estilo**), modelos por VRAM. |
+
+## Apresentações visuais (artefatos)
+
+| Artefato | Ângulo |
+|---|---|
+| [Agência Virtual](https://claude.ai/code/artifact/b4480a28-0ccb-4450-ba3b-696e9aa739fe) | **Quem faz** — 17 papéis em 5 departamentos e a linha de montagem de todo post. |
+| [IA Local-First](https://claude.ai/code/artifact/48336c86-bace-46f2-bb1a-34c15956ba8b) | **Com quê** — o stack de modelos locais por capacidade. |
+| [Mapa de Conexões](https://claude.ai/code/artifact/01572022-66d9-489b-875c-ba82c3de2baa) | **Como se ligam** — diagrama de conexões (orquestrador, estado, modelos, guardrails, feedback). |
+
+## As decisões que sustentam a proposta
+
+1. **Esqueleto barato + materialização *lazy*.** Planejar o ano inteiro é planejar a
+   *estrutura* (campanhas + slots datados, sem LLM por slot) e materializar os posts numa
+   **janela rolante de 2–4 semanas**. Controla custo, evita conteúdo velho e deixa as
+   métricas influenciarem o que ainda não foi gerado. *(→ doc 2, §1)*
+2. **Flex slots.** ~20–30% da cadência fica **vazia de propósito**, para absorver trends e
+   conteúdo reativo. Calendário 100% preenchido não surfa trend. *(→ doc 2, §1)*
+3. **O Brand Kit é o contrato visual.** Consistência é **imposta** em três pontos —
+   condicionamento na geração, moldura no render e portão no critic — não deixada ao acaso
+   do modelo. *(→ doc 2, §1-bis)*
+4. **Local-first por contrato + factory.** Toda capacidade de IA tem provider local padrão;
+   nuvem é troca opcional. Dados da marca não saem da máquina. *(→ doc 3)*
+5. **Padrão arquitetural nomeado:** híbrido **orquestrador–trabalhador + pipeline sequencial
+   + loop de feedback**. *(→ doc 3, cabeçalho; diagrama no Mapa de Conexões)*
+
+## Sprints propostas
+
+| Sprint | Tema | Cards |
+|---|---|---|
+| 11 | Onboarding & Marca (fundação) | formulário + upload de fotos, `CompanyProfile`/`BrandKit`, presets por segmento, condicionamento de estilo, moldura, portão de consistência |
+| 12 | Planejamento anual | `AnnualPlan`/`Campaign`/`PlanSlot`, calendário comercial, esqueleto anual, materializador lazy, endpoints, aba Planejamento |
+| 13 | Regionalização & Trends | `Region` + localização, `trend_scout`, gate de brand-safety, re-planejamento trimestral |
+| — | Arquitetura de IA | capacidade `vision`, registry, workflow IP-Adapter, injeção de estilo, embeddings (opcional) |
+
+## Referências
+
+Ver [`referencias-artigos.md`](./referencias-artigos.md) — artigos consultados, o que cada um
+contribuiu e as ressalvas de acesso.
+</content>
