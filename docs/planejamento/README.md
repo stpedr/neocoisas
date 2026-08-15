@@ -17,6 +17,7 @@ com **modelos locais**.
 | 3 | [`arquitetura-ia-modelos-locais.md`](./arquitetura-ia-modelos-locais.md) | Arquitetura de **IA local-first**: capacidade → factory → providers, stack 100% offline, capacidades novas (**visão**, **referência de estilo**), modelos por VRAM. |
 | 4 | [`carrossel-first-motor-de-slides.md`](./carrossel-first-motor-de-slides.md) | **Correção:** carrossel é o formato padrão (não vídeo). Modelo `Slide`, **motor de layout** (Slide + BrandKit → PNG 4:5) e publisher de carrossel. |
 | 5 | [`produto-agencia-exibicao-e-frontend.md`](./produto-agencia-exibicao-e-frontend.md) | **Produto:** barreira baixa → operação de agência (multi-tenant + revelação progressiva), `Activity`, aprovação por link, as telas, os 3 ritmos e a stack de frontend (**Base UI**, Motion, R3F com escopo). |
+| 7 | [`paralelismo-de-modelos.md`](./paralelismo-de-modelos.md) | **Escala:** como paralelizar chamadas de modelo numa única GPU — semáforo por classe de recurso, pipelining das etapas e provider de serving trocável (vLLM). |
 | 6 | [`personas.md`](./personas.md) | **Personas** — as 6 pessoas que a ferramenta atende, o que cada uma nunca deve ver e como elas resolvem disputas de escopo. |
 
 ## Apresentações visuais (artefatos)
@@ -28,6 +29,7 @@ com **modelos locais**.
 | [Mapa de Conexões](https://claude.ai/code/artifact/01572022-66d9-489b-875c-ba82c3de2baa) | **Como se ligam** — diagrama de conexões (orquestrador, estado, modelos, guardrails, feedback). |
 | [O Entregável](https://claude.ai/code/artifact/f07b8bbd-1fe1-463e-b695-e7953190d298) | **O que o usuário recebe** — a jornada e um carrossel pronto de 8 slides com legenda, hashtags e data. |
 | [Solo até Agência](https://claude.ai/code/artifact/00392daf-35bb-4506-8932-8661606ea5eb) | **Produto e interface** — revelação progressiva, as telas, os 3 ritmos e a stack de frontend. |
+| [Uma GPU, Três Pistas](https://claude.ai/code/artifact/04f5eb2d-f7d3-4f27-aec4-61539cd819ca) | **Paralelismo** — onde o fan-out é legítimo e como sobrepor GPU, CPU e rede. |
 
 ## As decisões que sustentam a proposta
 
@@ -63,6 +65,7 @@ quais **41 novos** nas sprints abaixo, todos em `backlog`.
 | 13 | Regionalização & Trends | `Region` + localização, `trend_scout`, gate de brand-safety, re-planejamento trimestral, registry `vision`/IP-Adapter, testes | 6 |
 | 14 | Operação de agência | `Activity`, tela **Hoje**, **link de aprovação**, tela de Campanha, Todos os clientes, relatório, testes | 7 |
 | 15 | Frontend | rotas reais, **Base UI**, **Motion**, TanStack Query, dnd-kit, **R3F** (escopo restrito) | 6 |
+| 16 | Escala e paralelismo | executor com semáforo por classe, materializador em lote, pipelining, fronteira na delegação, provider `vllm`, tuning do Ollama, medição | 7 |
 
 ## Referências
 

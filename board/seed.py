@@ -751,4 +751,58 @@ SEED_CARDS: list[dict] = [
         'sprint': 'Sprint 13 · Regionalização & Trends',
         'labels': ['backend', 'prioridade:média'],
     },
+
+    # ------------------------------------------------------------------
+    # Sprint 16 · Escala e paralelismo
+    # Doc: docs/planejamento/paralelismo-de-modelos.md
+    # ------------------------------------------------------------------
+    {
+        'title': 'Executor com semáforo por classe de recurso',
+        'description': 'Cada tarefa declara sua classe (gpu|cpu|io) e o executor respeita o limite daquela classe: gpu = OLLAMA_NUM_PARALLEL, cpu = nº de núcleos, io ~16. Falha de uma tarefa não derruba o lote (mesmo contrato de post_approved). Aceite: lote de N posts sem estourar VRAM.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Materializador em lote paralelo',
+        'description': 'N slots da janela e N regiões por slot processados concorrentemente, respeitando os limites por classe. O fan-out só onde os itens são independentes — copy->arte->layout continua sequencial.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Pipelining das etapas (sobrepor GPU, CPU e rede)',
+        'description': 'O motor de slides é CPU puro e a publicação é rede — ambos podem rodar enquanto a GPU já trabalha no próximo post. Aceite: sobreposição medida, não presumida; tempo total ~ tempo de GPU.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Fronteira explícita na delegação (anti-duplicação)',
+        'description': 'Ao abrir slides/regiões em paralelo, cada tarefa recebe escopo explícito ("você é o slide 4 de 8, papel conteúdo, não repita o gancho"). É a correção que a Anthropic aplicou para subagentes pararem de duplicar trabalho.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['conteúdo', 'backend', 'prioridade:média'],
+    },
+    {
+        'title': 'Provider vllm no factory de texto',
+        'description': 'Continuous batching para escala de agência: ~793 tok/s em pico contra ~41 do Ollama. Entra como provider trocável (não como padrão — exige GPU dedicada). Aceite: trocar text_provider para vllm sem mexer nos agentes.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'infra', 'prioridade:média'],
+    },
+    {
+        'title': 'Config de concorrência do Ollama + guia de tuning',
+        'description': 'OLLAMA_NUM_PARALLEL (default 1 — hoje serializa tudo) e OLLAMA_MAX_LOADED_MODELS no compose/.env, com doc explicando que VRAM escala linear (NUM_PARALLEL x CONTEXT) e que se deve subir de 1 em 1 medindo.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['infra', 'docs', 'prioridade:média'],
+    },
+    {
+        'title': 'Medição de tempo por etapa e ocupação por classe',
+        'description': 'Instrumentar o pipeline para achar o gargalo real antes de otimizar. Aceite: relatório por etapa (copy/arte/layout/publicação) e ocupação de GPU/CPU/rede num lote.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'testes', 'prioridade:alta'],
+    },
 ]
