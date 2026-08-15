@@ -474,8 +474,8 @@ SEED_CARDS: list[dict] = [
     },
     {
         'title': 'Agente de copy de carrossel',
-        'description': 'Gera a estrutura gancho -> conteúdo -> resumo -> CTA (6-10 slides) em JSON, mais legenda e hashtags. Parsing puro e testável, no padrão dos demais agentes.',
-        'column': 'backlog',
+        'description': 'Gera a estrutura gancho -> conteúdo -> resumo -> CTA (3-10 slides) em JSON, mais legenda e hashtags. Parsing puro e testável, no padrão dos demais agentes. ENTREGUE: agents/carousel_writer.py com fronteira explícita entre slides (anti-repetição) e normalização defensiva de hashtags/legenda — ver docs/entregas/agente-copy-carrossel.md. Falta ligar o visual_prompt ao provider de imagem.',
+        'column': 'done',
         'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
         'labels': ['backend', 'conteúdo', 'prioridade:alta'],
     },

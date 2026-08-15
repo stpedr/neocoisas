@@ -67,7 +67,7 @@ Todos os cards estão semeados em `board/seed.py` (→ `/api/board`): **112 card
 
 | Sprint | Tema | Cards |
 |---|---|---|
-| 11 | Fundação: Marca & Carrossel | multi-tenant, `CompanyProfile`/`BrandKit`, onboarding + preview, presets, **`Slide`** ✅, copy de carrossel, **motor de layout** ✅, publisher de carrossel, condicionamento de estilo, portão de consistência, capacidade `vision`, URL pública, testes | 14 |
+| 11 | Fundação: Marca & Carrossel | multi-tenant, `CompanyProfile`/`BrandKit`, onboarding + preview, presets, **`Slide`** ✅, **copy de carrossel** ✅, **motor de layout** ✅, publisher de carrossel, condicionamento de estilo, portão de consistência, capacidade `vision`, URL pública, testes | 14 |
 | 12 | Planejamento anual | `AnnualPlan`/`Campaign`/`PlanSlot`, calendário comercial, esqueleto + flex slots, materializador lazy, endpoints, agendador por data, aba Planejamento, testes | 8 |
 | 13 | Regionalização & Trends | `Region` + localização, `trend_scout`, gate de brand-safety, acervo próprio como few-shot, re-planejamento trimestral, registry `vision`/IP-Adapter, testes | 7 |
 | 14 | Operação de agência | `Activity`, tela **Hoje**, **link de aprovação**, tela de Campanha, Todos os clientes, relatório, testes | 7 |
@@ -81,4 +81,5 @@ Todos os cards estão semeados em `board/seed.py` (→ `/api/board`): **112 card
 | Entrega | O que saiu |
 |---|---|
 | [`motor-de-slides.md`](../entregas/motor-de-slides.md) | `Slide` + `BrandKit` + `render_carousel` — carrossel em PNG 1080×1350 com a identidade da marca em todos os slides. 44 testes. |
+| [`agente-copy-carrossel.md`](../entregas/agente-copy-carrossel.md) | `CarouselWriterAgent` — brief → slides com arco narrativo + legenda + hashtags. Fecha a cadeia até o PNG. 33 testes. |
 </content>

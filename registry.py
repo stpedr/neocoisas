@@ -52,7 +52,8 @@ KNOWN_MODELS: dict[str, dict[str, list[str]]] = {
 
 
 # Agentes que usam LLM de texto (podem ter modelo próprio).
-AGENTS = ["idea", "script", "critic", "editor", "titler", "translator", "analyst", "niche"]
+AGENTS = ["idea", "script", "carousel", "critic", "editor", "titler", "translator",
+          "analyst", "niche"]
 
 
 def _env_or_cfg(env: str, cfg: dict, key: str, default: str) -> str:
