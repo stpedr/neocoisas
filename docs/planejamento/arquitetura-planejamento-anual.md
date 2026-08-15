@@ -1,260 +1,287 @@
 # Arquitetura: planejamento anual de conteúdo de uma empresa
 
-> **Status:** proposta (arquitetura) · **Alvo:** Sprint 11–12 · Loja & Calendário editorial
+> **Status:** proposta (arquitetura) · **Alvo:** Sprint 11–13 · Loja & Calendário editorial
 > Amplia o escopo de [`calendario-posts-loja-instagram.md`](./calendario-posts-loja-instagram.md):
-> de **um mês** para **o ano inteiro** de uma empresa. O calendário mensal passa a ser
-> um **recorte** deste plano anual.
+> de **um mês** para **o ano inteiro** de uma empresa, agora com **regionalização**,
+> **acompanhamento de trends** e outros sinais dinâmicos. O calendário mensal passa a ser
+> um **recorte** deste plano.
 
-## 1. A ideia central (o que os artigos ensinam)
+## 1. A ideia central
 
-Planejar um ano **não é gerar ~300 posts prontos de uma vez**. Três razões, todas
-apontadas pela literatura de calendário editorial:
+Planejar um ano **não é gerar ~300 posts prontos de uma vez**, e também **não é um plano
+estático**. São duas forças combinadas:
 
-- **Horizonte de materialização é curto.** O ideal é detalhar (legenda/criativo) numa
-  janela de **2–4 semanas**: menos que isso vira reativo; mais que um mês, o conteúdo
-  "envelhece" e se desconecta do que acontece na empresa
+- **Estrutura (planejável com antecedência):** pilares de conteúdo + campanhas ancoradas
+  nas datas comerciais. Estável, barata, determinística.
+- **Sinais dinâmicos (só se sabem perto da hora):** *trends* atuais, contexto **regional**,
+  clima/sazonalidade local e **métricas** de desempenho. Voláteis, entram tarde.
+
+Da literatura de calendário editorial tiramos três princípios:
+
+- **Horizonte de detalhamento é curto** — 2–4 semanas: menos vira reativo; mais "envelhece"
   ([Sprout Social](https://sproutsocial.com/insights/social-media-calendar/)).
-- **Conteúdo é organizado por pilares + campanhas**, não post a post. Pilares são 2–4
-  temas recorrentes (educativo, promocional, comunidade, inspiracional, bastidores,
-  prova social) que **rotacionam a cada semana**; campanhas sazonais entram nas **datas
-  comerciais** ([Postiz](https://postiz.com/blog/content-pillars-for-social-media),
+- **Planeje ~70–80%, deixe ~20–30% de folga** para conteúdo reativo/ágil (trends, notícias,
+  UGC). Um calendário 100% preenchido não consegue surfar uma trend.
+- **Conteúdo é organizado por pilares + campanhas**, não post a post, e **realimentado por dados**
+  ([Postiz](https://postiz.com/blog/content-pillars-for-social-media),
   [SocialBee](https://socialbee.com/blog/social-media-content-calendar/)).
-- **Custo e feedback.** Gerar 300 legendas/mídias em janeiro desperdiça tokens, estoura
-  rate limits e ignora o que os **dados de desempenho** ensinariam ao longo do ano.
 
 **Decisão de arquitetura (a mais importante):**
 
-> **Planejar o *esqueleto* do ano de forma barata e determinística; materializar os
-> *detalhes* de forma preguiçosa (lazy), numa janela rolante de 2–4 semanas,
-> realimentada pelas métricas.**
+> **Planejar o *esqueleto* do ano de forma barata e determinística; reservar *flex slots*
+> para reação; e materializar os *detalhes* de forma preguiçosa (lazy) numa janela rolante,
+> modulada por três sinais — regionalização, trends e métricas.**
 
-Isso encaixa perfeitamente no que já existe: o `scheduler.py` já tem um *autogen tick*
-que gera conteúdo por intervalo — nós o generalizamos para "materializar os próximos N dias
-do plano".
+Isso encaixa no que já existe: o `scheduler.py` já tem um *autogen tick*; nós o
+generalizamos para "materializar os próximos slots do plano **aplicando os sinais atuais**".
 
-## 2. Hierarquia de planejamento (5 níveis)
-
-Um ano de conteúdo é uma árvore de cima para baixo:
+## 2. Hierarquia de planejamento (com região)
 
 ```mermaid
 graph TD
-    A[AnnualPlan · Estratégia do ano<br/>metas, pilares, cadência] --> Q[Quarter/Season · trimestre<br/>tema macro + re-planejamento]
-    Q --> C[Campaign · campanha<br/>ancorada em data comercial<br/>arco: teaser→oferta→última chamada]
-    Q --> B[Baseline · rotação de pilares<br/>conteúdo evergreen recorrente]
-    C --> S[PlanSlot · vaga datada<br/>dia + pilar + formato + fase]
+    A[AnnualPlan · estratégia do ano<br/>metas, pilares, cadência, flex %] --> R[Region · praça/unidade<br/>fuso, feriados locais, tom, clima]
+    A --> Q[Quarter · trimestre<br/>tema macro + re-planejamento]
+    Q --> C[Campaign · campanha<br/>datas comerciais nacionais/regionais<br/>arco: teaser→oferta→última chamada]
+    Q --> B[Baseline · rotação de pilares<br/>evergreen recorrente]
+    Q --> F[Flex slots · reserva ágil<br/>trends & reativo]
+    C --> S[PlanSlot · vaga datada]
     B --> S
-    S -->|materializa lazy| I[Idea · post concreto<br/>legenda, hashtags, visual, roteiro]
+    F --> S
+    S -->|materializa lazy + sinais| I[Idea · post concreto<br/>+ variantes por região/idioma]
     I --> P[Publicação · Graph API oficial]
 ```
 
-| Nível | Entidade | Quando é gerado | Custo LLM |
-|---|---|---|---|
-| Ano | `AnnualPlan` | 1× no início (ou por trimestre) | 1 chamada (estratégia) |
-| Trimestre | `QuarterTheme` | com o AnnualPlan; revisável a cada Q | baixo |
-| Campanha | `Campaign` | com o esqueleto (datas comerciais) | baixo |
-| Mês/Semana | `PlanSlot[]` | **esqueleto do ano todo, determinístico** | **zero por slot** |
-| Post | `Idea` (estendida) | **lazy, janela rolante 2–4 sem.** | 1 chamada por post |
+O **esqueleto** (150–300 slots/ano, incluindo os *flex* vazios) é calculado por
+**matemática de calendário + regras** — barato, testável **sem Ollama**. O LLM só entra
+(a) 1× na estratégia e (b) por post, **no momento da materialização**, quando os sinais
+dinâmicos já são conhecidos.
 
-O **esqueleto** (150–300 slots/ano) é calculado por **matemática de calendário + regras**
-— barato, estável, testável **sem Ollama**. O LLM só entra (a) 1× para a estratégia e (b)
-por post, **só quando o slot entra na janela de materialização**.
+## 3. Materialização lazy modulada por sinais
 
-## 3. Duas correntes que compõem o calendário
-
-O calendário de qualquer mês é a **fusão** de duas fontes:
-
-1. **Baseline / pilares (evergreen)** — preenche a cadência-base (ex.: 3×/semana),
-   **rotacionando os pilares** por peso configurável. Pode ser **batelado e reciclado**
-   (evergreen reaproveitável).
-2. **Sazonal / campanhas** — ancorada no **calendário comercial** (ver §5). Insere/So­brepõe
-   posts em datas específicas, com **arco narrativo** (teaser → esquenta → oferta →
-   última chamada → prova social).
-
-```
-grade_do_mês = merge(
-    rotação_de_pilares(cadência, pesos),     # baseline
-    posts_de_campanha(datas_comerciais)       # sazonal, prioridade sobre baseline
-)  # respeitando cadência e evitando sobrecarga de dias
-```
-
-## 4. Materialização lazy (janela rolante)
-
-O esqueleto existe o ano todo, mas cada `PlanSlot` só vira `Idea` (com legenda/mídia)
-quando entra na janela:
+Cada `PlanSlot` só vira `Idea` (com legenda/mídia) ao entrar na janela — e nesse instante
+recebe os **três sinais**:
 
 ```mermaid
 sequenceDiagram
     participant Sched as scheduler (tick diário)
-    participant Plan as PlanStore (slots do ano)
-    participant Gen as calendar/idea agents (LLM)
+    participant Plan as PlanStore (slots)
+    participant Sig as Sinais
+    participant Gen as agentes LLM
     participant Q as ReviewQueue
-    Sched->>Plan: slots com data em [hoje, hoje+21d] e status=planned
-    loop cada slot na janela
-        Sched->>Gen: materializa(slot, StoreProfile, analytics)
-        Gen-->>Q: Idea (caption, hashtags, visual, scheduled_date)
-        Sched->>Plan: slot.status=materialized, slot.idea_id=...
+    Sched->>Plan: slots em [hoje, hoje+21d], status=planned
+    Sched->>Sig: trends atuais + contexto regional + métricas
+    loop cada slot
+        alt slot flex e há trend forte
+            Sig-->>Gen: tema = trend (validado pela marca)
+        else slot estrutural
+            Sig-->>Gen: tema = pilar/campanha + ajuste regional/sazonal
+        end
+        Gen-->>Q: Idea (+ variantes por região/idioma), scheduled_date/hora local
+        Sched->>Plan: slot.status=materialized
     end
-    Note over Q: revisão (Tinder/Kanban) → render → publica na data
 ```
 
-Vantagens: **custo controlado**, **conteúdo fresco**, e as **métricas** (via
-`agents/analyst.py`) influenciam os slots ainda não materializados. Reusa o `autogen_tick`
-existente — só troca "prompt fixo" por "próximos slots do plano".
+Os *flex slots* têm janela **ainda mais curta** (dias), porque trend decai rápido — o que
+reforça o desenho lazy.
 
-## 5. Calendário comercial (`agents/commercial_calendar.py`, novo)
+## 4. Regionalização
 
-Núcleo **puro e testável** que, dado `(ano, região)`, devolve as datas comerciais/sazonais
-do varejo brasileiro que ancoram campanhas:
+Uma empresa com várias praças/unidades não posta o mesmo conteúdo igual em todo lugar.
+Dimensões que a arquitetura trata:
 
-| Trimestre | Datas-âncora (BR) |
+| Dimensão regional | Efeito no conteúdo |
 |---|---|
-| Q1 | Liquidações/volta às aulas (jan), Carnaval*, Dia do Consumidor (15/mar), Dia da Mulher (8/mar) |
-| Q2 | Páscoa*, Dia das Mães* (2º dom. mai), Namorados (12/jun), Festas Juninas |
-| Q3 | Férias (jul), Dia dos Pais* (2º dom. ago), Dia do Cliente (15/set), Primavera |
-| Q4 | Dia das Crianças (12/out), **Black Friday*** (última sex. nov), Cyber Monday, Natal (25/dez), Ano Novo |
+| **Feriados/datas locais** | Estaduais e municipais + festas culturais (São João no NE, Farroupilha/RS, Círio de Nazaré/PA, Carnaval por intensidade regional) entram como campanhas **só naquela região**. |
+| **Fuso horário** | BR tem múltiplos fusos (−2 a −5). `scheduled_date` guarda **hora local** por região; o publisher converte. |
+| **Linguagem/tom** | Regionalismos e gírias; ajuste de tom por praça (mantendo a marca). |
+| **Clima/estação** | Mesmo mês, mensagens opostas (frio no Sul × calor no NE). |
+| **Idioma** | Reusa `agents/translator.py` (PT/EN/ES) para praças/canais distintos. |
 
-`*` = data **móvel** (calculada: Páscoa por Computus; Mães/Pais/Black Friday por regra de
-"n-ésimo domingo/sexta"). Datas de **nicho** por empresa entram via `StoreProfile.keywords`.
+**Modelo:** um `PlanSlot` é **agnóstico de região**; na materialização ele **se ramifica**
+em N `Idea` (uma por região ativa) via um passo de **localização** (LLM adapta tom, datas e
+clima; tradução quando aplicável). O calendário comercial vira **região-consciente** (§5).
 
-## 6. Modelo de dados
+## 5. Calendário comercial região-consciente (`agents/commercial_calendar.py`, novo)
 
-Reaproveita `StoreProfile` e `Idea` do plano mensal; adiciona a camada de plano:
+Núcleo **puro e testável**: dado `(ano, região)` devolve as datas-âncora, **empilhando**
+três camadas:
+
+1. **Nacional** — Consumidor (15/mar), Mães*, Namorados (12/jun), Pais*, Cliente (15/set),
+   Crianças (12/out), **Black Friday*** (última sex./nov), Natal, Ano Novo…
+2. **Regional/estadual** — feriados estaduais + festas culturais da praça.
+3. **Nicho da empresa** — datas próprias (aniversário da loja, lançamentos) via `StoreProfile`.
+
+`*` = data **móvel** (Páscoa por Computus; Mães/Pais/Black Friday por regra de "n-ésimo
+dia da semana"). Camadas 1–2 são tabelas curadas; 3 vem do perfil.
+
+## 6. Trends atuais (sinal dinâmico + governança)
+
+Trends não cabem no esqueleto (mudam toda semana). A arquitetura as trata como um **sinal**
+que preenche os *flex slots* e tempera a materialização.
+
+**`agents/trend_scout.py` (novo)** — coleta e ranqueia trends, **apenas de fontes
+permitidas** (conformidade, §9):
+
+- **APIs oficiais / feeds permitidos** (onde existirem) de temas/hashtags/áudios em alta.
+- **Sinal interno** — os próprios top-performers da conta via `agents/analyst.py` (o que já
+  funciona para *esta* marca é a melhor "trend").
+- **Curadoria manual** — o operador injeta uma trend pelo painel (fonte confiável, sem
+  scraping que burle detecção).
+
+O que o `trend_scout` produz é um `TrendSignal {tema, tipo (áudio/hashtag/formato/assunto),
+score, validade, fonte}`. O **agente crítico** (`agents/critic.py`, já existe) funciona como
+**gate de brand-safety**: rejeita trends que destoam da marca ou são arriscadas **antes** de
+virar post. O LLM então **adapta** um pilar evergreen ao formato/tema da trend — sem forçar a
+marca a algo fora de tom.
+
+> Regra de ouro: **trend a serviço da marca**, com validade curta e passando pelo gate. Nunca
+> publicar automaticamente uma trend sem o gate de marca.
+
+## 7. Modelo de dados
+
+Reaproveita `StoreProfile` e `Idea`; adiciona a camada de plano + região + trend:
 
 ```python
 @dataclass
 class AnnualPlan:
-    id: str
-    company_id: str            # StoreProfile
-    year: int
-    goals: list[str]           # ["awareness", "vendas coleção X", ...]
-    pillar_weights: dict       # {"educativo": 0.3, "promocional": 0.2, ...}
+    id: str; company_id: str; year: int
+    goals: list[str]
+    pillar_weights: dict          # {"educativo": .3, "promocional": .2, ...}
     cadence_per_week: int = 3
-    status: str = "draft"      # draft | active | archived
+    flex_ratio: float = 0.25      # % de slots reservados p/ trends/reativo
+    status: str = "draft"         # draft | active | archived
+
+@dataclass
+class Region:
+    id: str; company_id: str
+    name: str                     # "Nordeste", "Loja Centro POA"
+    timezone: str = "America/Sao_Paulo"
+    locale_tone: str = ""         # regionalismos/tom
+    extra_dates: list[str] = ...  # feriados/festas locais
+    language: str = "pt-BR"
 
 @dataclass
 class Campaign:
-    id: str
-    annual_plan_id: str
-    name: str                  # "Black Friday 2026"
-    anchor_date: str           # ISO
-    window: tuple[str, str]    # (início, fim)
-    phases: list[str]          # ["teaser","esquenta","oferta","última chamada","prova social"]
-    goal: str
-    pillar: str = "promocional"
+    id: str; annual_plan_id: str
+    name: str; anchor_date: str; window: tuple[str, str]
+    phases: list[str]             # teaser, esquenta, oferta, última chamada, prova social
+    goal: str; pillar: str = "promocional"
+    region_id: str | None = None  # None = nacional
 
 @dataclass
-class PlanSlot:               # a linha do esqueleto — barata, sem LLM
-    id: str
-    annual_plan_id: str
-    date: str                  # ISO — o dia do post
-    pillar: str
-    post_format: str           # feed | carousel | reels | story
-    campaign_id: str | None    # se faz parte de campanha
-    phase: str | None          # fase do arco, se campanha
-    status: str = "planned"    # planned | materialized | approved | scheduled | posted
-    idea_id: str | None = None # aponta para a Idea quando materializado
+class PlanSlot:                   # esqueleto — barato, sem LLM, agnóstico de região
+    id: str; annual_plan_id: str
+    date: str; pillar: str; post_format: str
+    kind: str = "structural"      # structural | flex
+    campaign_id: str | None = None; phase: str | None = None
+    status: str = "planned"       # planned | materialized | approved | scheduled | posted
+
+@dataclass
+class TrendSignal:
+    id: str; theme: str
+    kind: str                     # audio | hashtag | format | topic
+    score: float; valid_until: str; source: str
+    approved: bool = False        # passou pelo gate de marca (critic)
 ```
 
-- **Persistência:** novas tabelas na mesma base SQLite (`plans.py`, espelhando
-  `board/store.py`). `Idea` continua na `ReviewQueue`.
-- **`Idea` estendida** (campos opcionais já propostos no doc mensal): `store_id`,
-  `scheduled_date`, `post_format`, `pillar`, `caption`, `hashtags`, `occasion`, + `slot_id`.
-- **Estados** alinhados às boas práticas: `planned → materialized → approved → scheduled → posted`.
+- `Idea` estendida (campos opcionais): `store_id`, `region_id`, `slot_id`, `scheduled_date`
+  (com hora local), `post_format`, `pillar`, `caption`, `hashtags`, `occasion`, `trend_id`.
+- Um `PlanSlot` → **N `Idea`** (uma por `Region` ativa) na localização.
+- Persistência: novas tabelas na base SQLite (`plans.py`, espelhando `board/store.py`).
 
-## 7. Pipeline anual (ponta a ponta)
+## 8. Pipeline anual (ponta a ponta)
 
 ```mermaid
 graph LR
-    P[StoreProfile + ano + metas] -->|1x LLM: estratégia| AP[AnnualPlan<br/>pilares + temas por trimestre]
-    AP -->|puro: calendário comercial + regras| SK[Esqueleto<br/>Campaigns + PlanSlots do ano]
+    P[StoreProfile + regiões + ano + metas] -->|1x LLM: estratégia| AP[AnnualPlan<br/>pilares + flex% + temas/trimestre]
+    AP -->|puro: calendário comercial regional + regras| SK[Esqueleto<br/>Campaigns + PlanSlots<br/>estruturais e flex]
     SK --> GR[Grade anual revisável<br/>aba Planejamento]
-    SK -->|lazy: janela 2–4 sem<br/>reusa autogen tick| MT[Materializa slot → Idea]
-    MT --> RV[Revisão Tinder/Kanban]
-    RV --> RN[render.py: mídia]
-    RN --> SC[scheduler: publica na scheduled_date]
-    SC --> IG[publishers/instagram.py<br/>Graph API oficial]
-    IG -->|métricas| AN[agents/analyst.py]
-    AN -->|realimenta pesos/temas| AP
+    subgraph Sinais
+      TR[trend_scout] --> GATE[critic: brand-safety]
+      AN[analyst: métricas] --> AP
+      RG[contexto regional/clima]
+    end
+    SK -->|lazy 2–4 sem| MT[Materializa slot]
+    GATE --> MT
+    AN --> MT
+    RG --> MT
+    MT -->|localização: N variantes| IV[Ideas por região/idioma]
+    IV --> RV[Revisão Tinder/Kanban] --> RN[render.py] --> SC[scheduler: hora local]
+    SC --> IG[publishers/instagram.py · Graph API]
+    IG --> AN
 ```
 
-## 8. Onde encaixa no que já existe
+## 9. Escopo e conformidade (obrigatório — `CLAUDE.md`)
 
-| Já existe | Papel no plano anual |
-|---|---|
-| `review/models.Idea` + `ReviewQueue` (SQLite) | post materializado; fila inalterada |
-| `scheduler.py` (`run_autogen_tick`, `run_tick`) | **generalizar**: materializar janela rolante + publicar na data |
-| `agents/llm` factory | estratégia (1×) e materialização (por post) |
-| `agents/media` + `render.py` | mídia do post, inalterado |
-| `agents/analyst.py` | fecha o loop: métricas → re-planejamento trimestral |
-| `publishers/instagram.py` | publicação real (feed/carrossel/Reels) via Graph API |
-| `board/store.py` | molde para `plans.py` (persistência do plano) |
+- **Somente APIs oficiais** (Meta Graph API, 2 passos). Rate limit ~100 posts/24h por conta;
+  o materializador respeita o teto mesmo com múltiplas regiões/variantes.
+- **Trends só de fontes permitidas:** APIs oficiais, sinal interno (analyst) e curadoria
+  manual. **Sem scraping que burle detecção**, sem fingerprint/proxies/DM em massa.
+- **Gate de marca obrigatório** antes de publicar qualquer post baseado em trend.
+- **Segredos só no `.env`** (`IG_USER_ID`, `IG_ACCESS_TOKEN`).
+- **URL pública do criativo** para a Graph API segue como dependência técnica (hospedagem).
 
-## 9. Superfície de API (novos endpoints)
+## 10. Outros pontos que a arquitetura já acomoda
+
+- **Timing por fuso/região** — melhor horário por praça; `scheduled_date` em hora local.
+- **Reciclagem de evergreen** — posts de bom desempenho voltam re-skinnados (baixo custo).
+- **A/B de título/thumbnail** — já entregue; aplica-se por variante regional.
+- **Governança de marca** — `StoreProfile` guarda tom e *do's/don'ts*; o critic zela.
+- **Acessibilidade** — alt text + legendas queimadas (já existe burn-in) por variante.
+- **Multi-idioma** — `agents/translator.py` cobre PT/EN/ES na localização.
+
+## 11. Superfície de API (novos endpoints)
 
 | Método | Rota | Descrição |
 |---|---|---|
-| `POST` | `/api/companies/{id}/annual-plan` | gera esqueleto do ano `{year, goals}` (barato, sem materializar) |
+| `POST` | `/api/companies/{id}/regions` | cadastra praça/região (fuso, feriados, tom) |
+| `POST` | `/api/companies/{id}/annual-plan` | gera esqueleto do ano (barato, sem materializar) |
 | `GET` | `/api/annual-plan/{id}` | plano + campanhas + slots (grade anual) |
-| `PATCH` | `/api/plan-slots/{id}` | editar pilar/formato/data de um slot |
-| `POST` | `/api/annual-plan/{id}/materialize` | materializa uma janela `{from, to}` → Ideas |
-| `POST` | `/api/annual-plan/{id}/replan-quarter` | re-planeja um trimestre com métricas |
+| `POST` | `/api/annual-plan/{id}/materialize` | materializa janela `{from,to}` aplicando sinais |
+| `GET`/`POST` | `/api/trends` | lista trends ranqueadas / injeta trend manual (→ gate) |
+| `POST` | `/api/annual-plan/{id}/replan-quarter` | re-planeja trimestre com métricas |
 
-Geração do esqueleto e materialização em lote seguem o padrão **job assíncrono + polling**
-(`jobs.py`).
+## 12. Onde encaixa no que já existe
 
-## 10. Frontend — aba "Planejamento" (visão anual)
+| Já existe | Papel |
+|---|---|
+| `review/models.Idea` + `ReviewQueue` | post materializado (agora com variantes por região) |
+| `scheduler.py` (`autogen_tick`/`run_tick`) | **generalizar**: materializar janela + aplicar sinais + publicar na hora local |
+| `agents/analyst.py` | sinal interno de trend + re-planejamento trimestral |
+| `agents/critic.py` | gate de brand-safety das trends |
+| `agents/translator.py` | localização multi-idioma |
+| `agents/llm` factory | estratégia (1×) + materialização/localização |
+| `agents/media` + `render.py` | mídia por variante |
+| `publishers/instagram.py` | publicação oficial, hora local por região |
+| `board/store.py` | molde para `plans.py` |
 
-- **Timeline do ano**: 12 meses com campanhas destacadas nas datas comerciais.
-- **Grade mensal** (drill-down): slots por dia com badge de pilar + ícone de formato +
-  status (`planned/materialized/...`).
-- **Editor de estratégia**: metas, pesos de pilares, cadência.
-- Reusa o design system da Sprint 10 (tema, a11y, toasts, skeletons).
+## 13. Cards adicionais
 
-## 11. Escopo e conformidade (obrigatório — `CLAUDE.md`)
+**Sprint 12 · Planejamento anual**
+1. `AnnualPlan`/`Campaign`/`PlanSlot` + persistência (`plans.py`). `alta`, backend.
+2. Calendário comercial região-consciente (nacional+regional+nicho; datas móveis). `alta`, backend, conteúdo.
+3. Gerador de esqueleto anual (estratégia 1×LLM + distribuição + flex slots). `alta`, backend, conteúdo.
+4. Materializador lazy (generaliza `autogen_tick`, janela rolante). `média`, backend.
+5. Endpoints do plano anual + materialização. `média`, backend.
+6. Aba Planejamento (timeline anual + drill-down). `média`, frontend.
 
-- **Somente APIs oficiais** (Meta Graph API, fluxo em 2 passos). Rate limit ~100 posts/24h
-  por conta — irrelevante para o volume de uma empresa, mas o materializador/scheduler
-  respeita o teto.
-- **Sem evasão de detecção** (fingerprint/proxies/DM em massa).
-- **Segredos só no `.env`** (`IG_USER_ID`, `IG_ACCESS_TOKEN`).
-- **URL pública do criativo** para a Graph API continua sendo a dependência técnica a
-  resolver (hospedagem) — bloqueia publicação real, não o planejamento.
+**Sprint 13 · Regionalização & Trends**
+7. Modelo `Region` + localização (fan-out de variantes, fuso/tom/clima). `alta`, backend, conteúdo.
+8. `agents/trend_scout.py` + `TrendSignal` (fontes permitidas + sinal interno). `alta`, backend, integração.
+9. Gate de brand-safety de trends (liga o `critic`) + injeção manual pela UI. `média`, backend, frontend.
+10. Re-planejamento trimestral com métricas (liga o `analyst`). `baixa`, backend.
+11. Testes (calendário regional, esqueleto+flex, localização, trend gate, endpoints). `alta`, testes.
 
-## 12. Por que esta arquitetura (tradeoffs)
+## 14. Critério de aceite (feature completa)
 
-- **Esqueleto barato + materialização lazy** > gerar tudo antecipado: controla custo de LLM,
-  evita conteúdo "stale", respeita rate limit e deixa as métricas influenciarem o que ainda
-  não foi materializado. É o padrão de "rolling horizon" da literatura.
-- **Determinístico onde dá** (datas, distribuição de slots) → testável sem Ollama; LLM só na
-  estratégia e na cópia por post.
-- **Reúso total** da esteira (Idea/queue/render/scheduler/analyst/publisher); adiciona apenas
-  a camada de plano por cima.
-- **Alternativa considerada e descartada:** modelar cada post como entidade nova
-  (`CalendarPost`) desde o esqueleto. Rejeitada por dobrar modelos; o `PlanSlot` (leve) +
-  `Idea` (materializada) separa bem "planejado" de "produzido".
-
-## 13. Cards adicionais (Sprint 12 · Planejamento anual)
-
-Sobre os cards da Sprint 11 (plano mensal), acrescentar:
-
-1. **`AnnualPlan` + `Campaign` + `PlanSlot` + persistência** (`plans.py`). `alta`, `backend`.
-2. **Calendário comercial BR** (datas fixas + móveis, puro/testável). `alta`, `backend`, `conteúdo`.
-3. **Gerador de esqueleto anual** (estratégia 1× LLM + distribuição determinística). `alta`, `backend`, `conteúdo`.
-4. **Materializador lazy** (generaliza `autogen_tick` p/ janela rolante). `média`, `backend`.
-5. **Endpoints do plano anual + materialização**. `média`, `backend`.
-6. **Aba Planejamento (timeline anual + drill-down)**. `média`, `frontend`.
-7. **Re-planejamento trimestral com métricas** (liga o `analyst`). `baixa`, `backend`, `integração`.
-8. **Testes** (comercial calendar, esqueleto, materialização, endpoints). `alta`, `testes`.
-
-## 14. Critério de aceite (da feature completa)
-
-- [ ] Gerar o **esqueleto de um ano** para uma empresa (campanhas nas datas comerciais +
-      slots de baseline), **sem** materializar tudo, em segundos.
-- [ ] Materializar uma **janela de 2–4 semanas** → Ideas com legenda/hashtags/visual.
-- [ ] Campanhas com **arco de fases** aparecem ancoradas nas datas certas.
-- [ ] Scheduler publica (ou simula) respeitando `scheduled_date`.
-- [ ] Métricas realimentam o re-planejamento do trimestre seguinte.
-- [ ] Núcleos puros cobertos por testes; `pytest -q` verde; `cd web && npm run build` ok.
+- [ ] Gerar o **esqueleto de um ano** (campanhas nas datas comerciais nacionais **e regionais**,
+      slots estruturais + **flex**) em segundos, sem materializar tudo.
+- [ ] Materializar uma **janela 2–4 semanas** → Ideas, com **variantes por região** (tom/fuso/clima).
+- [ ] *Flex slots* absorvem uma **trend** (via `trend_scout`/manual) **só após o gate de marca**.
+- [ ] Scheduler publica (ou simula) na **hora local** de cada região respeitando `scheduled_date`.
+- [ ] Métricas realimentam pesos de pilar e o re-planejamento do trimestre seguinte.
+- [ ] Núcleos puros (calendário, distribuição, localização) cobertos por testes;
+      `pytest -q` verde; `cd web && npm run build` ok.
 - [ ] Entrega documentada em `docs/entregas/planejamento-anual.md`.
 
 ## 15. Referências
