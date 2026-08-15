@@ -446,8 +446,8 @@ SEED_CARDS: list[dict] = [
     },
     {
         'title': 'CompanyProfile + BrandKit + storage das fotos da estética',
-        'description': 'Perfil agnóstico de segmento + manual de marca (logo, paleta, tipografia, style_keywords, fotos de referência, templates por formato). Persistência SQLite + storage das imagens. Doc: arquitetura-planejamento-anual.md §1-bis e §7.',
-        'column': 'backlog',
+        'description': 'Perfil agnóstico de segmento + manual de marca (logo, paleta, tipografia, style_keywords, fotos de referência, templates por formato). Persistência SQLite + storage das imagens. PARCIAL: BrandKit implementado em brand.py (cores semânticas, contraste automático, from_dict tolerante); faltam CompanyProfile, persistência e storage das fotos.',
+        'column': 'in_progress',
         'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
         'labels': ['backend', 'prioridade:alta'],
     },
@@ -467,8 +467,8 @@ SEED_CARDS: list[dict] = [
     },
     {
         'title': 'Modelo Slide + Idea.slides (carrossel-first)',
-        'description': 'Slide (role hook/content/summary/cta, headline, body, visual_prompt, alt_text) ao lado de Scene. post_format decide o caminho: slides (carrossel/feed) ou scenes (Reels). Retrocompatível. Doc: carrossel-first-motor-de-slides.md.',
-        'column': 'backlog',
+        'description': 'Slide (role hook/content/summary/cta, headline, body, visual_prompt, alt_text) ao lado de Scene. post_format decide o caminho: slides (carrossel/feed) ou scenes (Reels). Retrocompatível. ENTREGUE: agents/slides.py + Idea estendida — ver docs/entregas/motor-de-slides.md.',
+        'column': 'done',
         'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
         'labels': ['backend', 'prioridade:alta'],
     },
@@ -481,8 +481,8 @@ SEED_CARDS: list[dict] = [
     },
     {
         'title': 'Motor de layout: render_carousel (Slide + BrandKit -> PNG 4:5)',
-        'description': 'Compõe texto sobre imagem aplicando o template da marca (faixa, logo, tipografia, paleta, margens seguras, numeração n/N) e exporta 1080x1350. Determinístico e testável SEM GPU. É o ponto 2 dos três de consistência de marca. Persona: Bia.',
-        'column': 'backlog',
+        'description': 'Compõe texto sobre imagem aplicando o template da marca (faixa, tipografia, paleta, margens seguras, numeração n/N) e exporta 1080x1350. Determinístico e testável SEM GPU. É o ponto 2 dos três de consistência de marca. Persona: Bia. ENTREGUE: render_carousel.py (44 testes) — ver docs/entregas/motor-de-slides.md. Falta desenhar o logo_path no rodapé.',
+        'column': 'done',
         'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
         'labels': ['backend', 'conteúdo', 'prioridade:alta'],
     },
