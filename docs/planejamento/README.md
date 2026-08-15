@@ -19,7 +19,7 @@ com **modelos locais**.
 | 4 | [`carrossel-first-motor-de-slides.md`](./carrossel-first-motor-de-slides.md) | **Correção:** carrossel é o formato padrão (não vídeo). Modelo `Slide`, **motor de layout** e publisher de carrossel. |
 | 5 | [`produto-agencia-exibicao-e-frontend.md`](./produto-agencia-exibicao-e-frontend.md) | **Produto:** barreira baixa → operação de agência (multi-tenant + revelação progressiva), `Activity`, aprovação por link, as 10 telas, os 3 ritmos e a stack de frontend (**Base UI**, Motion, R3F com escopo). |
 | 6 | [`personas.md`](./personas.md) | **Personas** — as 6 pessoas que a ferramenta atende, o que cada uma nunca deve ver e como resolvem disputas de escopo. |
-| 7 | [`paralelismo-de-modelos.md`](./paralelismo-de-modelos.md) | **Escala:** paralelizar chamadas de modelo numa **única GPU** — semáforo por classe de recurso, pipelining das etapas e provider de serving trocável (vLLM). |
+| 7 | [`paralelismo-de-modelos.md`](./paralelismo-de-modelos.md) | **Escala:** paralelizar chamadas de modelo numa **única GPU** — semáforo por classe, pipelining, **co-locação de dois modelos residentes** (time-slicing × MPS × MIG, faixas de VRAM, *thrashing*) e provider de serving trocável (vLLM). |
 | — | [`referencias-artigos.md`](./referencias-artigos.md) | Artigos consultados, contribuição de cada um, mapeamento fonte→decisão e ressalvas de acesso. |
 
 ## Apresentações visuais (artefatos)
@@ -55,10 +55,14 @@ com **modelos locais**.
    *(→ doc 3, §8-bis)*
 9. **Paralelismo por classe de recurso.** Com **uma** GPU, fan-out ilimitado só vira fila: o
    ganho vem de separar GPU/CPU/rede e **sobrepor** os estágios. *(→ doc 7)*
+10. **A pista da GPU se divide quando dois modelos cabem.** Texto + imagem residentes juntos
+    fazem `copy` e `arte` rodarem simultaneamente — e o par é complementar (LLM é limitado por
+    banda de memória, difusão por computação). Acima de ~85% da VRAM, porém, vira *thrashing*
+    e fica **pior** que serializar. *(→ doc 7, §3-bis)*
 
 ## Sprints no board
 
-Todos os cards estão semeados em `board/seed.py` (→ `/api/board`): **110 cards**.
+Todos os cards estão semeados em `board/seed.py` (→ `/api/board`): **114 cards**.
 
 | Sprint | Tema | Cards |
 |---|---|---|
@@ -67,7 +71,7 @@ Todos os cards estão semeados em `board/seed.py` (→ `/api/board`): **110 card
 | 13 | Regionalização & Trends | `Region` + localização, `trend_scout`, gate de brand-safety, acervo próprio como few-shot, re-planejamento trimestral, registry `vision`/IP-Adapter, testes | 7 |
 | 14 | Operação de agência | `Activity`, tela **Hoje**, **link de aprovação**, tela de Campanha, Todos os clientes, relatório, testes | 7 |
 | 15 | Frontend | rotas reais, **Base UI**, **Motion**, TanStack Query, dnd-kit, **R3F** (escopo restrito) | 6 |
-| 16 | Escala e paralelismo | executor com semáforo por classe, materializador em lote, pipelining, fronteira na delegação, provider `vllm`, tuning do Ollama, medição | 7 |
+| 16 | Escala e paralelismo | executor com semáforo por classe, materializador em lote, pipelining, fronteira na delegação, provider `vllm`, tuning do Ollama, medição, **perfil de GPU**, **semáforo por modelo residente**, **anti-*thrashing***, **MPS** | 11 |
 
 ✅ = já entregue.
 

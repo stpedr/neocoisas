@@ -805,4 +805,32 @@ SEED_CARDS: list[dict] = [
         'sprint': 'Sprint 16 · Escala e paralelismo',
         'labels': ['backend', 'testes', 'prioridade:alta'],
     },
+    {
+        'title': 'Perfil de GPU (ANE_GPU_PROFILE)',
+        'description': 'Detecta/declara a faixa de VRAM (small 8-12GB | medium 16-24GB | large 32GB+) e deriva OLLAMA_MAX_LOADED_MODELS, OLLAMA_NUM_PARALLEL e os limites dos semáforos. Aceite: mesma base de código roda certo em GPU pequena (1 modelo) e média (texto+imagem residentes).',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'infra', 'prioridade:alta'],
+    },
+    {
+        'title': 'Semáforo por modelo residente (gpu:texto, gpu:imagem)',
+        'description': 'Em vez de um contador único para GPU, um por modelo residente — refletindo que são pistas distintas quando a VRAM comporta os dois. Colapsa em um só quando cabe um modelo. Aceite: em GPU de 16-24GB, copy e arte de posts diferentes rodam simultaneamente (medido).',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Escalonamento consciente do modelo residente (anti-thrashing)',
+        'description': 'Preferir despachar trabalho cujo modelo já está carregado, agrupando tarefas do mesmo modelo antes de forçar troca. Sem isso, um pipeline que alterna texto->imagem->texto vira carrega/descarrega em looping, pior que serializar. Regra: residentes + KV cache <= ~85% da VRAM.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'MPS opcional documentado (concorrência real entre processos)',
+        'description': 'Ollama e ComfyUI são processos separados: sem MPS eles se revezam por time-slicing (o padrão pós-Volta NÃO é concorrente). nvidia-cuda-mps-control -d habilita execução simultânea de kernels. MIG fica fora — é A100/H100.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['infra', 'docs', 'prioridade:baixa'],
+    },
 ]
