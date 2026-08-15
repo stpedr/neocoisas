@@ -160,11 +160,37 @@ Onde o 3D **ganha o lugar** (via **React Three Fiber** + drei, que integra ao ci
 
 Onde **não** entra: Hoje, Kanban, Calendário-mês, Post, Aprovação. Todas com fallback 2D.
 
-### 5.4. Stack proposta
+### 5.4. Biblioteca de UI: **Base UI** (headless, open-source)
+
+O projeto já tem **identidade visual própria** (tokens, tema claro/escuro, a11y — Sprint 10) e
+as telas propostas são densas e específicas (calendário, Kanban, carrossel). Então o que falta
+**não é aparência** — é **comportamento acessível**: dropdown, dialog, popover, tabs, tooltip,
+select, foco preso, navegação por teclado, ARIA correto. Reescrever isso à mão é onde
+projetos quebram acessibilidade sem perceber.
+
+Por isso a escolha é uma biblioteca **headless** (sem estilo), não uma "temada":
+
+| Opção | Situação (2026) | Veredito |
+|---|---|---|
+| **Base UI** | do **criador do Radix** + Floating UI, mantida pela MUI; **v1.0 estável em 2026**; hoje a camada de primitivos **mais ativa** | **recomendada** |
+| Radix Primitives | **adquirida pela WorkOS**; atualizações desaceleraram em vários componentes | evitar como aposta nova |
+| shadcn/ui | forma mais comum de consumir primitivos, mas **exige Tailwind**; desde 2025 aceita Base UI por opt-in | só se adotarmos Tailwind |
+| Headless UI | boa, porém escopo menor de componentes | insuficiente |
+| Mantine / MUI / HeroUI | trazem **design próprio** | conflita com o nosso |
+
+**Decisão:** adotar **Base UI** e **estilizar com os tokens CSS já existentes**. Ganhamos
+acessibilidade de primeira linha sem herdar visual de terceiros e sem migrar para Tailwind —
+a aparência continua sendo a nossa, igual à das apresentações.
+
+> Se um dia o time preferir Tailwind, `shadcn/ui` roda **sobre Base UI** — o caminho continua
+> aberto sem retrabalho de primitivos.
+
+### 5.5. Stack proposta
 
 | Camada | Escolha | Por quê |
 |---|---|---|
 | Framework | **Next 14+ App Router** (já existe) | rotas reais + Server Components |
+| Componentes | **Base UI** (headless) | a11y pronta, estilizada pelos nossos tokens |
 | Animação | **Motion** | transições compartilhadas, drag, gestos |
 | 3D | **React Three Fiber + drei** | só na landing e na hélice do ano |
 | Estado servidor | **TanStack Query** | polling de jobs, cache, revalidação |

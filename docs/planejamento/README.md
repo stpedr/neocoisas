@@ -16,7 +16,8 @@ com **modelos locais**.
 | 2 | [`arquitetura-planejamento-anual.md`](./arquitetura-planejamento-anual.md) | Arquitetura **anual**: hierarquia de 5 níveis, esqueleto barato + materialização *lazy*, **onboarding + Brand Kit**, **regionalização**, **trends**, **agência virtual** (17 papéis). |
 | 3 | [`arquitetura-ia-modelos-locais.md`](./arquitetura-ia-modelos-locais.md) | Arquitetura de **IA local-first**: capacidade → factory → providers, stack 100% offline, capacidades novas (**visão**, **referência de estilo**), modelos por VRAM. |
 | 4 | [`carrossel-first-motor-de-slides.md`](./carrossel-first-motor-de-slides.md) | **Correção:** carrossel é o formato padrão (não vídeo). Modelo `Slide`, **motor de layout** (Slide + BrandKit → PNG 4:5) e publisher de carrossel. |
-| 5 | [`produto-agencia-exibicao-e-frontend.md`](./produto-agencia-exibicao-e-frontend.md) | **Produto:** barreira baixa → operação de agência (multi-tenant + revelação progressiva), `Activity`, aprovação por link, as telas, os 3 ritmos e a stack de frontend. |
+| 5 | [`produto-agencia-exibicao-e-frontend.md`](./produto-agencia-exibicao-e-frontend.md) | **Produto:** barreira baixa → operação de agência (multi-tenant + revelação progressiva), `Activity`, aprovação por link, as telas, os 3 ritmos e a stack de frontend (**Base UI**, Motion, R3F com escopo). |
+| 6 | [`personas.md`](./personas.md) | **Personas** — as 6 pessoas que a ferramenta atende, o que cada uma nunca deve ver e como elas resolvem disputas de escopo. |
 
 ## Apresentações visuais (artefatos)
 
@@ -52,12 +53,16 @@ com **modelos locais**.
 
 ## Sprints propostas
 
+**Todos os cards já estão semeados no board** (`board/seed.py` → `/api/board`): 102 cards, dos
+quais **41 novos** nas sprints abaixo, todos em `backlog`.
+
 | Sprint | Tema | Cards |
 |---|---|---|
-| 11 | Onboarding & Marca (fundação) | formulário + upload de fotos, `CompanyProfile`/`BrandKit`, presets por segmento, condicionamento de estilo, moldura, portão de consistência |
-| 12 | Planejamento anual | `AnnualPlan`/`Campaign`/`PlanSlot`, calendário comercial, esqueleto anual, materializador lazy, endpoints, aba Planejamento |
-| 13 | Regionalização & Trends | `Region` + localização, `trend_scout`, gate de brand-safety, re-planejamento trimestral |
-| — | Arquitetura de IA | capacidade `vision`, registry, workflow IP-Adapter, injeção de estilo, embeddings (opcional) |
+| 11 | Fundação: Marca & Carrossel | multi-tenant, `CompanyProfile`/`BrandKit`, onboarding + preview, presets, modelo `Slide`, copy de carrossel, **motor de layout**, publisher de carrossel, condicionamento de estilo, portão de consistência, capacidade `vision`, URL pública, testes | 14 |
+| 12 | Planejamento anual | `AnnualPlan`/`Campaign`/`PlanSlot`, calendário comercial, esqueleto + flex slots, materializador lazy, endpoints, agendador por data, aba Planejamento, testes | 8 |
+| 13 | Regionalização & Trends | `Region` + localização, `trend_scout`, gate de brand-safety, re-planejamento trimestral, registry `vision`/IP-Adapter, testes | 6 |
+| 14 | Operação de agência | `Activity`, tela **Hoje**, **link de aprovação**, tela de Campanha, Todos os clientes, relatório, testes | 7 |
+| 15 | Frontend | rotas reais, **Base UI**, **Motion**, TanStack Query, dnd-kit, **R3F** (escopo restrito) | 6 |
 
 ## Referências
 
