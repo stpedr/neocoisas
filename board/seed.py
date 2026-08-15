@@ -105,7 +105,7 @@ SEED_CARDS: list[dict] = [
     },
     {
         'title': 'Publisher Instagram Reels',
-        'description': 'publishers/instagram.py (Graph API) — scaffold; falta URL pública do vídeo + chamada final. IG_USER_ID/IG_ACCESS_TOKEN.',
+        'description': 'publishers/instagram.py (Graph API) — scaffold; falta URL pública do vídeo + chamada final. IG_USER_ID/IG_ACCESS_TOKEN. NOTA: com a decisão carrossel-first, o publisher de CARROSSEL (Sprint 11) tem precedência — Reels vira o caminho secundário.',
         'column': 'review',
         'sprint': 'Sprint 6 · Automações',
         'labels': ['backend', 'integração'],
@@ -431,5 +431,392 @@ SEED_CARDS: list[dict] = [
         'column': 'done',
         'sprint': 'Sprint 10 · Design & UX',
         'labels': ['frontend', 'prioridade:baixa'],
+    },
+
+    # ------------------------------------------------------------------
+    # Sprint 11 · Fundação: Marca & Carrossel
+    # Ver docs/planejamento/ (README.md indexa todos os documentos).
+    # ------------------------------------------------------------------
+    {
+        'title': 'Workspace/Client (multi-tenant) + revelação progressiva',
+        'description': 'Modelo multi-tenant desde o dia 1 (Workspace -> Client) com a UI escondendo o conceito até o 2º cliente. Aceite: solo nunca vê a palavra "cliente"; ao cadastrar o 2º, o seletor e a visão "Todos" aparecem sem migração. Doc: produto-agencia-exibicao-e-frontend.md §1.',
+        'column': 'backlog',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['backend', 'frontend', 'prioridade:alta'],
+    },
+    {
+        'title': 'CompanyProfile + BrandKit + storage das fotos da estética',
+        'description': 'Perfil agnóstico de segmento + manual de marca (logo, paleta, tipografia, style_keywords, fotos de referência, templates por formato). Persistência SQLite + storage das imagens. PARCIAL: BrandKit implementado em brand.py (cores semânticas, contraste automático, from_dict tolerante); faltam CompanyProfile, persistência e storage das fotos.',
+        'column': 'in_progress',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Onboarding em 1 tela + preview de 3 posts na hora',
+        'description': 'Formulário único (dados essenciais + upload das fotos) que gera o Brand Kit e mostra 3 posts de exemplo ANTES de qualquer configuração. Aceite: usuário novo chega ao primeiro calendário em <= 5 min. Persona: Marina.',
+        'column': 'backlog',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['frontend', 'backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Presets por segmento',
+        'description': 'O segmento escolhido no onboarding define pilares, datas comerciais relevantes e cadência sugerida — é o que faz a mesma ferramenta servir padaria, clínica, e-commerce ou SaaS.',
+        'column': 'backlog',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['backend', 'conteúdo', 'prioridade:média'],
+    },
+    {
+        'title': 'Modelo Slide + Idea.slides (carrossel-first)',
+        'description': 'Slide (role hook/content/summary/cta, headline, body, visual_prompt, alt_text) ao lado de Scene. post_format decide o caminho: slides (carrossel/feed) ou scenes (Reels). Retrocompatível. ENTREGUE: agents/slides.py + Idea estendida — ver docs/entregas/motor-de-slides.md.',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Agente de copy de carrossel',
+        'description': 'Gera a estrutura gancho -> conteúdo -> resumo -> CTA (3-10 slides) em JSON, mais legenda e hashtags. Parsing puro e testável, no padrão dos demais agentes. ENTREGUE: agents/carousel_writer.py com fronteira explícita entre slides (anti-repetição) e normalização defensiva de hashtags/legenda — ver docs/entregas/agente-copy-carrossel.md. Falta ligar o visual_prompt ao provider de imagem.',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['backend', 'conteúdo', 'prioridade:alta'],
+    },
+    {
+        'title': 'Motor de layout: render_carousel (Slide + BrandKit -> PNG 4:5)',
+        'description': 'Compõe texto sobre imagem aplicando o template da marca (faixa, tipografia, paleta, margens seguras, numeração n/N) e exporta 1080x1350. Determinístico e testável SEM GPU. É o ponto 2 dos três de consistência de marca. Persona: Bia. ENTREGUE: render_carousel.py (44 testes) — ver docs/entregas/motor-de-slides.md. Falta desenhar o logo_path no rodapé.',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['backend', 'conteúdo', 'prioridade:alta'],
+    },
+    {
+        'title': 'Publisher de carrossel (Graph API)',
+        'description': 'N containers filhos (is_carousel_item=true) + container pai (media_type=CAROUSEL, children=[...]) + media_publish. Teto de 10 itens; carrossel conta como 1 post no limite de ~100/24h. Depende de: URL pública do criativo.',
+        'column': 'backlog',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['backend', 'integração', 'prioridade:alta'],
+    },
+    {
+        'title': 'Condicionamento de estilo pelas fotos da marca',
+        'description': 'Nível leve (MVP): style_keywords injetadas no visual_prompt (funciona em qualquer provider). Nível forte plugável: referência visual real via IP-Adapter/img2img. É o ponto 1 dos três de consistência. PARCIAL: carousel_art.py entrega a injeção e a geração de arte por slide, com sufixo idêntico em todos e falha isolada — ver docs/entregas/arte-por-slide.md. Falta as style_keywords virem automaticamente das fotos (depende da capacidade de visão) e o nível forte.',
+        'column': 'in_progress',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['backend', 'conteúdo', 'prioridade:média'],
+    },
+    {
+        'title': 'Portão de consistência visual (estende o critic)',
+        'description': 'O Guardião da Marca confere aderência à paleta/tom antes de aprovar; fora do padrão volta para ajuste. É o ponto 3 dos três de consistência.',
+        'column': 'backlog',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['backend', 'prioridade:média'],
+    },
+    {
+        'title': 'UI de revisão do carrossel',
+        'description': 'Visualizar os N slides (swipe) com legenda, hashtags e variantes antes de aprovar.',
+        'column': 'backlog',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['frontend', 'prioridade:média'],
+    },
+    {
+        'title': 'Capacidade de visão (agents/vision) — ler as fotos da estética',
+        'description': 'Nova factory get_vision_client no mesmo padrão, provider local padrão (Ollama multimodal: llama3.2-vision/llava/moondream). Saída: style_keywords do Brand Kit + alt text de acessibilidade. Doc: arquitetura-ia-modelos-locais.md §5.1.',
+        'column': 'backlog',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['backend', 'conteúdo', 'prioridade:média'],
+    },
+    {
+        'title': 'Testes da fundação (slides, layout, brand kit)',
+        'description': 'Estrutura de slides, composição de layout (sem GPU), montagem das chamadas de carrossel da API e geração do Brand Kit.',
+        'column': 'backlog',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['testes', 'prioridade:alta'],
+    },
+
+    # ------------------------------------------------------------------
+    # Sprint 12 · Planejamento anual
+    # ------------------------------------------------------------------
+    {
+        'title': 'AnnualPlan + Campaign + PlanSlot + persistência',
+        'description': 'Camada de plano (plans.py espelhando board/store.py). PlanSlot é a linha barata do esqueleto: data, pilar, formato, kind (structural|flex), status. Doc: arquitetura-planejamento-anual.md §7.',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · Planejamento anual',
+        'labels': ['backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Calendário comercial região-consciente',
+        'description': 'Núcleo puro (ano, região) -> datas-âncora empilhando 3 camadas: nacional + regional/estadual + nicho da empresa. Inclui datas móveis (Páscoa por Computus; Mães/Pais/Black Friday por regra de n-ésimo dia). Testável sem LLM.',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · Planejamento anual',
+        'labels': ['backend', 'conteúdo', 'prioridade:alta'],
+    },
+    {
+        'title': 'Gerador de esqueleto anual (+ flex slots)',
+        'description': 'Estratégia 1x LLM + distribuição determinística da cadência, casando campanhas com as datas comerciais e reservando ~20-30% de slots flex para trends/reativo. Aceite: esqueleto do ano em segundos, sem materializar.',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · Planejamento anual',
+        'labels': ['backend', 'conteúdo', 'prioridade:alta'],
+    },
+    {
+        'title': 'Materializador lazy (janela rolante)',
+        'description': 'Generaliza o autogen_tick: materializa os slots em [hoje, hoje+21d] aplicando os sinais atuais (trends, região, métricas). Flex slots usam janela mais curta. Aceite: custo de LLM proporcional à janela, não ao ano.',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · Planejamento anual',
+        'labels': ['backend', 'prioridade:média'],
+    },
+    {
+        'title': 'Endpoints do plano anual + materialização',
+        'description': 'POST /api/companies/{id}/annual-plan, GET /api/annual-plan/{id}, PATCH /api/plan-slots/{id}, POST .../materialize. Geração pesada como job assíncrono com polling (jobs.py).',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · Planejamento anual',
+        'labels': ['backend', 'prioridade:média'],
+    },
+    {
+        'title': 'Agendador por data planejada',
+        'description': 'run_scheduled_posts passa a priorizar/filtrar por scheduled_date <= agora, respeitando a hora local da região. Posts sem data mantêm o comportamento atual (retrocompatível).',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · Planejamento anual',
+        'labels': ['backend', 'prioridade:média'],
+    },
+    {
+        'title': 'Aba Planejamento (timeline anual + drill-down)',
+        'description': 'Timeline dos 12 meses com campanhas nas datas comerciais; drill-down para a grade do mês com badge de pilar, formato e status.',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · Planejamento anual',
+        'labels': ['frontend', 'prioridade:média'],
+    },
+    {
+        'title': 'Testes do planejamento anual',
+        'description': 'Calendário comercial (fixas e móveis), distribuição de slots, flex ratio, materialização e endpoints (TestClient).',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · Planejamento anual',
+        'labels': ['testes', 'prioridade:alta'],
+    },
+
+    # ------------------------------------------------------------------
+    # Sprint 13 · Regionalização & Trends
+    # ------------------------------------------------------------------
+    {
+        'title': 'Modelo Region + localização (fan-out de variantes)',
+        'description': 'Region (fuso, feriados locais, tom/regionalismos, idioma). Um PlanSlot é agnóstico de região e se ramifica em N Idea na materialização, ajustando tom, clima e datas. Reusa o translator para multi-idioma.',
+        'column': 'backlog',
+        'sprint': 'Sprint 13 · Regionalização & Trends',
+        'labels': ['backend', 'conteúdo', 'prioridade:alta'],
+    },
+    {
+        'title': 'agents/trend_scout.py + TrendSignal',
+        'description': 'Coleta e ranqueia trends APENAS de fontes permitidas: APIs oficiais, sinal interno (top-performers via analyst) e curadoria manual. Sem scraping que burle detecção. Produz {tema, tipo, score, validade, fonte}.',
+        'column': 'backlog',
+        'sprint': 'Sprint 13 · Regionalização & Trends',
+        'labels': ['backend', 'integração', 'prioridade:alta'],
+    },
+    {
+        'title': 'Gate de brand-safety das trends + injeção manual',
+        'description': 'O critic valida a trend contra o tom da marca ANTES de virar post; nenhuma trend publica sem passar pelo gate. UI para o operador injetar uma trend curada.',
+        'column': 'backlog',
+        'sprint': 'Sprint 13 · Regionalização & Trends',
+        'labels': ['backend', 'frontend', 'prioridade:média'],
+    },
+    {
+        'title': 'Re-planejamento trimestral com métricas',
+        'description': 'O analista realimenta pesos de pilar e temas do trimestre seguinte a partir do que performou. Fecha o loop do plano anual.',
+        'column': 'backlog',
+        'sprint': 'Sprint 13 · Regionalização & Trends',
+        'labels': ['backend', 'integração', 'prioridade:baixa'],
+    },
+    {
+        'title': 'Testes de regionalização e trends',
+        'description': 'Calendário regional, fan-out de variantes, fuso/hora local, ranqueamento e gate de trends.',
+        'column': 'backlog',
+        'sprint': 'Sprint 13 · Regionalização & Trends',
+        'labels': ['testes', 'prioridade:alta'],
+    },
+
+    # ------------------------------------------------------------------
+    # Sprint 14 · Operação de agência
+    # ------------------------------------------------------------------
+    {
+        'title': 'Activity (generaliza o Card do board)',
+        'description': 'Atividade com kind (briefing|produção|revisão|aprovação_cliente|ajuste|agendamento|publicação|relatório), status, responsável, prazo, ligada a campanha/post. Nasce automaticamente dos slots materializados E pode ser criada à mão. Persona: Rafa.',
+        'column': 'backlog',
+        'sprint': 'Sprint 14 · Operação de agência',
+        'labels': ['backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Tela Hoje / caixa de entrada',
+        'description': 'Tela inicial da operação: o que precisa de mim agora (aprovações pendentes, feedback do cliente, prazos de hoje). Densa, priorizando varredura. Aceite: Rafa zera o dia sem sair dela.',
+        'column': 'backlog',
+        'sprint': 'Sprint 14 · Operação de agência',
+        'labels': ['frontend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Link de aprovação do cliente (sem login)',
+        'description': 'Link público com token, otimizado para celular, onde o cliente aprova ou comenta POR SLIDE. Cada comentário vira uma Activity de ajuste com responsável. O cliente não é um assento no sistema. Persona: Dra. Helena.',
+        'column': 'backlog',
+        'sprint': 'Sprint 14 · Operação de agência',
+        'labels': ['backend', 'frontend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Tela de Campanha (arco + tarefas + posts)',
+        'description': 'Campanha ganha rosto operacional: arco teaser->oferta->última chamada, atividades, responsáveis, posts que a compõem e resultado.',
+        'column': 'backlog',
+        'sprint': 'Sprint 14 · Operação de agência',
+        'labels': ['frontend', 'prioridade:média'],
+    },
+    {
+        'title': 'Visão Todos os clientes (carga e atrasos)',
+        'description': 'Para o gestor: carga por cliente e por pessoa, o que está atrasado, o que aguarda aprovação. Persona: Caio.',
+        'column': 'backlog',
+        'sprint': 'Sprint 14 · Operação de agência',
+        'labels': ['frontend', 'prioridade:média'],
+    },
+    {
+        'title': 'Relatório por cliente',
+        'description': 'Desempenho por post/campanha/cliente + insights do analista, exportável — material de renovação para a agência.',
+        'column': 'backlog',
+        'sprint': 'Sprint 14 · Operação de agência',
+        'labels': ['backend', 'frontend', 'prioridade:baixa'],
+    },
+    {
+        'title': 'Testes da operação de agência',
+        'description': 'Geração automática de atividades a partir dos slots, token de aprovação, comentário -> atividade, visão multi-cliente.',
+        'column': 'backlog',
+        'sprint': 'Sprint 14 · Operação de agência',
+        'labels': ['testes', 'prioridade:alta'],
+    },
+
+    # ------------------------------------------------------------------
+    # Sprint 15 · Frontend (rotas, componentes, animação)
+    # ------------------------------------------------------------------
+    {
+        'title': 'Rotas reais + Server Components',
+        'description': 'Sair das abas trocadas em page.tsx para rotas do App Router: /hoje, /calendario, /ano, /producao, /cliente/[id], /aprovacao/[token].',
+        'column': 'backlog',
+        'sprint': 'Sprint 15 · Frontend',
+        'labels': ['frontend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Base UI (biblioteca headless) sobre os tokens atuais',
+        'description': 'Adotar Base UI (do criador do Radix, mantida pela MUI, v1.0 estável em 2026) para dialog/popover/select/tabs/tooltip com acessibilidade pronta, estilizando com os tokens CSS da Sprint 10. Radix ficou parada após a aquisição pela WorkOS; shadcn exigiria Tailwind.',
+        'column': 'backlog',
+        'sprint': 'Sprint 15 · Frontend',
+        'labels': ['frontend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Motion: transições compartilhadas, drag e swipe',
+        'description': 'layoutId para o card do calendário virar a tela do post; drag no Kanban; swipe do carrossel; AnimatePresence na caixa de entrada. Respeitar prefers-reduced-motion.',
+        'column': 'backlog',
+        'sprint': 'Sprint 15 · Frontend',
+        'labels': ['frontend', 'prioridade:alta'],
+    },
+    {
+        'title': 'TanStack Query (estado de servidor)',
+        'description': 'Cache, revalidação e polling dos jobs de geração/materialização, substituindo fetch manual.',
+        'column': 'backlog',
+        'sprint': 'Sprint 15 · Frontend',
+        'labels': ['frontend', 'prioridade:média'],
+    },
+    {
+        'title': 'dnd-kit no calendário e no Kanban',
+        'description': 'Arrastar acessível (funciona por teclado), melhor que HTML5 DnD — replanejar um post mudando o dia, mover atividade de coluna.',
+        'column': 'backlog',
+        'sprint': 'Sprint 15 · Frontend',
+        'labels': ['frontend', 'prioridade:média'],
+    },
+    {
+        'title': 'React Three Fiber: hélice do ano + landing',
+        'description': 'ESCOPO RESTRITO: 3D só na landing/onboarding e na hélice do ano (365 dias num quadro só, onde o 3D resolve densidade real). Fora das telas operacionais, sempre com fallback 2D e prefers-reduced-motion.',
+        'column': 'backlog',
+        'sprint': 'Sprint 15 · Frontend',
+        'labels': ['frontend', 'prioridade:baixa'],
+    },
+
+    # ------------------------------------------------------------------
+    # Infra transversal
+    # ------------------------------------------------------------------
+    {
+        'title': 'Hospedagem do criativo por URL pública',
+        'description': 'A Graph API publica a partir de URLs públicas — resolver entre volume servido pela API, bucket S3-compatível ou túnel. BLOQUEIA a publicação real (não o planejamento).',
+        'column': 'backlog',
+        'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
+        'labels': ['infra', 'integração', 'prioridade:alta'],
+    },
+    {
+        'title': 'Acervo próprio como few-shot (substitui fine-tuning)',
+        'description': 'Selecionar os N posts de melhor desempenho DAQUELA marca (analyst + Idea.metrics já existem) e injetá-los como exemplos na geração do próximo. Dado primário, por cliente, melhora sozinho e funciona em qualquer provider. Decisão registrada: NÃO fazer fine-tuning agora — ver arquitetura-ia-modelos-locais.md §8-bis.',
+        'column': 'backlog',
+        'sprint': 'Sprint 13 · Regionalização & Trends',
+        'labels': ['backend', 'conteúdo', 'prioridade:alta'],
+    },
+    {
+        'title': 'Registry: capacidade vision + workflow IP-Adapter',
+        'description': 'Expor a capacidade de visão em registry.py/GET /api/models e na UI de troca; workflow ComfyUI de referência de estilo (IP-Adapter) para o nível forte do Brand Kit.',
+        'column': 'backlog',
+        'sprint': 'Sprint 13 · Regionalização & Trends',
+        'labels': ['backend', 'prioridade:média'],
+    },
+
+    # ------------------------------------------------------------------
+    # Sprint 16 · Escala e paralelismo
+    # Doc: docs/planejamento/paralelismo-de-modelos.md
+    # ------------------------------------------------------------------
+    {
+        'title': 'Executor com semáforo por classe e por modelo residente',
+        'description': 'ORDEM 3. Cada tarefa declara sua classe (cpu = nº de núcleos, io ~16) e, na GPU, o semáforo é POR MODELO RESIDENTE (gpu:texto, gpu:imagem) — refletindo que são pistas distintas quando a VRAM comporta os dois; colapsa num só quando cabe um modelo, então o mesmo código serve as duas faixas. Falha de uma tarefa não derruba o lote (mesmo contrato de post_approved). Aceite: lote de N posts sem estourar VRAM; em GPU de 16-24GB, copy e arte de posts diferentes rodam simultaneamente (medido). Depende de: perfil de GPU.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Materializador em lote paralelo',
+        'description': 'ORDEM 6. Depende de: materializador lazy (Sprint 12). N slots da janela e N regiões por slot processados concorrentemente, respeitando os limites por classe. O fan-out só onde os itens são independentes — copy->arte->layout continua sequencial.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'prioridade:média'],
+    },
+    {
+        'title': 'Pipelining das etapas (sobrepor GPU, CPU e rede)',
+        'description': 'ORDEM 4. O motor de slides é CPU puro e a publicação é rede — ambos podem rodar enquanto a GPU já trabalha no próximo post. Aceite: sobreposição medida, não presumida; tempo total ~ tempo de GPU.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'Fronteira explícita na delegação (anti-duplicação)',
+        'description': 'ORDEM 7. Ao abrir slides/regiões em paralelo, cada tarefa recebe escopo explícito ("você é o slide 4 de 8, papel conteúdo, não repita o gancho"). É a correção que a Anthropic aplicou para subagentes pararem de duplicar trabalho.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['conteúdo', 'backend', 'prioridade:média'],
+    },
+    {
+        'title': 'Provider vllm no factory de texto',
+        'description': 'OPCIONAL — só para escala de agência. Continuous batching para escala de agência: ~793 tok/s em pico contra ~41 do Ollama. Entra como provider trocável (não como padrão — exige GPU dedicada). Aceite: trocar text_provider para vllm sem mexer nos agentes.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'infra', 'prioridade:baixa'],
+    },
+    {
+        'title': 'Medição de tempo por etapa e ocupação por classe',
+        'description': 'ORDEM 1 (primeiro de tudo). Instrumentar o pipeline para achar o gargalo real antes de otimizar. Aceite: relatório por etapa (copy/arte/layout/publicação) e ocupação de GPU/CPU/rede num lote.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'testes', 'prioridade:alta'],
+    },
+    {
+        'title': 'Perfil de GPU (ANE_GPU_PROFILE) + tuning do Ollama',
+        'description': 'ORDEM 2 (depois da medição). Detecta/declara a faixa de VRAM (small 8-12GB | medium 16-24GB | large 32GB+) e deriva OLLAMA_MAX_LOADED_MODELS, OLLAMA_NUM_PARALLEL e os limites dos semáforos — no compose/.env, com guia de tuning. Ponto crítico: NUM_PARALLEL tem default 1, então hoje tudo serializa; e VRAM escala linear (NUM_PARALLEL x CONTEXT), então subir de 1 em 1 medindo. Aceite: mesma base de código roda certo em GPU pequena (1 modelo) e média (texto+imagem residentes).',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'infra', 'prioridade:alta'],
+    },
+    {
+        'title': 'Escalonamento consciente do modelo residente (anti-thrashing)',
+        'description': 'ORDEM 5. Preferir despachar trabalho cujo modelo já está carregado, agrupando tarefas do mesmo modelo antes de forçar troca. Sem isso, um pipeline que alterna texto->imagem->texto vira carrega/descarrega em looping, pior que serializar. Regra: residentes + KV cache <= ~85% da VRAM.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['backend', 'prioridade:alta'],
+    },
+    {
+        'title': 'MPS opcional documentado (concorrência real entre processos)',
+        'description': 'OPCIONAL. Ollama e ComfyUI são processos separados: sem MPS eles se revezam por time-slicing (o padrão pós-Volta NÃO é concorrente). nvidia-cuda-mps-control -d habilita execução simultânea de kernels. MIG fica fora — é A100/H100.',
+        'column': 'backlog',
+        'sprint': 'Sprint 16 · Escala e paralelismo',
+        'labels': ['infra', 'docs', 'prioridade:baixa'],
     },
 ]
