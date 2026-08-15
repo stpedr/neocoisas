@@ -2,9 +2,10 @@
 
 > **Status:** proposta (arquitetura) · **Alvo:** Sprint 11–13 · Loja & Calendário editorial
 > Amplia o escopo de [`calendario-posts-loja-instagram.md`](./calendario-posts-loja-instagram.md):
-> de **um mês** para **o ano inteiro** de uma empresa, agora com **regionalização**,
-> **acompanhamento de trends** e outros sinais dinâmicos. O calendário mensal passa a ser
-> um **recorte** deste plano.
+> de **um mês** para **o ano inteiro** de uma empresa **de qualquer segmento**, que entra por um
+> **onboarding** (formulário + fotos da estética) e cujo **padrão de marca é mantido em todo
+> post**. Inclui **regionalização**, **trends** e outros sinais dinâmicos. O calendário mensal
+> passa a ser um **recorte** deste plano.
 
 ## 1. A ideia central
 
@@ -34,6 +35,48 @@ Da literatura de calendário editorial tiramos três princípios:
 
 Isso encaixa no que já existe: o `scheduler.py` já tem um *autogen tick*; nós o
 generalizamos para "materializar os próximos slots do plano **aplicando os sinais atuais**".
+
+## 1-bis. Ponto de entrada: qualquer empresa começa por um formulário + Brand Kit
+
+A ferramenta é **agnóstica de segmento** — padaria, clínica, e-commerce, estúdio, SaaS: toda
+empresa entra pelo mesmo **onboarding guiado**, um formulário que captura os **dados
+essenciais** e a **estética** da marca. Desse intake nascem dois artefatos que **governam
+tudo** depois:
+
+- **`CompanyProfile`** — identidade, **segmento**, público, região(ões), objetivos, voz da
+  marca (tom, *do's & don'ts*), links.
+- **`BrandKit`** — o "manual de marca": logo, **paleta (hex)**, tipografia, palavras-chave de
+  estilo, **fotos de referência da estética** (uploads) e **templates/molduras** por formato.
+
+O **segmento** escolhido no formulário define **presets** (mix de pilares, datas comerciais
+relevantes, cadência sugerida) — é assim que a mesma ferramenta serve qualquer tipo de negócio.
+
+```mermaid
+graph LR
+    F[Onboarding · formulário<br/>dados essenciais + fotos da estética] --> CP[CompanyProfile<br/>segmento, voz, objetivos, regiões]
+    F --> BK[BrandKit<br/>logo, paleta, tipografia,<br/>fotos de referência, templates]
+    CP --> PR[Presets por segmento<br/>pilares · datas · cadência]
+    BK --> G1[Geração: condiciona prompt + estilo]
+    BK --> G2[Composição: moldura + logo]
+    BK --> G3[Portão: checagem de consistência]
+```
+
+### Como o padrão é mantido em TODO post
+
+Consistência de marca é **imposta**, em três pontos da linha de montagem — não fica a cargo do
+acaso do modelo:
+
+1. **Condicionamento na geração** — o `visual_prompt` de cada post recebe automaticamente
+   **paleta + palavras-chave de estilo**, e o provider de imagem usa as **fotos de referência
+   como referência de estilo** (img2img / IP-Adapter no **ComfyUI**, que já é um provider). É
+   aqui que as "fotos da estética" entram de fato.
+2. **Template na composição** — `render.py` aplica a **moldura da marca** (logo, cores,
+   tipografia, áreas seguras) por formato: todo post sai com o mesmo esqueleto visual.
+3. **Portão de consistência** — o **Guardião da Marca** (`critic.py`, estendido para o visual)
+   confere aderência à paleta/tom **antes** de aprovar; fora do padrão, volta para ajuste.
+
+> N posts, a mesma cara. O `BrandKit` é o **contrato visual** que a agência inteira obedece —
+> e o `CompanyProfile` é o briefing que a estratégia segue.
 
 ## 2. Hierarquia de planejamento (com região)
 
@@ -139,9 +182,30 @@ marca a algo fora de tom.
 
 ## 7. Modelo de dados
 
-Reaproveita `StoreProfile` e `Idea`; adiciona a camada de plano + região + trend:
+O intake (§1-bis) gera `CompanyProfile` + `BrandKit`; sobre eles vem a camada de plano +
+região + trend. `Idea` continua sendo o post materializado.
 
 ```python
+@dataclass
+class CompanyProfile:             # generaliza o "StoreProfile" — qualquer segmento
+    id: str; name: str
+    segment: str                  # varejo | serviço | food | saúde | SaaS | ...
+    description: str; audience: str
+    goals: list[str]
+    tone: str; dos: list[str]; donts: list[str]
+    keywords: list[str]; links: dict
+    region_ids: list[str] = ...   # praças ativas
+
+@dataclass
+class BrandKit:                   # "manual de marca" — governa a estética de todo post
+    company_id: str
+    logo_path: str | None = None
+    palette: list[str] = ...      # cores hex
+    fonts: dict = ...             # {display, body}
+    style_keywords: list[str] = ...   # descritores estéticos injetados no prompt
+    reference_images: list[str] = ... # "fotos da estética" (uploads)
+    templates: dict = ...         # molduras por formato {feed, carousel, reels, story}
+
 @dataclass
 class AnnualPlan:
     id: str; company_id: str; year: int
@@ -289,11 +353,23 @@ montagem com **portões de qualidade**. A maior parte do time **já existe** no 
 critic → humano]** → `07 Agendamento` → `08 Publicação` **[só API oficial]** → `09 Análise`
 → **realimenta 01**.
 
+Todo o time trabalha **sob o `BrandKit`** gerado no onboarding (§1-bis): o Diretor de Arte
+condiciona a geração pela estética, o Editor aplica a moldura, e o Guardião da Marca reprova o
+que fugir do padrão — é o que garante que **N posts tenham a mesma cara**.
+
 Isso segue o padrão do repo (contrato + factory por capacidade): cada papel é plugável e
 os handoffs são estados da `Idea`/`PlanSlot`. Apresentação visual do time:
 **[Agência Virtual](https://claude.ai/code/artifact/b4480a28-0ccb-4450-ba3b-696e9aa739fe)**.
 
 ## 13. Cards adicionais
+
+**Sprint 11 · Onboarding & Marca (fundação)**
+0a. Onboarding guiado (formulário multi-etapas + **upload de fotos da estética**). `alta`, frontend, backend.
+0b. `CompanyProfile` + `BrandKit` + storage de imagens de referência. `alta`, backend.
+0c. Presets por segmento (pilares/datas/cadência por tipo de negócio). `alta`, backend, conteúdo.
+0d. Condicionamento de estilo na geração (fotos de referência via ComfyUI/img2img). `alta`, backend, conteúdo.
+0e. Template/moldura de marca no `render.py` (logo, paleta, tipografia, safe areas). `média`, backend.
+0f. Portão de consistência visual (estende `critic.py` para paleta/tom). `média`, backend.
 
 **Sprint 12 · Planejamento anual**
 1. `AnnualPlan`/`Campaign`/`PlanSlot` + persistência (`plans.py`). `alta`, backend.
@@ -312,6 +388,10 @@ os handoffs são estados da `Idea`/`PlanSlot`. Apresentação visual do time:
 
 ## 14. Critério de aceite (feature completa)
 
+- [ ] Uma empresa **de qualquer segmento** é cadastrada por um **formulário** (dados essenciais
+      + fotos da estética) e gera `CompanyProfile` + `BrandKit`.
+- [ ] **Todo post** gerado adere ao Brand Kit (paleta/estilo/moldura) e passa pelo **portão de
+      consistência** antes de aprovar.
 - [ ] Gerar o **esqueleto de um ano** (campanhas nas datas comerciais nacionais **e regionais**,
       slots estruturais + **flex**) em segundos, sem materializar tudo.
 - [ ] Materializar uma **janela 2–4 semanas** → Ideas, com **variantes por região** (tom/fuso/clima).
