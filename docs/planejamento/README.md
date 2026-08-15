@@ -15,6 +15,7 @@ com **modelos locais**.
 | 1 | [`calendario-posts-loja-instagram.md`](./calendario-posts-loja-instagram.md) | Escopo inicial: calendário **mensal** de uma loja no Instagram. Modelo de dados (`StoreProfile`, extensão da `Idea`), agente de calendário, endpoints, aba Calendário. |
 | 2 | [`arquitetura-planejamento-anual.md`](./arquitetura-planejamento-anual.md) | Arquitetura **anual**: hierarquia de 5 níveis, esqueleto barato + materialização *lazy*, **onboarding + Brand Kit**, **regionalização**, **trends**, **agência virtual** (17 papéis). |
 | 3 | [`arquitetura-ia-modelos-locais.md`](./arquitetura-ia-modelos-locais.md) | Arquitetura de **IA local-first**: capacidade → factory → providers, stack 100% offline, capacidades novas (**visão**, **referência de estilo**), modelos por VRAM. |
+| 4 | [`carrossel-first-motor-de-slides.md`](./carrossel-first-motor-de-slides.md) | **Correção:** carrossel é o formato padrão (não vídeo). Modelo `Slide`, **motor de layout** (Slide + BrandKit → PNG 4:5) e publisher de carrossel. |
 
 ## Apresentações visuais (artefatos)
 
@@ -23,6 +24,7 @@ com **modelos locais**.
 | [Agência Virtual](https://claude.ai/code/artifact/b4480a28-0ccb-4450-ba3b-696e9aa739fe) | **Quem faz** — 17 papéis em 5 departamentos e a linha de montagem de todo post. |
 | [IA Local-First](https://claude.ai/code/artifact/48336c86-bace-46f2-bb1a-34c15956ba8b) | **Com quê** — o stack de modelos locais por capacidade. |
 | [Mapa de Conexões](https://claude.ai/code/artifact/01572022-66d9-489b-875c-ba82c3de2baa) | **Como se ligam** — diagrama de conexões (orquestrador, estado, modelos, guardrails, feedback). |
+| [O Entregável](https://claude.ai/code/artifact/f07b8bbd-1fe1-463e-b695-e7953190d298) | **O que o usuário recebe** — a jornada e um carrossel pronto de 8 slides com legenda, hashtags e data. |
 
 ## As decisões que sustentam a proposta
 
@@ -39,6 +41,9 @@ com **modelos locais**.
    nuvem é troca opcional. Dados da marca não saem da máquina. *(→ doc 3)*
 5. **Padrão arquitetural nomeado:** híbrido **orquestrador–trabalhador + pipeline sequencial
    + loop de feedback**. *(→ doc 3, cabeçalho; diagrama no Mapa de Conexões)*
+6. **Carrossel é o caminho padrão, não vídeo.** A maioria dos posts de empresa é carrossel —
+   o que exige um **motor de slides** (modelo `Slide` + layout com o Brand Kit + publisher de
+   carrossel) que o repositório, hoje vídeo-first, não tem. *(→ doc 4)*
 
 ## Sprints propostas
 
