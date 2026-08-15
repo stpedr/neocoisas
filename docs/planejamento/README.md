@@ -62,7 +62,7 @@ com **modelos locais**.
 
 ## Sprints no board
 
-Todos os cards estão semeados em `board/seed.py` (→ `/api/board`): **114 cards**.
+Todos os cards estão semeados em `board/seed.py` (→ `/api/board`): **112 cards**.
 
 | Sprint | Tema | Cards |
 |---|---|---|
@@ -71,7 +71,7 @@ Todos os cards estão semeados em `board/seed.py` (→ `/api/board`): **114 card
 | 13 | Regionalização & Trends | `Region` + localização, `trend_scout`, gate de brand-safety, acervo próprio como few-shot, re-planejamento trimestral, registry `vision`/IP-Adapter, testes | 7 |
 | 14 | Operação de agência | `Activity`, tela **Hoje**, **link de aprovação**, tela de Campanha, Todos os clientes, relatório, testes | 7 |
 | 15 | Frontend | rotas reais, **Base UI**, **Motion**, TanStack Query, dnd-kit, **R3F** (escopo restrito) | 6 |
-| 16 | Escala e paralelismo | executor com semáforo por classe, materializador em lote, pipelining, fronteira na delegação, provider `vllm`, tuning do Ollama, medição, **perfil de GPU**, **semáforo por modelo residente**, **anti-*thrashing***, **MPS** | 11 |
+| 16 | Escala e paralelismo | **ordem explícita 1→7**: medir · perfil de GPU + tuning · executor com semáforo (classe + modelo residente) · pipelining · anti-*thrashing* · materializador em lote · fronteira na delegação. Opcionais: `vllm`, MPS | 9 |
 
 ✅ = já entregue.
 
