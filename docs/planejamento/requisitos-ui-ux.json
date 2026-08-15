@@ -1,0 +1,624 @@
+{
+  "meta": {
+    "produto": "Auto Niche Engine — plataforma de conteúdo para empresas e agências",
+    "versao": "1.0",
+    "escopo": "Requisitos funcionais de UI/UX. Deriva dos documentos em docs/planejamento/.",
+    "convencoes": {
+      "id_requisito": "RF-<TELA>-<n> (funcional) · UX-<CATEGORIA>-<n> (transversal)",
+      "prioridade": ["alta", "media", "baixa"],
+      "densidade": {
+        "densa": "operação diária — prioriza varredura e quantidade de itens visíveis",
+        "ampla": "apresentação — vista com menos frequência, pode respirar",
+        "externa": "fora do login — mobile-first, mínimo de conceitos"
+      }
+    },
+    "principios": [
+      "O modelo de dados é multi-tenant desde o dia 1; a UI esconde isso até o 2º cliente.",
+      "Mostrar antes de perguntar: preview com a marca do usuário antes de qualquer configuração.",
+      "Consistência de marca é imposta pelo sistema, não pedida ao usuário.",
+      "Nenhuma animação bloqueia uma ação; tudo respeita prefers-reduced-motion.",
+      "Toda ação destrutiva ou externa (publicar) exige confirmação explícita."
+    ]
+  },
+
+  "personas": [
+    {
+      "id": "marina",
+      "nome": "Marina",
+      "papel": "Dona de loja (solo)",
+      "objetivo": "Ter presença constante sem virar social media.",
+      "dor": "Não sabe o que postar; quando sabe, não tem tempo de fazer a arte.",
+      "frequencia": "10 min por semana",
+      "dispositivo_principal": "celular",
+      "telas": ["onboarding", "hoje", "post", "desempenho"],
+      "nunca_deve_ver": ["cliente", "workspace", "papeis_equipe", "responsavel", "atividades_de_terceiros", "configuracao_de_modelo"],
+      "decide": "Onboarding em uma tela com preview de 3 posts antes de qualquer ajuste."
+    },
+    {
+      "id": "rafa",
+      "nome": "Rafa",
+      "papel": "Social media / atendimento de agência (12 clientes)",
+      "objetivo": "Fechar o dia sem pendência e sem cliente cobrando.",
+      "dor": "Troca de contexto entre clientes; feedback espalhado em WhatsApp e e-mail.",
+      "frequencia": "o dia todo",
+      "dispositivo_principal": "desktop",
+      "telas": ["hoje", "producao", "calendario", "campanha", "post", "todos_clientes"],
+      "necessita": ["densidade", "atalhos_de_teclado", "troca_de_cliente_sem_recarregar", "estado_codificado_em_forma_e_cor"],
+      "decide": "Telas operacionais são 2D e densas; todo comentário do cliente vira atividade."
+    },
+    {
+      "id": "bia",
+      "nome": "Bia",
+      "papel": "Diretora de arte",
+      "objetivo": "Que todo post pareça feito pelo estúdio, não por um gerador.",
+      "dor": "Retrabalho por receber material fora do padrão.",
+      "frequencia": "por lote",
+      "dispositivo_principal": "desktop",
+      "telas": ["marca", "post", "producao"],
+      "decide": "Os três pontos de imposição do padrão e o portão de consistência visual."
+    },
+    {
+      "id": "caio",
+      "nome": "Caio",
+      "papel": "Dono da agência",
+      "objetivo": "Mais clientes por pessoa, sem cair a qualidade.",
+      "dor": "Não enxerga carga, atrasos nem quem está afogado.",
+      "frequencia": "diária (visão)",
+      "dispositivo_principal": "desktop",
+      "telas": ["todos_clientes", "desempenho", "campanha"],
+      "decide": "Multi-tenant desde o dia 1 e relatório por cliente."
+    },
+    {
+      "id": "helena",
+      "nome": "Dra. Helena",
+      "papel": "Cliente da agência (usuária externa)",
+      "objetivo": "Aprovar rápido, sem aprender ferramenta nenhuma.",
+      "dor": "Receber PDF/print por WhatsApp e não saber o que já foi resolvido.",
+      "frequencia": "por ciclo",
+      "dispositivo_principal": "celular",
+      "telas": ["aprovacao_externa"],
+      "nunca_deve_ver": ["custo", "plano_anual", "quem_produziu", "backlog", "mencao_a_ia"],
+      "decide": "Aprovação por link público com token, mobile-first, comentário por slide."
+    },
+    {
+      "id": "leo",
+      "nome": "Léo",
+      "papel": "Operador técnico / instalador",
+      "objetivo": "Rodar tudo local, sem chave de API e sem mandar dado da marca para fora.",
+      "dor": "Stacks que exigem cinco serviços na nuvem para funcionar.",
+      "frequencia": "na instalação e em ajustes",
+      "dispositivo_principal": "desktop",
+      "telas": ["configuracoes_modelos", "saude_sistema"],
+      "decide": "Local-first por contrato + factory, degradação graciosa, nuvem opt-in."
+    }
+  ],
+
+  "fluxos": [
+    {
+      "id": "F01",
+      "nome": "Entrada — do zero ao primeiro calendário",
+      "persona": "marina",
+      "gatilho": "Primeiro acesso",
+      "meta": "≤ 5 minutos",
+      "telas": ["onboarding", "calendario"],
+      "passos": [
+        {"n": 1, "acao": "Preenche dados essenciais (nome, segmento, público, tom, produtos, links)", "tela": "onboarding"},
+        {"n": 2, "acao": "Envia fotos da estética (3 a 10 imagens)", "tela": "onboarding"},
+        {"n": 3, "acao": "Sistema gera o Brand Kit (paleta, tipografia, style_keywords)", "tela": "onboarding", "automatico": true},
+        {"n": 4, "acao": "Vê 3 posts de exemplo com a própria marca aplicada", "tela": "onboarding", "momento_aha": true},
+        {"n": 5, "acao": "Ajusta paleta/tom se quiser (opcional) ou aceita", "tela": "onboarding"},
+        {"n": 6, "acao": "Sistema monta o esqueleto do ano", "tela": "calendario", "automatico": true}
+      ],
+      "criterio_sucesso": "Usuário chega ao calendário sem ter escolhido pilar de conteúdo nem cadência.",
+      "metricas": ["tempo_ate_primeiro_calendario", "taxa_conclusao_onboarding", "taxa_de_ajuste_do_brand_kit"]
+    },
+    {
+      "id": "F02",
+      "nome": "Ritmo diário — despachar",
+      "persona": "rafa",
+      "gatilho": "Início do dia / notificação",
+      "meta": "~10 minutos",
+      "telas": ["hoje", "post"],
+      "passos": [
+        {"n": 1, "acao": "Abre Hoje e vê o que precisa dele agora", "tela": "hoje"},
+        {"n": 2, "acao": "Aprova, ajusta ou descarta cada item", "tela": "post"},
+        {"n": 3, "acao": "Responde feedback do cliente (vira atividade resolvida)", "tela": "hoje"}
+      ],
+      "criterio_sucesso": "Caixa de entrada zerada sem sair da tela Hoje.",
+      "metricas": ["itens_pendentes_fim_do_dia", "tempo_medio_por_item"]
+    },
+    {
+      "id": "F03",
+      "nome": "Ritmo semanal — fechar a semana",
+      "persona": "rafa",
+      "gatilho": "Fim da semana / semana materializada",
+      "telas": ["calendario", "post", "aprovacao_externa"],
+      "passos": [
+        {"n": 1, "acao": "Revisa a semana materializada", "tela": "calendario"},
+        {"n": 2, "acao": "Seleciona os posts do ciclo e gera link de aprovação", "tela": "calendario"},
+        {"n": 3, "acao": "Envia o link ao cliente", "tela": "calendario"},
+        {"n": 4, "acao": "Agenda o que foi aprovado", "tela": "calendario"}
+      ],
+      "criterio_sucesso": "Semana seguinte aprovada e agendada.",
+      "metricas": ["tempo_ate_aprovacao_do_cliente", "taxa_de_aprovacao_sem_ajuste"]
+    },
+    {
+      "id": "F04",
+      "nome": "Aprovação do cliente (externa)",
+      "persona": "helena",
+      "gatilho": "Recebe o link",
+      "meta": "≤ 2 minutos",
+      "telas": ["aprovacao_externa"],
+      "sem_login": true,
+      "passos": [
+        {"n": 1, "acao": "Abre o link no celular", "tela": "aprovacao_externa"},
+        {"n": 2, "acao": "Desliza os slides de cada post", "tela": "aprovacao_externa"},
+        {"n": 3, "acao": "Aprova, ou comenta em um slide específico", "tela": "aprovacao_externa"},
+        {"n": 4, "acao": "Confirma o lote", "tela": "aprovacao_externa"}
+      ],
+      "efeito_colateral": "Cada comentário cria uma Activity de ajuste com responsável na agência.",
+      "criterio_sucesso": "Aprova sem criar conta e sem instruções.",
+      "metricas": ["tempo_de_aprovacao", "taxa_de_abertura_do_link", "comentarios_por_ciclo"]
+    },
+    {
+      "id": "F05",
+      "nome": "Ritmo trimestral — replanejar",
+      "persona": "caio",
+      "gatilho": "Virada de trimestre",
+      "telas": ["ano", "desempenho"],
+      "passos": [
+        {"n": 1, "acao": "Abre o Ano e vê campanhas e sazonalidade", "tela": "ano"},
+        {"n": 2, "acao": "Lê os insights do analista sobre o que performou", "tela": "desempenho"},
+        {"n": 3, "acao": "Ajusta pesos de pilar e campanhas do próximo trimestre", "tela": "ano"},
+        {"n": 4, "acao": "Confirma o replanejamento (slots não materializados são refeitos)", "tela": "ano"}
+      ],
+      "criterio_sucesso": "Próximo trimestre reflete o aprendizado do anterior.",
+      "metricas": ["delta_engajamento_pos_replanejamento"]
+    },
+    {
+      "id": "F06",
+      "nome": "Ajustar um post gerado",
+      "persona": "bia",
+      "gatilho": "Post fora do padrão ou com copy fraca",
+      "telas": ["post"],
+      "passos": [
+        {"n": 1, "acao": "Abre o post e navega pelos slides", "tela": "post"},
+        {"n": 2, "acao": "Edita manchete/apoio/legenda inline", "tela": "post"},
+        {"n": 3, "acao": "Ou pede regeneração (do slide, da arte ou do post inteiro)", "tela": "post"},
+        {"n": 4, "acao": "Reordena ou remove slides", "tela": "post"},
+        {"n": 5, "acao": "Aprova", "tela": "post"}
+      ],
+      "criterio_sucesso": "Ajuste sem sair da tela e sem perder o restante do post.",
+      "metricas": ["taxa_de_regeneracao", "slides_editados_por_post"]
+    },
+    {
+      "id": "F07",
+      "nome": "Virar agência — adicionar o 2º cliente",
+      "persona": "caio",
+      "gatilho": "Cadastro do segundo cliente",
+      "telas": ["marca", "todos_clientes"],
+      "revelacao_progressiva": true,
+      "passos": [
+        {"n": 1, "acao": "Cadastra novo cliente (mesmo onboarding do F01)", "tela": "onboarding"},
+        {"n": 2, "acao": "Sistema revela o seletor de cliente e a visão Todos", "tela": "todos_clientes", "automatico": true}
+      ],
+      "criterio_sucesso": "Nenhuma migração de conta; nada do que já existia se perde.",
+      "metricas": ["tempo_para_adicionar_cliente"]
+    },
+    {
+      "id": "F08",
+      "nome": "Operar a produção da equipe",
+      "persona": "rafa",
+      "gatilho": "Atividades geradas ou criadas à mão",
+      "telas": ["producao"],
+      "passos": [
+        {"n": 1, "acao": "Vê atividades por status, responsável e prazo", "tela": "producao"},
+        {"n": 2, "acao": "Arrasta entre colunas ou reatribui", "tela": "producao"},
+        {"n": 3, "acao": "Cria atividade manual (reunião, sessão de fotos, relatório)", "tela": "producao"}
+      ],
+      "criterio_sucesso": "Atividades automáticas e manuais convivem no mesmo quadro.",
+      "metricas": ["atividades_atrasadas", "carga_por_pessoa"]
+    },
+    {
+      "id": "F09",
+      "nome": "Configurar modelos locais",
+      "persona": "leo",
+      "gatilho": "Instalação ou troca de hardware",
+      "telas": ["configuracoes_modelos", "saude_sistema"],
+      "passos": [
+        {"n": 1, "acao": "Vê capacidades (texto/imagem/voz/vídeo/visão) e provider ativo", "tela": "configuracoes_modelos"},
+        {"n": 2, "acao": "Troca provider/modelo por capacidade", "tela": "configuracoes_modelos"},
+        {"n": 3, "acao": "Vê quais exigem chave e quais estão configurados", "tela": "configuracoes_modelos"},
+        {"n": 4, "acao": "Confere VRAM, modelos residentes e perfil de GPU", "tela": "saude_sistema"}
+      ],
+      "criterio_sucesso": "Trocar modelo pela UI reflete no backend sem editar arquivo.",
+      "metricas": ["tempo_de_setup"]
+    }
+  ],
+
+  "telas": [
+    {
+      "id": "onboarding",
+      "nome": "Onboarding",
+      "rota": "/comecar",
+      "persona_primaria": "marina",
+      "densidade": "ampla",
+      "objetivo": "Capturar o essencial e devolver valor visível antes de pedir configuração.",
+      "requisitos_funcionais": [
+        {"id": "RF-ONB-01", "descricao": "Formulário em etapa única com scroll, sem wizard de múltiplas páginas.", "prioridade": "alta", "aceite": "Usuário vê todos os campos essenciais sem navegar entre passos."},
+        {"id": "RF-ONB-02", "descricao": "Campos essenciais: nome da empresa, segmento (lista + livre), descrição, público-alvo, tom de voz, produtos/serviços, links.", "prioridade": "alta", "aceite": "Só nome e segmento são obrigatórios; o resto tem valor padrão inferido."},
+        {"id": "RF-ONB-03", "descricao": "Upload de 3 a 10 fotos da estética, com arrastar-e-soltar, preview e remoção individual.", "prioridade": "alta", "aceite": "Aceita jpg/png/webp até 10MB cada; mostra progresso e erro por arquivo."},
+        {"id": "RF-ONB-04", "descricao": "Geração automática do Brand Kit a partir das fotos (paleta, tipografia sugerida, style_keywords).", "prioridade": "alta", "aceite": "Paleta extraída é exibida e editável antes de aceitar."},
+        {"id": "RF-ONB-05", "descricao": "Preview de 3 posts de exemplo com a marca aplicada, antes de qualquer configuração fina.", "prioridade": "alta", "aceite": "Preview aparece em ≤ 60s; enquanto gera, mostra skeleton com progresso por post."},
+        {"id": "RF-ONB-06", "descricao": "Presets por segmento definem pilares, datas comerciais e cadência sem o usuário escolher.", "prioridade": "media", "aceite": "Nenhuma pergunta sobre pilar ou cadência no caminho crítico."},
+        {"id": "RF-ONB-07", "descricao": "Seção 'ajustes avançados' recolhida por padrão (cadência, pilares, regiões, idioma).", "prioridade": "media", "aceite": "Fechada por padrão; abrir não bloqueia a conclusão."},
+        {"id": "RF-ONB-08", "descricao": "Salvamento incremental: sair e voltar não perde o preenchido.", "prioridade": "media", "aceite": "Recarregar a página restaura os campos e uploads."}
+      ],
+      "estados": {
+        "vazio": "Formulário limpo com exemplos de placeholder reais (não lorem).",
+        "carregando": "Skeleton dos 3 posts + texto do que está acontecendo ('lendo suas fotos', 'montando a paleta').",
+        "erro": "Falha de upload ou geração mostra o que falhou e permite repetir só aquilo, sem refazer o formulário.",
+        "sucesso": "Transição para o calendário com os 3 posts já na fila."
+      },
+      "acessibilidade": ["Upload acessível por teclado", "Rótulos associados a todos os campos", "Erros anunciados via aria-live"]
+    },
+    {
+      "id": "hoje",
+      "nome": "Hoje / Caixa de entrada",
+      "rota": "/hoje",
+      "persona_primaria": "rafa",
+      "densidade": "densa",
+      "objetivo": "Responder 'o que precisa de mim agora' em um relance.",
+      "tela_inicial": true,
+      "requisitos_funcionais": [
+        {"id": "RF-HOJE-01", "descricao": "Lista única priorizada: aprovações pendentes, feedback do cliente, prazos de hoje, falhas de publicação.", "prioridade": "alta", "aceite": "Itens ordenados por urgência; tipo identificável sem ler o texto."},
+        {"id": "RF-HOJE-02", "descricao": "Ações inline por item: aprovar, abrir, adiar, atribuir — sem sair da tela.", "prioridade": "alta", "aceite": "Aprovar não navega; item some com desfazer disponível por 5s."},
+        {"id": "RF-HOJE-03", "descricao": "Estado codificado em forma e cor (não só cor).", "prioridade": "alta", "aceite": "Distinguível em escala de cinza e por leitor de tela."},
+        {"id": "RF-HOJE-04", "descricao": "Atalhos de teclado: j/k navegar, a aprovar, e abrir, ? ajuda.", "prioridade": "media", "aceite": "Overlay de atalhos acessível por '?'."},
+        {"id": "RF-HOJE-05", "descricao": "Filtro por cliente e por 'meus' (só aparece com 2+ clientes ou 2+ usuários).", "prioridade": "media", "aceite": "Invisível para usuário solo."},
+        {"id": "RF-HOJE-06", "descricao": "Contador de pendências no título da aba/favicon.", "prioridade": "baixa", "aceite": "Atualiza sem recarregar."}
+      ],
+      "estados": {
+        "vazio": "Estado de conclusão ('tudo em dia'), não um vazio triste — mostra o que vem a seguir e quando.",
+        "carregando": "Skeleton de 5 linhas mantendo a altura para não pular layout.",
+        "erro": "Falha de carga mostra erro com botão repetir; itens já carregados permanecem.",
+        "sucesso": "Toast de confirmação com desfazer."
+      },
+      "acessibilidade": ["Navegação por teclado completa", "aria-live para itens que somem", "Foco preservado após ação"]
+    },
+    {
+      "id": "calendario",
+      "nome": "Calendário (mês)",
+      "rota": "/calendario",
+      "persona_primaria": "rafa",
+      "densidade": "densa",
+      "objetivo": "Ver e replanejar o mês.",
+      "requisitos_funcionais": [
+        {"id": "RF-CAL-01", "descricao": "Grade mensal com posts por dia, mostrando pilar, formato e status no cartão.", "prioridade": "alta", "aceite": "Um dia com 3 posts continua legível sem cortar informação essencial."},
+        {"id": "RF-CAL-02", "descricao": "Arrastar post entre dias replaneja a data (dnd acessível por teclado).", "prioridade": "alta", "aceite": "Funciona com teclado; confirma a mudança com toast e desfazer."},
+        {"id": "RF-CAL-03", "descricao": "Distinção visual entre slot planejado (vazio), materializado, aprovado, agendado e publicado.", "prioridade": "alta", "aceite": "Cinco estados distinguíveis por forma além da cor."},
+        {"id": "RF-CAL-04", "descricao": "Flex slots aparecem como vagas reservadas, com ação de 'preencher com trend'.", "prioridade": "media", "aceite": "Visualmente diferente de um slot estrutural vazio."},
+        {"id": "RF-CAL-05", "descricao": "Campanhas destacadas como faixa contínua sobre os dias que abrangem.", "prioridade": "media", "aceite": "Clicar na faixa abre a tela de campanha."},
+        {"id": "RF-CAL-06", "descricao": "Seleção múltipla para ações em lote (aprovar, gerar link de aprovação, agendar).", "prioridade": "alta", "aceite": "Shift+clique seleciona intervalo; ação em lote mostra quantos itens afeta."},
+        {"id": "RF-CAL-07", "descricao": "Alternância mês/semana e navegação por período.", "prioridade": "media", "aceite": "Preserva a seleção ao trocar de visão."},
+        {"id": "RF-CAL-08", "descricao": "Indicador de horário local por região quando há mais de uma região ativa.", "prioridade": "baixa", "aceite": "Some quando há região única."}
+      ],
+      "estados": {
+        "vazio": "Mês sem plano oferece gerar o esqueleto do período.",
+        "carregando": "Skeleton da grade preservando o número de semanas.",
+        "erro": "Falha ao mover mostra reversão visual e explica o motivo.",
+        "sucesso": "Toast com desfazer após mover/aprovar."
+      },
+      "acessibilidade": ["Grade navegável por setas", "Drag alternativo por menu de contexto", "Datas anunciadas por extenso"]
+    },
+    {
+      "id": "ano",
+      "nome": "Ano / Linha do tempo",
+      "rota": "/ano",
+      "persona_primaria": "caio",
+      "densidade": "ampla",
+      "objetivo": "Ver o ano inteiro e replanejar trimestres.",
+      "requisitos_funcionais": [
+        {"id": "RF-ANO-01", "descricao": "Visão dos 12 meses com campanhas ancoradas nas datas comerciais.", "prioridade": "alta", "aceite": "Ano inteiro visível sem scroll horizontal no desktop."},
+        {"id": "RF-ANO-02", "descricao": "Drill-down: clicar em um mês abre a grade mensal preservando o contexto.", "prioridade": "alta", "aceite": "Transição compartilhada (o mês vira a grade), com volta preservando a posição."},
+        {"id": "RF-ANO-03", "descricao": "Editor de estratégia: metas, pesos de pilares, cadência, percentual de flex.", "prioridade": "media", "aceite": "Alterar peso mostra prévia de quantos slots mudam antes de confirmar."},
+        {"id": "RF-ANO-04", "descricao": "Replanejar trimestre refaz apenas slots NÃO materializados; materializados são preservados.", "prioridade": "alta", "aceite": "Diálogo informa exatamente quantos slots serão refeitos e quantos preservados."},
+        {"id": "RF-ANO-05", "descricao": "Visualização 3D (hélice) opcional, com fallback 2D e respeito a prefers-reduced-motion.", "prioridade": "baixa", "aceite": "Funciona plenamente sem 3D; 3D nunca é a única forma de acessar a informação."},
+        {"id": "RF-ANO-06", "descricao": "Marcadores de sazonalidade regional quando há regiões com feriados distintos.", "prioridade": "baixa", "aceite": "Legenda identifica a região de cada marcador."}
+      ],
+      "estados": {
+        "vazio": "Sem plano anual, oferece gerar o esqueleto do ano com estimativa de tempo.",
+        "carregando": "Progresso por trimestre durante a geração do esqueleto.",
+        "erro": "Falha na geração preserva o que já foi criado e permite retomar.",
+        "sucesso": "Resumo do que foi gerado (nº de campanhas, slots estruturais, flex)."
+      },
+      "acessibilidade": ["Alternativa tabular à visão gráfica", "3D nunca obrigatório"]
+    },
+    {
+      "id": "producao",
+      "nome": "Produção (Kanban de atividades)",
+      "rota": "/producao",
+      "persona_primaria": "rafa",
+      "densidade": "densa",
+      "objetivo": "Operar o trabalho da equipe.",
+      "requisitos_funcionais": [
+        {"id": "RF-PROD-01", "descricao": "Colunas por status: backlog, fazendo, revisão, aguardando cliente, pronto.", "prioridade": "alta", "aceite": "Contador por coluna; coluna 'aguardando cliente' destaca o tempo parado."},
+        {"id": "RF-PROD-02", "descricao": "Cartão mostra tipo, responsável, prazo, cliente e vínculo com post/campanha.", "prioridade": "alta", "aceite": "Atrasado é distinguível sem abrir o cartão."},
+        {"id": "RF-PROD-03", "descricao": "Atividades automáticas (geradas do plano) e manuais convivem, com origem identificável.", "prioridade": "alta", "aceite": "Badge distingue 'auto' de 'manual'."},
+        {"id": "RF-PROD-04", "descricao": "Criar atividade manual com tipo, responsável, prazo e vínculo opcional.", "prioridade": "alta", "aceite": "Criação em ≤ 3 campos obrigatórios."},
+        {"id": "RF-PROD-05", "descricao": "Arrastar entre colunas (acessível por teclado) e reatribuir responsável.", "prioridade": "media", "aceite": "Mudança de coluna registra quem e quando."},
+        {"id": "RF-PROD-06", "descricao": "Filtros por responsável, cliente, tipo e atraso.", "prioridade": "media", "aceite": "Filtros combináveis e refletidos na URL."}
+      ],
+      "estados": {
+        "vazio": "Coluna vazia explica o que a preenche.",
+        "carregando": "Skeleton por coluna.",
+        "erro": "Falha ao mover reverte visualmente com explicação.",
+        "sucesso": "Movimento confirmado com desfazer."
+      },
+      "acessibilidade": ["Mover por menu de contexto além do arrastar", "Foco visível em cartões"]
+    },
+    {
+      "id": "post",
+      "nome": "Post (detalhe do carrossel)",
+      "rota": "/post/[id]",
+      "persona_primaria": "bia",
+      "densidade": "densa",
+      "objetivo": "Revisar, ajustar e aprovar um post.",
+      "requisitos_funcionais": [
+        {"id": "RF-POST-01", "descricao": "Visualização dos N slides em carrossel navegável (swipe, setas, teclado) com miniatura de todos.", "prioridade": "alta", "aceite": "Slide atual sempre identificável; navegação por teclado funcional."},
+        {"id": "RF-POST-02", "descricao": "Edição inline de manchete, apoio e legenda, com salvamento automático.", "prioridade": "alta", "aceite": "Edição não abre modal; salvamento indicado sem bloquear."},
+        {"id": "RF-POST-03", "descricao": "Regeneração granular: só a arte do slide, só a copy do slide, ou o post inteiro.", "prioridade": "alta", "aceite": "Regenerar um slide preserva os demais; mostra progresso e permite cancelar."},
+        {"id": "RF-POST-04", "descricao": "Reordenar e remover slides, respeitando o teto de 10 itens da plataforma.", "prioridade": "media", "aceite": "Impede passar de 10 com mensagem explicando o limite."},
+        {"id": "RF-POST-05", "descricao": "Exibição e edição de hashtags e do alt text por slide.", "prioridade": "media", "aceite": "Alt text obrigatório para aprovar (acessibilidade)."},
+        {"id": "RF-POST-06", "descricao": "Alternar entre variantes por região/idioma quando existirem.", "prioridade": "media", "aceite": "Troca de variante preserva a posição no carrossel."},
+        {"id": "RF-POST-07", "descricao": "Painel de conformidade de marca: mostra a nota do portão e o que destoou.", "prioridade": "media", "aceite": "Post reprovado no portão exibe o motivo específico, não só a nota."},
+        {"id": "RF-POST-08", "descricao": "Ações: aprovar, rejeitar, agendar, baixar PNGs, ver histórico de versões.", "prioridade": "alta", "aceite": "Aprovar exige alt text presente; agendar pede data/hora local."}
+      ],
+      "estados": {
+        "vazio": "Post sem slides oferece gerar a partir do brief.",
+        "carregando": "Skeleton no formato 4:5 preservando proporção; progresso por slide na regeneração.",
+        "erro": "Falha em um slide não invalida o post; slide marcado com opção de repetir.",
+        "sucesso": "Confirmação de aprovação com próximo item sugerido."
+      },
+      "acessibilidade": ["Carrossel operável por teclado", "Alt text obrigatório", "Contraste verificado no preview"]
+    },
+    {
+      "id": "campanha",
+      "nome": "Campanha",
+      "rota": "/campanha/[id]",
+      "persona_primaria": "caio",
+      "densidade": "ampla",
+      "objetivo": "Enxergar uma campanha como unidade de trabalho e resultado.",
+      "requisitos_funcionais": [
+        {"id": "RF-CAMP-01", "descricao": "Arco da campanha por fases (teaser, esquenta, oferta, última chamada, prova social) com os posts de cada fase.", "prioridade": "alta", "aceite": "Fase sem post é visível como lacuna."},
+        {"id": "RF-CAMP-02", "descricao": "Atividades da campanha com responsável e prazo.", "prioridade": "media", "aceite": "Atrasos destacados."},
+        {"id": "RF-CAMP-03", "descricao": "Criar campanha manual: nome, data-âncora, janela, meta, região.", "prioridade": "media", "aceite": "Ao criar, sugere fases e datas com base na data-âncora."},
+        {"id": "RF-CAMP-04", "descricao": "Resultado consolidado da campanha após publicação.", "prioridade": "baixa", "aceite": "Compara com a média do período."}
+      ],
+      "estados": {
+        "vazio": "Campanha nova mostra o arco sugerido para preencher.",
+        "carregando": "Skeleton por fase.",
+        "erro": "Erro de carga preserva a navegação.",
+        "sucesso": "Confirmação ao publicar a campanha inteira."
+      },
+      "acessibilidade": ["Fases como lista semântica ordenada"]
+    },
+    {
+      "id": "marca",
+      "nome": "Marca / Brand Kit",
+      "rota": "/marca",
+      "persona_primaria": "bia",
+      "densidade": "ampla",
+      "objetivo": "Governar a identidade que todo post obedece.",
+      "requisitos_funcionais": [
+        {"id": "RF-MARCA-01", "descricao": "Editar paleta (surface, ink, accent, deep) com preview ao vivo em um slide de exemplo.", "prioridade": "alta", "aceite": "Mudança de cor reflete no preview em tempo real."},
+        {"id": "RF-MARCA-02", "descricao": "Aviso de contraste insuficiente ao escolher cores.", "prioridade": "alta", "aceite": "Alerta quando o par fundo/texto fica abaixo do mínimo legível."},
+        {"id": "RF-MARCA-03", "descricao": "Upload de logo e escolha de tipografia (display e corpo).", "prioridade": "media", "aceite": "Logo aparece no rodapé do preview."},
+        {"id": "RF-MARCA-04", "descricao": "Gerenciar fotos de referência da estética (adicionar, remover, marcar favoritas).", "prioridade": "media", "aceite": "Remover foto recalcula style_keywords sob confirmação."},
+        {"id": "RF-MARCA-05", "descricao": "Editar tom de voz e do's & don'ts que o portão de marca usa.", "prioridade": "media", "aceite": "Alteração afeta apenas posts ainda não materializados."},
+        {"id": "RF-MARCA-06", "descricao": "Gerenciar regiões: fuso, feriados locais, tom regional, idioma.", "prioridade": "media", "aceite": "Seção só aparece quando há ou se adiciona mais de uma região."},
+        {"id": "RF-MARCA-07", "descricao": "Aviso claro do impacto de mudar o kit sobre posts já gerados.", "prioridade": "alta", "aceite": "Diálogo informa quantos posts serão afetados e quais serão preservados."}
+      ],
+      "estados": {
+        "vazio": "Kit incompleto indica o que falta e o efeito de cada lacuna.",
+        "carregando": "Preview com skeleton mantendo proporção 4:5.",
+        "erro": "Falha de upload isolada por arquivo.",
+        "sucesso": "Confirmação com link para ver um post de exemplo atualizado."
+      },
+      "acessibilidade": ["Seletor de cor com entrada por texto (hex)", "Contraste calculado e anunciado"]
+    },
+    {
+      "id": "aprovacao_externa",
+      "nome": "Aprovação (link externo)",
+      "rota": "/aprovacao/[token]",
+      "persona_primaria": "helena",
+      "densidade": "externa",
+      "objetivo": "Aprovar em 2 minutos, no celular, sem login.",
+      "sem_login": true,
+      "mobile_first": true,
+      "requisitos_funcionais": [
+        {"id": "RF-APR-01", "descricao": "Acesso por token no link, sem cadastro, sem senha.", "prioridade": "alta", "aceite": "Abrir o link basta; token com validade e revogável."},
+        {"id": "RF-APR-02", "descricao": "Lista dos posts do ciclo com slides deslizáveis.", "prioridade": "alta", "aceite": "Swipe fluido no celular; legenda visível junto."},
+        {"id": "RF-APR-03", "descricao": "Aprovar post inteiro ou comentar em um slide específico.", "prioridade": "alta", "aceite": "Comentário identifica o slide automaticamente."},
+        {"id": "RF-APR-04", "descricao": "Confirmar o lote ao final, com resumo do que foi aprovado e comentado.", "prioridade": "alta", "aceite": "Resumo antes de confirmar; confirmação irreversível avisa disso."},
+        {"id": "RF-APR-05", "descricao": "Nenhuma menção a custo, plano, backlog, quem produziu ou IA.", "prioridade": "alta", "aceite": "Auditoria de texto da tela não contém esses termos."},
+        {"id": "RF-APR-06", "descricao": "Estado de já aprovado é claro ao reabrir o link.", "prioridade": "media", "aceite": "Reabrir mostra o que já foi decidido, sem permitir duplicar."},
+        {"id": "RF-APR-07", "descricao": "Link expirado ou revogado mostra mensagem orientando contatar a agência.", "prioridade": "media", "aceite": "Sem vazar dados do cliente na tela de expiração."}
+      ],
+      "estados": {
+        "vazio": "Nenhum post pendente: mensagem de que está tudo aprovado.",
+        "carregando": "Skeleton dos cartões preservando proporção.",
+        "erro": "Falha de rede permite repetir sem perder comentários digitados.",
+        "sucesso": "Tela de agradecimento com resumo; nada mais a fazer."
+      },
+      "acessibilidade": ["Alvos de toque ≥ 44px", "Funciona sem gesto (setas visíveis)", "Contraste alto para uso em luz forte"]
+    },
+    {
+      "id": "todos_clientes",
+      "nome": "Todos os clientes",
+      "rota": "/clientes",
+      "persona_primaria": "caio",
+      "densidade": "densa",
+      "objetivo": "Enxergar carga, atrasos e o que aguarda aprovação.",
+      "visivel_quando": "2 ou mais clientes",
+      "requisitos_funcionais": [
+        {"id": "RF-CLI-01", "descricao": "Linha por cliente com pendências, atrasos, aguardando aprovação e próximo post.", "prioridade": "alta", "aceite": "Cliente em risco identificável sem clicar."},
+        {"id": "RF-CLI-02", "descricao": "Carga por pessoa da equipe.", "prioridade": "media", "aceite": "Sobrecarga destacada."},
+        {"id": "RF-CLI-03", "descricao": "Troca de cliente pelo seletor sem recarregar a aplicação.", "prioridade": "alta", "aceite": "Contexto de tela preservado ao trocar."},
+        {"id": "RF-CLI-04", "descricao": "Adicionar cliente a partir desta tela.", "prioridade": "media", "aceite": "Leva ao mesmo onboarding."}
+      ],
+      "estados": {
+        "vazio": "Um único cliente: a tela não aparece no menu.",
+        "carregando": "Skeleton por linha.",
+        "erro": "Erro parcial mostra os clientes que carregaram.",
+        "sucesso": "n/a"
+      },
+      "acessibilidade": ["Tabela semântica com cabeçalhos associados"]
+    },
+    {
+      "id": "desempenho",
+      "nome": "Desempenho",
+      "rota": "/desempenho",
+      "persona_primaria": "caio",
+      "densidade": "ampla",
+      "objetivo": "Mostrar o que funcionou e alimentar o replanejamento.",
+      "requisitos_funcionais": [
+        {"id": "RF-DES-01", "descricao": "KPIs do período: publicados, alcance, engajamento, taxa de aprovação sem ajuste.", "prioridade": "alta", "aceite": "Comparação com período anterior."},
+        {"id": "RF-DES-02", "descricao": "Desempenho por pilar e por formato.", "prioridade": "alta", "aceite": "Permite identificar o pilar que performa."},
+        {"id": "RF-DES-03", "descricao": "Top posts com link para o post.", "prioridade": "media", "aceite": "Top 5 sempre visível."},
+        {"id": "RF-DES-04", "descricao": "Insights do agente analista em linguagem natural.", "prioridade": "media", "aceite": "Insight sempre acompanhado do dado que o sustenta."},
+        {"id": "RF-DES-05", "descricao": "Exportar relatório por cliente (PDF ou link).", "prioridade": "baixa", "aceite": "Relatório sem jargão técnico e com a marca do cliente."},
+        {"id": "RF-DES-06", "descricao": "Deixar claro quando as métricas são simuladas/ausentes por falta de credencial.", "prioridade": "alta", "aceite": "Nunca apresenta número simulado como real."}
+      ],
+      "estados": {
+        "vazio": "Sem dados ainda: explica que aparece após as primeiras publicações.",
+        "carregando": "Skeleton dos gráficos preservando altura.",
+        "erro": "Falha de coleta é explícita, sem inventar dados.",
+        "sucesso": "n/a"
+      },
+      "acessibilidade": ["Todo gráfico tem alternativa tabular", "Cor nunca é o único canal de informação"]
+    },
+    {
+      "id": "configuracoes_modelos",
+      "nome": "Configurações — Modelos",
+      "rota": "/config/modelos",
+      "persona_primaria": "leo",
+      "densidade": "densa",
+      "objetivo": "Escolher provider e modelo por capacidade.",
+      "requisitos_funcionais": [
+        {"id": "RF-CFG-01", "descricao": "Listar capacidades (texto, imagem, voz, vídeo, visão, publicação) com provider e modelo ativos.", "prioridade": "alta", "aceite": "Reflete GET /api/models."},
+        {"id": "RF-CFG-02", "descricao": "Indicar quais providers exigem chave e quais estão configurados.", "prioridade": "alta", "aceite": "Nunca exibe o valor da chave, só se está presente."},
+        {"id": "RF-CFG-03", "descricao": "Trocar provider/modelo por capacidade, com validação.", "prioridade": "alta", "aceite": "Seleção inválida é bloqueada com explicação."},
+        {"id": "RF-CFG-04", "descricao": "Override de modelo por agente.", "prioridade": "media", "aceite": "Mostra o modelo efetivo de cada agente."},
+        {"id": "RF-CFG-05", "descricao": "Modelos do Ollama descobertos ao vivo.", "prioridade": "media", "aceite": "Ollama fora do ar não quebra a tela; cai na lista conhecida."}
+      ],
+      "estados": {
+        "vazio": "n/a",
+        "carregando": "Skeleton por capacidade.",
+        "erro": "Provider indisponível é sinalizado sem impedir o resto.",
+        "sucesso": "Confirmação de troca aplicada."
+      },
+      "acessibilidade": ["Formulário com rótulos e descrições associadas"]
+    },
+    {
+      "id": "saude_sistema",
+      "nome": "Saúde do sistema",
+      "rota": "/config/saude",
+      "persona_primaria": "leo",
+      "densidade": "densa",
+      "objetivo": "Ver se o pipeline está saudável e onde está o gargalo.",
+      "requisitos_funcionais": [
+        {"id": "RF-SAU-01", "descricao": "Status dos serviços: API, Ollama, provider de imagem, scheduler.", "prioridade": "alta", "aceite": "Serviço fora do ar identificado com o efeito prático."},
+        {"id": "RF-SAU-02", "descricao": "VRAM total/usada, modelos residentes e perfil de GPU ativo.", "prioridade": "media", "aceite": "Alerta ao passar de ~85% da VRAM (risco de thrashing)."},
+        {"id": "RF-SAU-03", "descricao": "Fila de jobs com tempo por etapa e ocupação por classe (GPU/CPU/rede).", "prioridade": "media", "aceite": "Permite identificar o gargalo real."},
+        {"id": "RF-SAU-04", "descricao": "Últimas falhas com mensagem e ação sugerida.", "prioridade": "media", "aceite": "Mensagem diz o que fazer, não só o que quebrou."}
+      ],
+      "estados": {
+        "vazio": "Sem jobs: mostra o próximo agendado.",
+        "carregando": "Skeleton por bloco.",
+        "erro": "Impossível consultar um serviço é diferente de serviço fora do ar.",
+        "sucesso": "n/a"
+      },
+      "acessibilidade": ["Status por ícone + texto, nunca só cor"]
+    }
+  ],
+
+  "componentes": [
+    {"id": "seletor_cliente", "descricao": "Troca de cliente no topo.", "visivel_quando": "2+ clientes", "requisitos": ["Busca por nome", "Não recarrega a aplicação", "Mostra pendências por cliente"]},
+    {"id": "cartao_post", "descricao": "Representa um post no calendário/lista.", "requisitos": ["Mostra pilar, formato, status e horário", "Estado por forma e cor", "Ação rápida sem abrir"]},
+    {"id": "carrossel_slides", "descricao": "Navegação pelos slides de um post.", "requisitos": ["Swipe, setas e teclado", "Miniaturas", "Indicador n/N", "Preserva posição ao trocar variante"]},
+    {"id": "toast", "descricao": "Confirmação de ação.", "requisitos": ["Desfazer por 5s em ações reversíveis", "Não cobre a ação que o gerou", "Empilha no máximo 3"]},
+    {"id": "skeleton", "descricao": "Carregamento.", "requisitos": ["Preserva a altura/proporção final", "Nunca causa salto de layout"]},
+    {"id": "dialogo_impacto", "descricao": "Confirma mudanças que afetam conteúdo já gerado.", "requisitos": ["Diz exatamente quantos itens serão afetados", "Distingue o que é preservado", "Ação destrutiva é a secundária"]},
+    {"id": "badge_status", "descricao": "Estado de post/atividade.", "requisitos": ["Forma + cor + texto", "Legível em escala de cinza"]},
+    {"id": "editor_inline", "descricao": "Edição de texto no lugar.", "requisitos": ["Salva automaticamente", "Indica salvamento sem bloquear", "Esc cancela"]}
+  ],
+
+  "requisitos_ux": {
+    "acessibilidade": [
+      {"id": "UX-A11Y-01", "descricao": "Toda funcionalidade operável por teclado, com foco visível.", "prioridade": "alta"},
+      {"id": "UX-A11Y-02", "descricao": "Cor nunca é o único canal de informação (estado, gráfico, alerta).", "prioridade": "alta"},
+      {"id": "UX-A11Y-03", "descricao": "Alt text obrigatório em todo slide antes de aprovar.", "prioridade": "alta"},
+      {"id": "UX-A11Y-04", "descricao": "Contraste mínimo verificado, inclusive nas cores escolhidas pelo usuário no Brand Kit.", "prioridade": "alta"},
+      {"id": "UX-A11Y-05", "descricao": "Mudanças assíncronas anunciadas por aria-live.", "prioridade": "media"},
+      {"id": "UX-A11Y-06", "descricao": "Arrastar sempre tem alternativa (menu/atalho).", "prioridade": "alta"}
+    ],
+    "responsividade": [
+      {"id": "UX-RESP-01", "descricao": "Aprovação externa e Hoje são mobile-first.", "prioridade": "alta"},
+      {"id": "UX-RESP-02", "descricao": "Nenhuma tela provoca scroll horizontal do corpo; tabelas e grades rolam no próprio container.", "prioridade": "alta"},
+      {"id": "UX-RESP-03", "descricao": "Alvos de toque ≥ 44px nas telas de uso móvel.", "prioridade": "alta"},
+      {"id": "UX-RESP-04", "descricao": "Telas densas degradam para lista em telas estreitas, sem esconder informação essencial.", "prioridade": "media"}
+    ],
+    "movimento": [
+      {"id": "UX-MOT-01", "descricao": "prefers-reduced-motion desliga transições não essenciais.", "prioridade": "alta"},
+      {"id": "UX-MOT-02", "descricao": "Nenhuma animação bloqueia ou atrasa uma ação do usuário.", "prioridade": "alta"},
+      {"id": "UX-MOT-03", "descricao": "Transição compartilhada entre cartão do calendário e tela do post.", "prioridade": "media"},
+      {"id": "UX-MOT-04", "descricao": "3D restrito a landing e hélice do ano, sempre com fallback 2D.", "prioridade": "baixa"}
+    ],
+    "feedback_e_erro": [
+      {"id": "UX-FB-01", "descricao": "Toda ação tem confirmação visível; ações reversíveis oferecem desfazer.", "prioridade": "alta"},
+      {"id": "UX-FB-02", "descricao": "Erro diz o que aconteceu e o que fazer, sem jargão nem culpa.", "prioridade": "alta"},
+      {"id": "UX-FB-03", "descricao": "Falha de um item em lote não derruba o lote; o item falho é marcado e repetível.", "prioridade": "alta"},
+      {"id": "UX-FB-04", "descricao": "Operações longas mostram progresso real por etapa, não spinner indefinido.", "prioridade": "media"},
+      {"id": "UX-FB-05", "descricao": "Dado simulado ou ausente nunca é apresentado como real.", "prioridade": "alta"}
+    ],
+    "revelacao_progressiva": [
+      {"id": "UX-RP-01", "descricao": "Usuário com um cliente nunca vê os termos cliente, workspace ou responsável.", "prioridade": "alta"},
+      {"id": "UX-RP-02", "descricao": "Seletor de cliente e visão Todos aparecem ao cadastrar o 2º cliente, sem migração.", "prioridade": "alta"},
+      {"id": "UX-RP-03", "descricao": "Responsável e filtro 'meus' aparecem ao existir o 2º usuário.", "prioridade": "media"},
+      {"id": "UX-RP-04", "descricao": "Configuração avançada fica recolhida e fora do caminho crítico.", "prioridade": "alta"}
+    ],
+    "conteudo_e_texto": [
+      {"id": "UX-TXT-01", "descricao": "Nomear pelo que o usuário reconhece, não pela implementação.", "prioridade": "alta"},
+      {"id": "UX-TXT-02", "descricao": "Botão diz exatamente o que acontece; a confirmação usa o mesmo verbo.", "prioridade": "alta"},
+      {"id": "UX-TXT-03", "descricao": "Tela de aprovação externa não menciona IA, custo, plano ou backlog.", "prioridade": "alta"},
+      {"id": "UX-TXT-04", "descricao": "Estados vazios explicam o que preenche aquele espaço.", "prioridade": "media"}
+    ],
+    "confianca_e_seguranca": [
+      {"id": "UX-SEC-01", "descricao": "Publicar exige confirmação explícita e mostra data/hora local e conta de destino.", "prioridade": "alta"},
+      {"id": "UX-SEC-02", "descricao": "Chaves nunca são exibidas; só o estado 'configurado'.", "prioridade": "alta"},
+      {"id": "UX-SEC-03", "descricao": "Token de aprovação tem validade e pode ser revogado.", "prioridade": "alta"},
+      {"id": "UX-SEC-04", "descricao": "Mudança no Brand Kit informa o impacto sobre posts já gerados antes de aplicar.", "prioridade": "alta"}
+    ]
+  },
+
+  "requisitos_nao_funcionais_relevantes_a_ui": [
+    {"id": "NF-01", "descricao": "Geração pesada roda como job assíncrono com polling; a UI nunca trava esperando.", "prioridade": "alta"},
+    {"id": "NF-02", "descricao": "Preview do onboarding deve responder em ≤ 60s; acima disso, mostrar progresso por post.", "prioridade": "alta"},
+    {"id": "NF-03", "descricao": "Publicação respeita o teto de ~100 posts/24h por conta e o máximo de 10 itens por carrossel.", "prioridade": "alta"},
+    {"id": "NF-04", "descricao": "Horários são exibidos e agendados no fuso local da região do post.", "prioridade": "alta"},
+    {"id": "NF-05", "descricao": "A interface funciona com o sistema rodando 100% local, sem nenhuma chave de nuvem.", "prioridade": "alta"}
+  ],
+
+  "rastreabilidade": {
+    "documentos": [
+      "docs/planejamento/produto-agencia-exibicao-e-frontend.md",
+      "docs/planejamento/personas.md",
+      "docs/planejamento/arquitetura-planejamento-anual.md",
+      "docs/planejamento/carrossel-first-motor-de-slides.md",
+      "docs/planejamento/arquitetura-ia-modelos-locais.md",
+      "docs/planejamento/paralelismo-de-modelos.md"
+    ],
+    "sprints_relacionadas": ["Sprint 11", "Sprint 12", "Sprint 13", "Sprint 14", "Sprint 15", "Sprint 16"]
+  }
+}

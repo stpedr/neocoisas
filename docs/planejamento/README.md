@@ -20,6 +20,7 @@ com **modelos locais**.
 | 5 | [`produto-agencia-exibicao-e-frontend.md`](./produto-agencia-exibicao-e-frontend.md) | **Produto:** barreira baixa → operação de agência (multi-tenant + revelação progressiva), `Activity`, aprovação por link, as 10 telas, os 3 ritmos e a stack de frontend (**Base UI**, Motion, R3F com escopo). |
 | 6 | [`personas.md`](./personas.md) | **Personas** — as 6 pessoas que a ferramenta atende, o que cada uma nunca deve ver e como resolvem disputas de escopo. |
 | 7 | [`paralelismo-de-modelos.md`](./paralelismo-de-modelos.md) | **Escala:** paralelizar chamadas de modelo numa **única GPU** — semáforo por classe, pipelining, **co-locação de dois modelos residentes** (time-slicing × MPS × MIG, faixas de VRAM, *thrashing*) e provider de serving trocável (vLLM). |
+| 8 | [`requisitos-ui-ux.json`](./requisitos-ui-ux.json) | **Especificação de UI/UX** — 6 personas, 9 fluxos, 13 telas, 8 componentes e **115 requisitos** (79 funcionais + 31 transversais + 5 não-funcionais), com IDs rastreáveis. |
 | — | [`referencias-artigos.md`](./referencias-artigos.md) | Artigos consultados, contribuição de cada um, mapeamento fonte→decisão e ressalvas de acesso. |
 
 ## Apresentações visuais (artefatos)
