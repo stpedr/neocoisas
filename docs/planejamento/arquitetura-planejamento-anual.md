@@ -255,6 +255,44 @@ graph LR
 | `publishers/instagram.py` | publicação oficial, hora local por região |
 | `board/store.py` | molde para `plans.py` |
 
+## 12-bis. O time de marketing completo (agência virtual)
+
+Requisito: **todo post segue o processo de uma equipe de marketing completa** — da
+estratégia à análise. A arquitetura modela isso como uma **agência virtual**: cada função
+é um **agente com contrato**, e o post é uma ordem de serviço que percorre a linha de
+montagem com **portões de qualidade**. A maior parte do time **já existe** no repo.
+
+**Organograma → agentes (17 papéis, 5 departamentos):**
+
+| Departamento | Papel | Agente | Estado |
+|---|---|---|---|
+| Estratégia & Planejamento | Head de Estratégia | `niche_creator.py` | instalado |
+| | Radar de Tendências | `trend_scout.py` | **novo** |
+| | Planejador de Conteúdo | `calendar_planner.py` | **novo** |
+| | Product Owner (backlog/aprovação) | `board/` + revisão | instalado |
+| Criação · Estúdio | Redator / Copy | `idea_generator.py` | instalado |
+| | Roteirista | `script_writer.py` | instalado |
+| | Títulos A/B | `titler.py` | instalado |
+| | Diretor de Arte | `agents/media` (imagem) | instalado |
+| | Editor de Vídeo | `render.py` · `video_pipeline.py` | instalado |
+| | Locução / Voz | `agents/media` (voz) | instalado |
+| | Localização | `translator.py` | instalado |
+| Qualidade & Marca | Editor-chefe (loop) | `editor.py` | instalado |
+| | Guardião da Marca / Brand-safety | `critic.py` | instalado |
+| | Aprovação humana | `review/` + web | instalado |
+| Distribuição · Mídia | Social Media Manager / Agendamento | `scheduler.py` | instalado |
+| | Publicação | `publishers/instagram.py` | em obra (scaffold) |
+| Dados & Growth | Analista de Performance | `analyst.py` | instalado |
+
+**Linha de montagem (todo post):** `01 Brief` → `02 Estratégia & ângulo` *(gate de trend)*
+→ `03 Redação` → `04 Produção` → `05 Localização` → `06 Revisão` **[portão: editor →
+critic → humano]** → `07 Agendamento` → `08 Publicação` **[só API oficial]** → `09 Análise`
+→ **realimenta 01**.
+
+Isso segue o padrão do repo (contrato + factory por capacidade): cada papel é plugável e
+os handoffs são estados da `Idea`/`PlanSlot`. Apresentação visual do time:
+**[Agência Virtual](https://claude.ai/code/artifact/b4480a28-0ccb-4450-ba3b-696e9aa739fe)**.
+
 ## 13. Cards adicionais
 
 **Sprint 12 · Planejamento anual**
