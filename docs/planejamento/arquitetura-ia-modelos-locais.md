@@ -4,6 +4,7 @@
 > [`arquitetura-planejamento-anual.md`](./arquitetura-planejamento-anual.md).
 > Foco: **como a IA roda com modelos locais** hoje, e o que o time de marketing
 > (Brand Kit, fotos da estética, trends) acrescenta — sempre **local-first**.
+> Apresentação visual: **[IA Local-First](https://claude.ai/code/artifact/48336c86-bace-46f2-bb1a-34c15956ba8b)**.
 
 ## 1. Princípio: local-first por `contrato + factory`
 
