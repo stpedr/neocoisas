@@ -65,6 +65,11 @@ DEFAULT_LAYOUT = CarouselLayout()
 _HEADLINE_SIZES = (108, 96, 84, 74, 64, 56, 48, 42, 36)
 _BODY_SIZES = (40, 36, 32, 28, 24)
 
+# Opacidade do véu sobre a arte (0-255), do topo ao rodapé. O piso não é zero:
+# arte de alto contraste atrás da manchete tornaria o texto ilegível.
+_VEU_PISO = 96
+_VEU_TETO = 224
+
 
 # ---------------------------------------------------------- puros/medida ---
 def wrap_lines(text: str, max_width: int, measure) -> list[str]:
@@ -196,30 +201,45 @@ def _cover(img, size: tuple[int, int]):
     return img.crop((esquerda, topo, esquerda + largura, topo + altura))
 
 
-def _draw_background(canvas, slide: Slide, fundo, layout: CarouselLayout):
-    """Pinta o fundo: arte do slide (com véu para legibilidade) ou cor sólida."""
+def _draw_background(canvas, slide: Slide, fundo, layout: CarouselLayout) -> bool:
+    """Pinta o fundo: arte do slide (com véu para legibilidade) ou cor sólida.
+
+    Devolve `True` se a arte foi aplicada — o chamador usa isso para escolher a
+    cor do texto pelo que ficou **atrás dele**, e não pela cor da marca.
+    """
     from PIL import Image, ImageDraw
 
     canvas.paste(Image.new("RGB", (layout.width, layout.height), fundo), (0, 0))
     caminho = slide.image_path
     if not caminho or not Path(caminho).exists():
-        return
+        return False
 
     try:
         arte = Image.open(caminho).convert("RGB")
     except OSError:
-        return  # arte ilegível não derruba o slide — segue com a cor sólida
+        return False  # arte ilegível não derruba o slide — segue com a cor sólida
 
     canvas.paste(_cover(arte, (layout.width, layout.height)), (0, 0))
 
-    # Véu vertical: preserva a arte no topo e garante contraste embaixo.
+    # Véu vertical em direção à cor da marca: mantém a arte visível no topo e
+    # sobe até o rodapé. O piso alto (não zero) é o que garante que a manchete
+    # — que fica no meio — nunca dispute com uma arte de alto contraste.
     veu = Image.new("L", (1, layout.height))
     desenho = ImageDraw.Draw(veu)
     for y in range(layout.height):
         t = y / max(1, layout.height - 1)
-        desenho.point((0, y), fill=int(40 + 180 * (t ** 1.6)))
+        desenho.point((0, y), fill=int(_VEU_PISO + (_VEU_TETO - _VEU_PISO) * (t ** 1.4)))
     mascara = veu.resize((layout.width, layout.height))
     canvas.paste(Image.new("RGB", (layout.width, layout.height), fundo), (0, 0), mascara)
+    return True
+
+
+def _cor_media(canvas, caixa: tuple[int, int, int, int]) -> tuple[int, int, int]:
+    """Cor média de uma região — usada para decidir a cor do texto por cima dela."""
+    from PIL import Image
+
+    recorte = canvas.crop(caixa).resize((1, 1), Image.BOX)
+    return recorte.getpixel((0, 0))
 
 
 # --------------------------------------------------------------- render ---
@@ -236,8 +256,17 @@ def render_slide(
 
     fundo, texto_cor, realce = slide_palette(slide.role, kit)
     canvas = Image.new("RGB", (layout.width, layout.height), fundo)
-    _draw_background(canvas, slide, fundo, layout)
+    tem_arte = _draw_background(canvas, slide, fundo, layout)
     draw = ImageDraw.Draw(canvas)
+
+    # Com arte, a cor da marca já não descreve o que está atrás do texto:
+    # decide pelo pixel real da faixa onde a manchete vai cair.
+    if tem_arte:
+        fundo = _cor_media(
+            canvas,
+            (layout.margin, layout.content_top, layout.width - layout.margin, layout.content_bottom),
+        )
+        texto_cor = readable_on(fundo)
 
     # Faixa da marca no topo — presente em todos os slides (a "assinatura").
     draw.rectangle([0, 0, layout.width, layout.band], fill=realce)

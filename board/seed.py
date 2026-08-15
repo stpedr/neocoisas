@@ -495,8 +495,8 @@ SEED_CARDS: list[dict] = [
     },
     {
         'title': 'Condicionamento de estilo pelas fotos da marca',
-        'description': 'Nível leve (MVP): visão descreve a estética -> style_keywords + paleta injetados no visual_prompt (funciona em qualquer provider). Nível forte plugável: referência visual real via IP-Adapter/img2img. É o ponto 1 dos três de consistência.',
-        'column': 'backlog',
+        'description': 'Nível leve (MVP): style_keywords injetadas no visual_prompt (funciona em qualquer provider). Nível forte plugável: referência visual real via IP-Adapter/img2img. É o ponto 1 dos três de consistência. PARCIAL: carousel_art.py entrega a injeção e a geração de arte por slide, com sufixo idêntico em todos e falha isolada — ver docs/entregas/arte-por-slide.md. Falta as style_keywords virem automaticamente das fotos (depende da capacidade de visão) e o nível forte.',
+        'column': 'in_progress',
         'sprint': 'Sprint 11 · Fundação: Marca & Carrossel',
         'labels': ['backend', 'conteúdo', 'prioridade:média'],
     },

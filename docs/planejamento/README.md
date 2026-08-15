@@ -81,5 +81,6 @@ Todos os cards estão semeados em `board/seed.py` (→ `/api/board`): **112 card
 | Entrega | O que saiu |
 |---|---|
 | [`motor-de-slides.md`](../entregas/motor-de-slides.md) | `Slide` + `BrandKit` + `render_carousel` — carrossel em PNG 1080×1350 com a identidade da marca em todos os slides. 44 testes. |
-| [`agente-copy-carrossel.md`](../entregas/agente-copy-carrossel.md) | `CarouselWriterAgent` — brief → slides com arco narrativo + legenda + hashtags. Fecha a cadeia até o PNG. 33 testes. |
+| [`agente-copy-carrossel.md`](../entregas/agente-copy-carrossel.md) | `CarouselWriterAgent` — brief → slides com arco narrativo + legenda + hashtags. 33 testes. |
+| [`arte-por-slide.md`](../entregas/arte-por-slide.md) | `carousel_art` — `visual_prompt` → provedor de imagem, condicionado pelo estilo da marca, com contraste de texto medido sobre a arte. 17 testes. |
 </content>

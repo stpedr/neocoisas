@@ -256,3 +256,51 @@ class TestRenderCarousel:
                 faixas.append(img.getpixel((img.width // 2, 4)))
         assert len(set(faixas)) == 1              # a assinatura é idêntica
         assert faixas[0] == kit.rgb_accent        # e vem do Brand Kit
+
+
+class TestContrasteSobreArte:
+    """Com arte de fundo, a cor do texto vem do que ficou ATRÁS dele.
+
+    A cor da marca deixa de descrever o fundo assim que uma imagem cobre o
+    slide — decidir pela marca produziria texto ilegível sobre arte clara.
+    """
+
+    def _slide_com_arte(self, tmp_path, cor, nome):
+        from PIL import Image
+
+        arte = tmp_path / f"{nome}.png"
+        Image.new("RGB", (200, 250), cor).save(arte)
+        return Slide(headline="Manchete de teste", image_path=str(arte))
+
+    def _luminancia_do_texto(self, caminho) -> float:
+        """Luminância do texto na faixa da manchete.
+
+        O fundo é a **mediana** da faixa (domina em área); o texto é o pixel que
+        mais se afasta dela. Comparar com um valor fixo escolheria o fundo
+        sempre que ele fosse mais extremo que o texto.
+        """
+        from PIL import Image
+
+        with Image.open(caminho) as img:
+            faixa = img.crop((80, 500, img.width - 80, 800))
+            lums = sorted((r + g + b) / 3 for r, g, b in faixa.convert("RGB").getdata())
+        fundo = lums[len(lums) // 2]
+        return max(lums[0], lums[-1], key=lambda v: abs(v - fundo))
+
+    def test_arte_clara_recebe_texto_escuro(self, tmp_path):
+        slide = self._slide_com_arte(tmp_path, (245, 245, 240), "clara")
+        destino = render_slide(slide, BrandKit(), 1, 1, tmp_path / "clara_out.png")
+        assert self._luminancia_do_texto(destino) < 120, "texto deveria ser escuro sobre arte clara"
+
+    def test_arte_escura_recebe_texto_claro(self, tmp_path):
+        slide = self._slide_com_arte(tmp_path, (12, 12, 18), "escura")
+        destino = render_slide(slide, BrandKit(), 1, 1, tmp_path / "escura_out.png")
+        assert self._luminancia_do_texto(destino) > 200, "texto deveria ser claro sobre arte escura"
+
+    def test_sem_arte_mantem_a_cor_da_marca(self, tmp_path):
+        from PIL import Image
+
+        kit = BrandKit(surface="#FFFFFF", ink="#111111")
+        destino = render_slide(Slide(headline="X"), kit, 1, 1, tmp_path / "sem.png")
+        with Image.open(destino) as img:
+            assert img.getpixel((10, img.height // 2)) == kit.rgb_surface
