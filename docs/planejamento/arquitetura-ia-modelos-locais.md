@@ -4,7 +4,14 @@
 > [`arquitetura-planejamento-anual.md`](./arquitetura-planejamento-anual.md).
 > Foco: **como a IA roda com modelos locais** hoje, e o que o time de marketing
 > (Brand Kit, fotos da estética, trends) acrescenta — sempre **local-first**.
-> Apresentação visual: **[IA Local-First](https://claude.ai/code/artifact/48336c86-bace-46f2-bb1a-34c15956ba8b)**.
+> Apresentação visual: **[IA Local-First](https://claude.ai/code/artifact/48336c86-bace-46f2-bb1a-34c15956ba8b)**
+> · diagrama de conexões: **[Mapa de Conexões](https://claude.ai/code/artifact/01572022-66d9-489b-875c-ba82c3de2baa)**.
+>
+> **Padrão arquitetural:** híbrido **orquestrador–trabalhador + pipeline sequencial + loop de
+> feedback** ([Beam](https://beam.ai/agentic-insights/multi-agent-orchestration-patterns-production),
+> [MachineLearningMastery](https://machinelearningmastery.com/the-end-to-end-agentic-ai-pipeline/),
+> [arXiv 2512.08769](https://arxiv.org/html/2512.08769v1)). O Engine/Scheduler é o supervisor;
+> os agentes são trabalhadores especializados; Critic e Analista fecham os loops de feedback.
 
 ## 1. Princípio: local-first por `contrato + factory`
 
