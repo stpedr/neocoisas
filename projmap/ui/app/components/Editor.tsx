@@ -20,6 +20,8 @@ import {
   drawableFor, drawWarpedImage, quadAspect, setMediaReadyCallback, textureRegion, unlockVideos, type UvToScreen,
 } from "../lib/preview";
 import type { DetectCandidate, Layer, MediaItem, Node, Point, SourceSpec, Surface } from "../lib/types";
+import { DEFAULT_COLOR } from "../lib/types";
+import { cssFilter, isNeutral } from "./ColorControls";
 
 export type View = "photo" | "projector";
 export type Mode = "surfaces" | "boundary";
@@ -205,6 +207,10 @@ export default function Editor(props: Props) {
         g.clip();
         const alpha = (s.visible ? 1 : 0.35) * s.opacity;
         const qa = quadAspect(s.warp.base as Point[]);
+        // Ajuste de cor (superfície × projetor), aproximado com filtro CSS na prévia.
+        const outColor = node.output.color ?? DEFAULT_COLOR;
+        const surfColor = s.color ?? DEFAULT_COLOR;
+        if (!isNeutral(outColor) || !isNeutral(surfColor)) g.filter = cssFilter(surfColor, outColor);
         hasContent = paint(g, s.source, [0, 0, 1, 1], qa, map, alpha, props.media, markAnimated);
         for (const layer of s.layers) {
           if (!layer.visible) continue;

@@ -168,6 +168,49 @@ que o mestre abre; use `--token MEUSEGREDO` para fixar um.
 | **Contornos** | Desenha as bordas das superfícies na parede. | Conferir o encaixe. |
 | **Looks** (no celular) | Salva a combinação atual (mídia e visibilidade de cada superfície) e troca tudo de uma vez com um toque. | Cenas do show: "Abertura", "Natal", "Final". |
 
+## 6.1 Melhorar a imagem projetada
+
+No editor, card **Imagem do projetor** (também no celular, aba *Show* →
+*Imagem*):
+
+| Predefinição | Quando usar |
+|---|---|
+| **Ambiente claro** | Luz acesa, fim de tarde, vitrine iluminada: realça os médios e as cores. |
+| **Ambiente escuro** | Sala ou fachada à noite: pretos mais pretos, menos ofuscante. |
+| **Cores vivas** | Festas e conteúdo colorido. |
+| **Parede amarelada** | Parede creme, bege ou madeira: esfria a imagem para as cores ficarem certas. |
+| **Parede azulada** | Parede cinza-fria ou azulada: aquece a imagem. |
+
+Em **Ajuste fino** há brilho, médios (gama), contraste, saturação e
+temperatura. Um duplo clique num controle volta ao padrão.
+
+- **Para clarear sem estourar o branco, use Médios (gama) acima de 1.** O
+  Brilho acima de 100% clareia tudo, mas os brancos "estouram" (perdem
+  detalhe).
+- **Retroprojeção (espelhar):** quando o projetor fica **atrás** de uma tela ou
+  tecido translúcido (voile, lona de retroprojeção). Sem espelhar, o público vê
+  tudo invertido.
+- **Projetor no teto (inverter):** quando o projetor está preso de cabeça para
+  baixo. Se o próprio projetor já tiver o modo "teto" ligado, deixe esta opção
+  desligada (senão inverte duas vezes).
+- **Cor por superfície:** no card *Superfície* → **Cor desta superfície**.
+  Equilibra uma parede mais escura ou colorida que as outras, e soma-se ao
+  ajuste do projetor.
+- Os padrões de alinhamento (Branco, Grade, Bordas) saem sempre puros, sem
+  ajuste.
+
+**O que o software não faz (e como resolver no mundo real):**
+- **Brilho real** vem do projetor (lúmens). O ajuste de software só redistribui
+  a luz que o projetor tem. Para ganhar brilho de verdade:
+  - desligue o modo *Eco* do projetor e use o modo *Brilhante/Dinâmico*;
+  - aproxime o projetor da parede (imagem menor = mais luz por m²);
+  - apague ou desvie as luzes que batem na parede;
+  - prefira superfícies claras e foscas.
+- **Foco** é ajustado na lente do projetor. Use o padrão **Grade** e foque
+  pelo centro.
+- **Não use o keystone** (correção de trapézio) do projetor: ele perde
+  resolução. O mapeamento do ProjMap já corrige a perspectiva.
+
 ## 7. Salvar, fazer backup e levar para outro PC
 
 - **Salvar:** não há botão. Cada mudança é gravada na hora na pasta do projeto
