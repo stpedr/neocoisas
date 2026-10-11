@@ -59,6 +59,12 @@ export interface Surface {
   blend_mode: BlendMode;
 }
 
+export interface Look {
+  id: string;
+  name: string;
+  surfaces: Record<string, { visible: boolean; opacity: number; source: SourceSpec }>;
+}
+
 export interface Project {
   version: number;
   name: string;
@@ -66,6 +72,7 @@ export interface Project {
   nodes: Node[];
   surfaces: Surface[];
   media: Record<string, MediaItem>;
+  looks: Look[];
 }
 
 export const DEFAULT_SOURCE: SourceSpec = {

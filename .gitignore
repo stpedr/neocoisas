@@ -25,3 +25,4 @@ shows/
 *.pmz
 # Modelos baixados (MediaPipe etc.): python -m projmap.tools.fetch_models
 models/
+.venv-projmap/

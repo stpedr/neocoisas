@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { type Mode, type View } from "./components/Editor";
 import InteractPanel from "./components/InteractPanel";
+import RemoteCard from "./components/RemoteCard";
 import SurfacePanel from "./components/SurfacePanel";
 import { api, ApiError } from "./lib/api";
 import { applyH, invert3, mul3, photoToProjector, rectQuad, validateQuad } from "./lib/geometry";
@@ -36,6 +37,9 @@ export default function Page() {
   // Enquanto o usuário arrasta, os PUTs se encadeiam (~20/s) e a parede acompanha.
   const pending = useRef<Project | null>(null);
   const inflight = useRef(false);
+  // Revisão que este editor conhece. Se o mestre avançar sem ele (remote no
+  // celular, looks), recarrega antes que o próximo PUT apague a mudança alheia.
+  const knownRev = useRef(-1);
   const flush = useCallback(async () => {
     if (inflight.current || !pending.current) return;
     const next = pending.current;
@@ -43,7 +47,8 @@ export default function Page() {
     inflight.current = true;
     setSave("saving");
     try {
-      await api.putProject(next);
+      const { revision } = await api.putProject(next);
+      knownRev.current = revision;
       setSave(pending.current ? "saving" : "saved");
     } catch (e) {
       setSave("error");
@@ -74,11 +79,30 @@ export default function Page() {
   useEffect(() => {
     api
       .getProject()
-      .then(({ project }) => {
+      .then(({ revision, project }) => {
+        knownRev.current = revision;
         setProject(project);
         setNodeId(project.nodes[0]?.id ?? "");
       })
       .catch(() => setLoadError("Não foi possível falar com o mestre. Ele está rodando? (python -m projmap.master)"));
+  }, []);
+
+  // ---- sincronia com outros clientes (remote no celular)
+  useEffect(() => {
+    const id = window.setInterval(async () => {
+      if (inflight.current || pending.current) return;
+      try {
+        const { revision } = await api.health();
+        if (revision === knownRev.current || inflight.current || pending.current) return;
+        const fresh = await api.getProject();
+        if (inflight.current || pending.current) return;
+        knownRev.current = fresh.revision;
+        setProject(fresh.project);
+      } catch {
+        /* mestre reiniciando: tenta de novo no próximo ciclo */
+      }
+    }, 1500);
+    return () => window.clearInterval(id);
   }, []);
 
   const node = project?.nodes.find((n) => n.id === nodeId) ?? null;
@@ -399,6 +423,8 @@ export default function Page() {
               onError={(m) => notify(m, "err")}
             />
           )}
+
+          <RemoteCard />
 
           <InteractPanel onError={(m) => notify(m, "err")} />
 

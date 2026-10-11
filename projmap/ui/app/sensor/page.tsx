@@ -12,7 +12,7 @@
 // cabeça (solvePnP, mesma função testada da webcam) e alimenta a cena interativa.
 
 import { useEffect, useRef, useState } from "react";
-import { API_BASE } from "../lib/api";
+import { API_BASE, withToken } from "../lib/api";
 
 // Mesmos índices de projmap/interact/sensors.py (FACE_LANDMARKS):
 // nariz, queixo, olho esq., olho dir., boca esq., boca dir.
@@ -59,7 +59,7 @@ export default function SensorPage() {
   // ---- WebSocket com reconexão
   function connect() {
     const base = API_BASE || window.location.origin;
-    const url = base.replace(/^http/, "ws") + "/api/interact/phone";
+    const url = withToken(base.replace(/^http/, "ws") + "/api/interact/phone");
     const ws = new WebSocket(url);
     wsRef.current = ws;
     ws.onopen = () => setWsOk(true);

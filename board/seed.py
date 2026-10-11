@@ -475,8 +475,15 @@ SEED_CARDS: list[dict] = [
         'labels': ['backend', 'projmap', 'prioridade:média'],
     },
     {
-        'title': 'ProjMap F6 — Remote mobile + app Android (seed42)',
-        'description': 'Rota /remote via QR+token (cues, dimmer, blackout, fontes, PJLink) e /capture (foto pelo celular). App Android via Capacitor com a mesma UI.',
+        'title': 'ProjMap F6a — Remote no celular (web/PWA)',
+        'description': 'Rota /remote pareada por QR+token: blackout, dimmer, padrões, looks (cues), fonte/opacidade/visibilidade por superfície, foto e mídia pelo celular. Token obrigatório fora do mestre. Instalável como PWA.',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['frontend', 'mobile', 'projmap', 'prioridade:média'],
+    },
+    {
+        'title': 'ProjMap F6b — App Android (Capacitor) + PJLink/status no remote',
+        'description': 'Empacotar o mesmo build como APK (descoberta mDNS, câmera nativa, cleartext só p/ IPs privados). Energia via PJLink (F5) e status dos nós (fps, deriva) no remote (F2).',
         'column': 'backlog',
         'sprint': 'Sprint 11 · Projeção mapeada',
         'labels': ['frontend', 'mobile', 'projmap', 'prioridade:média'],

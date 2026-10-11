@@ -161,6 +161,25 @@ class Surface(_Model):
         return v
 
 
+class SurfaceLook(_Model):
+    """O que um look guarda de cada superfície: só o "conteúdo", nunca a geometria."""
+
+    visible: bool = True
+    opacity: float = Field(1.0, ge=0.0, le=1.0)
+    source: SourceSpec = Field(default_factory=SourceSpec)
+
+
+class Look(_Model):
+    """Cena salva (cue) do remote (F6): recall troca fontes/visibilidade de uma vez.
+
+    Pode citar superfícies ou mídias que já não existem; o recall as ignora.
+    """
+
+    id: str
+    name: str = ""
+    surfaces: dict[str, SurfaceLook] = Field(default_factory=dict)
+
+
 class Project(_Model):
     version: int = SCHEMA_VERSION
     name: str = "Novo projeto"
@@ -168,6 +187,7 @@ class Project(_Model):
     nodes: list[Node] = Field(default_factory=list)
     surfaces: list[Surface] = Field(default_factory=list)
     media: dict[str, MediaItem] = Field(default_factory=dict)
+    looks: list[Look] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _references(self) -> "Project":

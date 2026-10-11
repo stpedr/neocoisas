@@ -8,6 +8,9 @@ Exemplos::
     # sem projetor: saída numa janela de preview
     python -m projmap.master --project shows/teste.projmap --windowed
 
+    # expor na LAN para o remote no celular (token gerado e mostrado no log/QR)
+    python -m projmap.master --project shows/teste.projmap --host 0.0.0.0
+
     # só a UI/API (sem janela)
     python -m projmap.master --project shows/teste.projmap --no-output
 
@@ -39,6 +42,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--import", dest="import_pmz", help="extrai este .pmz em --project antes de abrir")
     parser.add_argument("--host", default="127.0.0.1", help="interface do servidor (padrão: só esta máquina)")
     parser.add_argument("--port", type=int, default=8100)
+    parser.add_argument("--token", default=None,
+                        help="token de pareamento do remote (padrão: gerado a cada execução, se exposto na LAN)")
     parser.add_argument("--node", default=None, help="nó desta saída (padrão: o primeiro do projeto)")
     parser.add_argument("--display", type=int, default=0, help="índice do monitor/projetor para a saída")
     parser.add_argument("--windowed", action="store_true", help="saída em janela (preview) em vez de tela cheia")
@@ -72,6 +77,8 @@ def main(argv: list[str] | None = None) -> None:
     import uvicorn
 
     from .app import create_app
+    from .auth import new_token
+    from .remote import remote_url
 
     runtime = None
     if not args.no_interact:
@@ -83,9 +90,12 @@ def main(argv: list[str] | None = None) -> None:
         log.info("camada interativa: cena '%s', sensor %s%s", runtime.spec.title, args.sensor,
                  f", OSC → {args.osc_out}" if args.osc_out else "")
 
-    app = create_app(state, UI_DIR, runtime=runtime)
-    if args.host not in ("127.0.0.1", "localhost"):
-        log.warning("servidor exposto em %s SEM autenticação (o token de pareamento chega na F2/F6)", args.host)
+    exposed = args.host not in ("127.0.0.1", "localhost")
+    token = args.token or (new_token() if exposed else None)
+    app = create_app(state, UI_DIR, runtime=runtime, token=token, host=args.host, port=args.port)
+    if exposed:
+        log.info("remote no celular (mesma rede): %s", remote_url(args.host, args.port, token))
+        log.info("ou abra o card 'Remote' no editor e escaneie o QR")
     url = f"http://{'localhost' if args.host in ('0.0.0.0', '127.0.0.1') else args.host}:{args.port}"
     log.info("UI/API: %s · projeto: %s", url, store.root)
     if not (UI_DIR / "index.html").is_file():

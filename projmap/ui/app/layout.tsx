@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ProjMap — mestre",
   description: "Editor de projeção mapeada: superfícies sobre a foto, saída ao vivo no projetor.",
+  // PWA: "Adicionar à tela inicial" no celular abre direto o remote (F6).
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "ProjMap", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {

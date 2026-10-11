@@ -159,8 +159,15 @@ Guia de uso: [`interact/README.md`](interact/README.md).
 
 ## 9. Segurança
 
-- O mestre escuta em `127.0.0.1` por padrão. Expor na LAN gera um aviso no log
-  até o token de pareamento chegar (F2/F6).
+- O mestre escuta em `127.0.0.1` por padrão. Exposto na LAN (`--host 0.0.0.0`),
+  um **token de pareamento** (gerado a cada execução ou `--token`) passa a ser
+  exigido em `/api/*`, `/media/*` e no WebSocket do sensor para clientes fora da
+  máquina (`master/auth.py`, middleware ASGI). Loopback (editor, `adb reverse`)
+  dispensa. O token vai no cabeçalho `X-ProjMap-Token` ou em `?token=` e só é
+  exibido a quem está no mestre (`GET /api/remote/pair`, QR no editor).
+- O remote (F6) usa comandos pequenos (`PATCH /api/surfaces/{id}`, looks) em vez
+  do `PUT` do projeto inteiro; o editor recarrega quando a revisão do mestre
+  avança sem ele, para não sobrescrever o que veio do celular.
 - CORS liberado só para `localhost`, para a UI em modo dev.
 - Senhas (PJLink, F5) vão só no `.env`. O projeto guarda apenas o nome da
   variável.

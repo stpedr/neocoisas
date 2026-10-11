@@ -316,3 +316,45 @@ details summary { cursor: pointer; margin-bottom: 6px; }
 .sensor-status .err { color: var(--red); font-size: 13px; }
 .sensor-controls { display: flex; flex-direction: column; gap: 10px; }
 .sensor-controls .btn-block { min-height: 52px; font-size: 16px; }
+
+/* ------------------------------------------------------------ remote (F6, celular) */
+.remote {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 12px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.remote-head { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.remote-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+.dot-off { background: var(--red); }
+.remote-tabs { width: 100%; }
+.remote-tabs > button { flex: 1; min-height: 44px; }
+.remote .btn { min-height: 44px; }
+.remote input, .remote select { min-height: 40px; font-size: 16px; } /* 16px: iOS não dá zoom no foco */
+.blackout {
+  font: inherit;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  min-height: 64px;
+  border-radius: var(--radius);
+  border: 2px solid var(--red);
+  background: var(--red-soft);
+  color: var(--red);
+  cursor: pointer;
+}
+.blackout-on { background: var(--red); color: #fff; }
+.remote-slider { display: flex; align-items: center; gap: 12px; }
+.remote-slider input[type="range"] { flex: 1; height: 36px; }
+.remote-value { font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; color: var(--text-dim); }
+.remote-list { display: flex; flex-direction: column; gap: 12px; }
+.card-muted { opacity: 0.6; }
+.looks { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+.look-btn { min-height: 56px; }
+.qr { background: #fff; border-radius: var(--radius-sm); padding: 8px; align-self: center; line-height: 0; }
+.qr svg { max-width: 220px; height: auto; }
+.remote-link { word-break: break-all; color: var(--accent); }
+.remote .segmented button { font-size: 14px; flex: 1; }
+.remote .segmented { display: flex; }

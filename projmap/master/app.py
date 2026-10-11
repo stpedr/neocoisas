@@ -10,8 +10,8 @@ Princípios:
   própria (``PATCH .../output``) — são os comandos que o remote do celular (F6)
   vai usar.
 - **Mídia por upload** vai para ``media/<sha256>`` e é registrada no projeto.
-- Por padrão o mestre escuta só em ``127.0.0.1``. Expor na LAN (celular, nós)
-  chega com o token de pareamento (F2/F6).
+- Por padrão o mestre escuta só em ``127.0.0.1``. Exposto na LAN (``--host
+  0.0.0.0``), clientes de fora exigem o token de pareamento (ver ``auth.py``).
 """
 
 from __future__ import annotations
@@ -29,6 +29,8 @@ from pydantic import BaseModel, ValidationError
 from .. import __version__
 from ..core.project import Output, Project, parse_project
 from ..core.state import ProjectState
+from .auth import PairingTokenMiddleware
+from .remote import create_router as create_remote_router
 
 
 class ProjectBody(BaseModel):
@@ -45,9 +47,12 @@ def _validation_detail(exc: ValidationError) -> list[str]:
 
 
 def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any = None,
-               nlp_client_factory: Any = None) -> FastAPI:
+               nlp_client_factory: Any = None, token: Optional[str] = None,
+               host: str = "127.0.0.1", port: int = 8100) -> FastAPI:
     """``runtime``: ``InteractionRuntime`` da camada interativa (opcional).
-    ``nlp_client_factory``: devolve o cliente LLM para texto→cena (padrão: o do repo)."""
+    ``nlp_client_factory``: devolve o cliente LLM para texto→cena (padrão: o do repo).
+    ``token``: token de pareamento; exigido de clientes fora desta máquina (F6).
+    ``host``/``port``: onde o servidor escuta, para montar a URL do remote."""
     app = FastAPI(title="ProjMap — mestre", version=__version__)
     # Dev: UI no `next dev` (outra porta) chamando a API local.
     app.add_middleware(
@@ -56,6 +61,7 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(PairingTokenMiddleware, token=token)
     store = state.store
 
     @app.exception_handler(ValidationError)
@@ -162,6 +168,8 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
         store.export_pmz(tmp)
         safe = "".join(c if c.isalnum() or c in "-_" else "-" for c in project.name).strip("-") or "projeto"
         return FileResponse(tmp, filename=f"{safe}.pmz", media_type="application/zip")
+
+    app.include_router(create_remote_router(state, host=host, port=port, token=token))
 
     if runtime is not None:
         from ..interact.api import create_router

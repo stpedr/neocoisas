@@ -17,7 +17,7 @@ GIF ou imagem para cada uma, e a parede atualiza ao vivo.
 | F3 Detecção de superfícies com IA (SAM 2) | — |
 | F4 Calibração Gray code + edge blending | — |
 | F5 NDI + PJLink | — |
-| F6 Remote no celular + app Android | — |
+| **F6a Remote no celular (web/PWA)** | ✅ entregue — ver abaixo · app Android (F6b) pendente |
 | **F8 Camada interativa (IA + sensores + TouchDesigner)** | ✅ MVP — [`interact/README.md`](interact/README.md) |
 
 ---
@@ -102,6 +102,24 @@ python -m projmap.master --project shows/meu-show.projmap --sensor phone --adb
 ```
 A página `/sensor/` abre no celular; toque em **Iniciar sensor**. Passo a
 passo em [interact/README.md](interact/README.md#celular-por-usbadb-phone--recomendado-sem-kinect).
+
+### Controlar pelo celular (remote)
+
+```bash
+python -m projmap.master --project shows/meu-show.projmap --display 1 --host 0.0.0.0
+```
+
+O log mostra `http://<ip>:8100/remote/#t=<token>`, e o card **Remote no
+celular** do editor mostra o mesmo link em QR. Com o celular na mesma rede
+Wi-Fi, escaneie e pronto: blackout, dimmer, padrões de teste, contornos,
+**looks** (salve a parede como cena e troque com um toque), fonte/opacidade/
+visibilidade por superfície, foto da posição do projetor e envio de mídia.
+No menu do navegador, **Adicionar à tela inicial** instala como app.
+
+- Fora do mestre, nada é aceito sem o token (401). Ele muda a cada execução;
+  use `--token <valor>` para fixar.
+- O QR usa `segno` (já em `requirements-projmap-master.txt`). Sem ele, copie o
+  link do log.
 
 ### Medir desempenho
 
