@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { api } from "../lib/api";
 import { validateQuad } from "../lib/geometry";
 import type { MediaItem, Project, SourceKind, Surface } from "../lib/types";
 
@@ -11,6 +12,8 @@ interface Props {
   onDelete: () => void;
   onUpload: (file: File) => Promise<MediaItem>;
   onError: (msg: string) => void;
+  /** Abre a galeria; a mídia escolhida vira o fundo da superfície. */
+  onOpenGallery: (onPick: (item: MediaItem) => void) => void;
 }
 
 const KINDS: { id: SourceKind; label: string }[] = [
@@ -29,7 +32,7 @@ const ACCEPT: Record<string, string> = {
   image: "image/png,image/jpeg,image/webp,image/bmp",
 };
 
-export default function SurfacePanel({ surface: s, project, onChange, onDelete, onUpload, onError }: Props) {
+export default function SurfacePanel({ surface: s, project, onChange, onDelete, onUpload, onError, onOpenGallery }: Props) {
   // Tipo escolhido que ainda não tem arquivo no projeto: a superfície continua
   // como está até o upload (o servidor recusa "vídeo" sem mídia).
   const [wantKind, setWantKind] = useState<SourceKind | null>(null);
@@ -84,28 +87,29 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
         </select>
       </label>
 
-      {needsMedia && media.length === 0 && (
-        <p className="dim small">Nenhum arquivo deste tipo no projeto ainda — envie um abaixo.</p>
-      )}
-
-      {needsMedia && media.length > 0 && (
-        <label>
-          Arquivo
-          <select
-            value={s.source.kind === shownKind ? s.source.media ?? "" : ""}
-            onChange={(e) => {
-              setWantKind(null);
-              onChange((c) => ({ ...c, source: { ...c.source, kind: shownKind, media: e.target.value } }));
-            }}
+      {/* Galeria (miniaturas, pastas do Drive, sugestões) no lugar da lista suspensa */}
+      {(() => {
+        const cur = s.source.media ? project.media[s.source.media] : undefined;
+        return (
+          <button
+            className="media-pick"
+            onClick={() =>
+              onOpenGallery((item) => {
+                setWantKind(null);
+                onChange((c) => ({ ...c, source: { ...c.source, kind: item.kind, media: item.sha256 } }));
+              })
+            }
           >
-            {s.source.kind !== shownKind && <option value="">Escolha…</option>}
-            {media.map((m) => (
-              <option key={m.sha256} value={m.sha256}>
-                {m.filename}
-              </option>
-            ))}
-          </select>
-        </label>
+            {cur ? <img src={api.mediaThumbUrl(cur.sha256)} alt="" /> : <span className="media-pick-empty">🖼</span>}
+            <span>
+              <b>{cur ? cur.filename : "Escolher na galeria"}</b>
+              <span className="dim small">{cur ? "trocar mídia" : "vídeos e fotos do projeto e das suas pastas"}</span>
+            </span>
+          </button>
+        );
+      })()}
+      {needsMedia && media.length === 0 && !s.source.media && (
+        <p className="dim small">Nenhum arquivo deste tipo no projeto ainda: escolha na galeria ou envie abaixo.</p>
       )}
 
       <div className="upload-row">

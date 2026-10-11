@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { adoptTokenFromHash, api, ApiError, getToken, setToken } from "../lib/api";
+import MediaGallery from "../components/MediaGallery";
 import type { MediaItem, Pattern, Project, SourceSpec, Surface } from "../lib/types";
 
 type Conn = "ok" | "offline" | "unpaired";
@@ -30,6 +31,7 @@ export default function RemotePage() {
   const [tab, setTab] = useState<Tab>("show");
   const [toast, setToast] = useState<{ msg: string; kind: "ok" | "err" } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [gallerySurface, setGallerySurface] = useState<Surface | null>(null);
   const rev = useRef(-1);
   // Dentro do app Android (Capacitor) o user agent leva "ProjMapApp": mostra
   // "Trocar mestre", que volta ao lançador do app (origem https://localhost).
@@ -173,6 +175,7 @@ export default function RemotePage() {
           {surfaces.map((s) => (
             <SurfaceCard key={s.id} surface={s} media={project.media}
                          onDrag={(v) => (dragging.current = v)}
+                         onGallery={() => setGallerySurface(s)}
                          onPatch={(changes) => run(() => api.patchSurface(s.id, changes))} />
           ))}
         </section>
@@ -220,6 +223,18 @@ export default function RemotePage() {
           {busy && <p className="dim small">Enviando…</p>}
         </section>
       )}
+
+      <MediaGallery
+        open={!!gallerySurface}
+        title={gallerySurface ? `Mídia de "${gallerySurface.label || gallerySurface.id}"` : undefined}
+        surfaceId={gallerySurface?.id}
+        onPick={(m) => {
+          const s = gallerySurface;
+          if (s) void run(() => api.patchSurface(s.id, { source: { kind: m.kind, media: m.sha256 } }), "Mídia trocada");
+        }}
+        onClose={() => setGallerySurface(null)}
+        onError={(m) => notify(m, "err")}
+      />
 
       {conn === "offline" && <div className="toast toast-err" role="status">Sem conexão com o mestre…</div>}
       {toast && <div className={`toast toast-${toast.kind}`} role="status">{toast.msg}</div>}
@@ -281,17 +296,15 @@ function Slider({ value, onCommit, onDrag }: {
   );
 }
 
-function sourceValue(src: SourceSpec) {
-  return src.media ? `media:${src.media}` : src.kind;
-}
 
-function SurfaceCard({ surface, media, onPatch, onDrag }: {
+function SurfaceCard({ surface, media, onPatch, onDrag, onGallery }: {
   surface: Surface;
   media: Record<string, MediaItem>;
   onPatch: (c: { visible?: boolean; opacity?: number; source?: Partial<SourceSpec> }) => void;
   onDrag: (dragging: boolean) => void;
+  onGallery: () => void;
 }) {
-  const items = Object.values(media);
+  const cur = surface.source.media ? media[surface.source.media] : undefined;
   return (
     <section className={`card ${surface.visible ? "" : "card-muted"}`}>
       <div className="card-head">
@@ -301,35 +314,21 @@ function SurfaceCard({ surface, media, onPatch, onDrag }: {
           Visível
         </label>
       </div>
-      <label>
-        Fonte
-        <select
-          value={sourceValue(surface.source)}
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v.startsWith("media:")) {
-              const item = media[v.slice(6)];
-              onPatch({ source: { kind: item.kind, media: item.sha256 } });
-            } else {
-              onPatch({ source: { kind: v as SourceSpec["kind"], media: null } });
-            }
-          }}
-        >
-          <option value="none">Nada (preto)</option>
-          <option value="test">Cartela de teste</option>
-          <option value="color">Cor sólida</option>
-          <option value="interactive">Cena interativa</option>
-          {items.length > 0 && (
-            <optgroup label="Mídia">
-              {items.map((m) => (
-                <option key={m.sha256} value={`media:${m.sha256}`}>
-                  {{ video: "🎬", gif: "🌀", image: "🖼" }[m.kind]} {m.filename}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
-      </label>
+      {/* Galeria com miniaturas no lugar da lista suspensa (que fica enorme com muitas mídias) */}
+      <button className="media-pick" onClick={onGallery}>
+        {cur ? <img src={api.mediaThumbUrl(cur.sha256)} alt="" /> : <span className="media-pick-empty">🖼</span>}
+        <span>
+          <b>{cur ? cur.filename : { none: "Nada (preto)", test: "Cartela de teste", color: "Cor sólida", interactive: "Cena interativa", video: "Vídeo", gif: "GIF", image: "Imagem" }[surface.source.kind]}</b>
+          <span className="dim small">toque para escolher na galeria</span>
+        </span>
+      </button>
+      <div className="segmented">
+        {([["none", "Preto"], ["test", "Cartela"], ["color", "Cor"], ["interactive", "Interativa"]] as const).map(([k, label]) => (
+          <button key={k} className={surface.source.kind === k ? "on" : ""} onClick={() => onPatch({ source: { kind: k, media: null } })}>
+            {label}
+          </button>
+        ))}
+      </div>
       {surface.source.kind === "color" && (
         <label>
           Cor

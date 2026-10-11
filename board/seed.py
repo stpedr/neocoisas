@@ -897,6 +897,13 @@ SEED_CARDS: list[dict] = [
         'labels': ['frontend', 'backend', 'projmap', 'prioridade:alta'],
     },
     {
+        'title': 'ProjMap — Galeria de mídias (pastas/Google Drive) + sugestões por superfície',
+        'description': 'Biblioteca de pastas do mestre (Google Drive para computador, OneDrive, HD) com miniaturas em cache e importação por hash; galeria com busca/filtros no editor e no celular; sugestões por formato/resolução/tipo e "Sugerir mídias" para todas. Guia do usuário em projmap/GUIA.md.',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['frontend', 'backend', 'projmap', 'prioridade:alta'],
+    },
+    {
         'title': 'ProjMap F7 — Conteúdo por IA por superfície (opcional)',
         'description': 'Pipeline do ifnull com as factories existentes (stability structure, comfyui ControlNet, Veo): foto da posição → geração estilizada → recorte por superfície → mídia do projeto.',
         'column': 'backlog',
