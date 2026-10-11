@@ -68,6 +68,31 @@ def fit_transform(fit: str, source_size: tuple[int, int], quad: Sequence[Sequenc
     raise ValueError(f"fit desconhecido: {fit}")
 
 
+def compose(inner: UvTransform, outer: UvTransform) -> UvTransform:
+    """``outer(inner(uv))``: aplica ``inner`` e depois ``outer``."""
+    return UvTransform(
+        (inner.scale[0] * outer.scale[0], inner.scale[1] * outer.scale[1]),
+        (inner.offset[0] * outer.scale[0] + outer.offset[0], inner.offset[1] * outer.scale[1] + outer.offset[1]),
+    )
+
+
+def layer_uvx(rect: Sequence[float], fit: str, source_size: tuple[int, int],
+              quad: Sequence[Sequence[float]]) -> UvTransform:
+    """Transformação da camada (F9): uv da superfície → textura da mídia.
+
+    Primeiro leva ``uv`` para o espaço local do retângulo (``(uv - xy) / wh``);
+    depois aplica o ``fit`` usando a proporção aparente do *retângulo* (a do quad
+    escalada por w/h). Fora do retângulo, ``tex`` sai de [0,1] e o shader descarta.
+    """
+    x, y, w, h = rect
+    local = UvTransform((1.0 / w, 1.0 / h), (-x / w, -y / h))
+    if fit == "stretch":
+        return local
+    a_rect = quad_aspect(quad) * w / h
+    q = [(0.0, 0.0), (a_rect, 0.0), (a_rect, 1.0), (0.0, 1.0)]  # quad de mesma proporção
+    return compose(local, fit_transform(fit, source_size, q))
+
+
 def hinv_for(quad: Sequence[Sequence[float]]) -> np.ndarray:
     """Matriz que o shader recebe como ``u_hinv`` (pixel do projetor → uv)."""
     return quad_to_unit_square(quad)

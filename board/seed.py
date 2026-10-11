@@ -496,6 +496,13 @@ SEED_CARDS: list[dict] = [
         'labels': ['backend', 'mobile', 'projmap', 'prioridade:baixa'],
     },
     {
+        'title': 'ProjMap F9 — Prévia ao vivo no editor + camadas por superfície',
+        'description': 'Mídia (vídeo/GIF/imagem/cor/cartela) desenhada dentro das superfícies no editor, em perspectiva e animada. Várias mídias por superfície (camadas) com mover/redimensionar no canvas, ordem, opacidade e ajuste; renderer e looks com camadas. REA do MadMapper em docs/projmap/PLANO-F9-preview-camadas.md.',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['frontend', 'backend', 'projmap', 'prioridade:alta'],
+    },
+    {
         'title': 'ProjMap F7 — Conteúdo por IA por superfície (opcional)',
         'description': 'Pipeline do ifnull com as factories existentes (stability structure, comfyui ControlNet, Veo): foto da posição → geração estilizada → recorte por superfície → mídia do projeto.',
         'column': 'backlog',

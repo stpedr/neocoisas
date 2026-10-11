@@ -8,10 +8,18 @@
 //  - "projector": o quadro do projetor em si (para ajuste fino olhando a parede).
 // Arrastar em qualquer vista converte de volta para pixels do projetor; o
 // renderer do nó e a parede atualizam no frame seguinte.
+//
+// F9: as mídias (fundo + camadas) aparecem DENTRO das superfícies, em
+// perspectiva e animadas (vídeo/GIF), como no MadMapper. Com uma camada
+// selecionada, o retângulo dela ganha alças: arrastar um canto redimensiona
+// mantendo a proporção (Shift libera) e arrastar por dentro move.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { applyH, invert3, pointInQuad, validateQuad, type Mat3 } from "../lib/geometry";
-import type { Node, Point, Surface } from "../lib/types";
+import { applyH, homography4, invert3, pointInQuad, validateQuad, type Mat3 } from "../lib/geometry";
+import {
+  drawableFor, drawWarpedImage, quadAspect, setMediaReadyCallback, textureRegion, unlockVideos, type UvToScreen,
+} from "../lib/preview";
+import type { Layer, MediaItem, Node, Point, SourceSpec, Surface } from "../lib/types";
 
 export type View = "photo" | "projector";
 export type Mode = "surfaces" | "boundary";
@@ -33,12 +41,21 @@ interface Props {
   onQuad: (id: string, quad: Point[]) => void;
   onBoundary: (boundary: Point[]) => void;
   onReject: (msg: string) => void;
+  media: Record<string, MediaItem>;
+  showMedia: boolean;
+  selectedLayerId: string | null;
+  onLayerRect: (surfaceId: string, layerId: string, rect: Layer["rect"]) => void;
 }
+
+const UNIT: Point[] = [[0, 0], [1, 0], [1, 1], [0, 1]];
+const rectCorners = ([x, y, w, h]: Layer["rect"]): Point[] => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
 
 type Drag =
   | { kind: "corner"; id: string; corner: number; quadView: Point[] }
   | { kind: "move"; id: string; start: Point; quadView: Point[] }
-  | { kind: "boundary"; corner: number };
+  | { kind: "boundary"; corner: number }
+  | { kind: "layerCorner"; sid: string; lid: string; corner: number; start: Layer["rect"] }
+  | { kind: "layerMove"; sid: string; lid: string; startUv: Point; start: Layer["rect"] };
 
 export default function Editor(props: Props) {
   const { node, surfaces, view, mode, photo, photoToProj, selectedId, selectedCorner } = props;
@@ -48,6 +65,8 @@ export default function Editor(props: Props) {
   const dragRef = useRef<Drag | null>(null);
   const [pointer, setPointer] = useState<Point | null>(null); // em px de tela, para a lupa
   const lastReject = useRef(0);
+  const drawRef = useRef<() => void>(() => {});
+  const animatedRef = useRef(false);
 
   const usePhoto = view === "photo" && photo !== null && photoToProj !== null;
   const viewW = usePhoto ? photo!.naturalWidth : node.output.width;
@@ -81,8 +100,42 @@ export default function Editor(props: Props) {
     return () => ro.disconnect();
   }, []);
 
-  // ---- desenho
+  // uv da superfície → tela, passando por projetor → vista.
+  const uvMapper = useCallback(
+    (s: Surface): UvToScreen | null => {
+      const h = homography4(UNIT, s.warp.base as Point[]);
+      if (!h) return null;
+      return (u, v) => viewToScreen(projToView(applyH(h, [u, v])));
+    },
+    [viewToScreen, projToView],
+  );
+
+  // tela → uv da superfície (para arrastar camadas).
+  const screenToUv = (s: Surface, sp: Point): Point | null => {
+    const h = homography4(s.warp.base as Point[], UNIT);
+    return h ? applyH(h, viewToProj(screenToView(sp))) : null;
+  };
+
+  // Laço de animação: só redesenha por frame quando há vídeo/GIF visível.
   useEffect(() => {
+    setMediaReadyCallback(() => drawRef.current());
+    let raf = 0;
+    const tick = () => {
+      if (animatedRef.current) drawRef.current();
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      setMediaReadyCallback(() => {});
+    };
+  }, []);
+
+  // ---- desenho (nas mudanças de estado e, havendo vídeo/GIF, a cada frame)
+  useEffect(() => {
+    drawRef.current = draw;
+    draw();
+    function draw() {
     const cv = canvasRef.current;
     if (!cv) return;
     cv.width = Math.round(size.w * size.dpr);
@@ -124,16 +177,39 @@ export default function Editor(props: Props) {
     }
 
     // Superfícies
+    let animated = false;
+    const markAnimated = () => (animated = true);
     const ordered = [...surfaces].sort((a, b) => a.z - b.z);
     ordered.forEach((s) => {
       const idx = surfaces.indexOf(s);
       const color = COLORS[idx % COLORS.length];
       const pts = s.warp.base.map((p) => viewToScreen(projToView(p as Point)));
       const sel = s.id === selectedId;
+      // Prévia da mídia: fundo e camadas, recortados pela superfície.
+      let hasContent = false;
+      const map = props.showMedia ? uvMapper(s) : null;
+      if (map) {
+        g.save();
+        poly(g, pts);
+        g.clip();
+        const alpha = (s.visible ? 1 : 0.35) * s.opacity;
+        const qa = quadAspect(s.warp.base as Point[]);
+        hasContent = paint(g, s.source, [0, 0, 1, 1], qa, map, alpha, props.media, markAnimated);
+        for (const layer of s.layers) {
+          if (!layer.visible) continue;
+          g.save();
+          poly(g, rectCorners(layer.rect).map(([u, v]) => map(u, v)));
+          g.clip();
+          hasContent = paint(g, layer.source, layer.rect, qa, map, alpha * layer.opacity, props.media, markAnimated) || hasContent;
+          g.restore();
+        }
+        g.restore();
+      }
       g.save();
       g.globalAlpha = s.visible ? 1 : 0.35;
       poly(g, pts);
-      g.fillStyle = hexA(color, sel ? 0.28 : 0.16);
+      // Com mídia à mostra, o véu colorido some (só um toque na selecionada).
+      g.fillStyle = hexA(color, hasContent ? (sel ? 0.1 : 0) : sel ? 0.28 : 0.16);
       g.fill();
       g.lineWidth = sel ? 2.5 : 1.5;
       g.strokeStyle = color;
@@ -160,6 +236,38 @@ export default function Editor(props: Props) {
       }
     });
 
+    animatedRef.current = animated;
+
+    // Camada selecionada: retângulo deformado na superfície + alças.
+    const selSurf = surfaces.find((s) => s.id === selectedId);
+    const selLayer = selSurf?.layers.find((l) => l.id === props.selectedLayerId);
+    const selMap = selSurf && selLayer && mode === "surfaces" ? uvMapper(selSurf) : null;
+    if (selLayer && selMap) {
+      const corners = rectCorners(selLayer.rect).map(([u, v]) => selMap(u, v));
+      g.save();
+      g.setLineDash([6, 4]);
+      g.lineWidth = 2;
+      g.strokeStyle = "#fff";
+      poly(g, corners);
+      g.stroke();
+      g.setLineDash([]);
+      for (const p of corners) {
+        g.fillStyle = "#fff";
+        g.strokeStyle = "#000";
+        g.lineWidth = 1.5;
+        g.fillRect(p[0] - 6, p[1] - 6, 12, 12);
+        g.strokeRect(p[0] - 6, p[1] - 6, 12, 12);
+      }
+      const c = corners.reduce((a, p) => [a[0] + p[0] / 4, a[1] + p[1] / 4], [0, 0]);
+      g.font = "600 11px Inter, system-ui, sans-serif";
+      g.fillStyle = "#fff";
+      g.textAlign = "center";
+      g.shadowColor = "rgba(0,0,0,.9)";
+      g.shadowBlur = 4;
+      g.fillText(selLayer.label || selLayer.id, c[0], c[1] + 16);
+      g.restore();
+    }
+
     // Lupa: amplia a FOTO (não o canvas, que teria a bolinha do canto por cima)
     // e desenha só as arestas finas — precisão de canto, inclusive no toque.
     const d = dragRef.current;
@@ -170,7 +278,9 @@ export default function Editor(props: Props) {
       else edges = (surfaces.find((s) => s.id === d.id)?.warp.base ?? []).map((p) => projToView(p as Point));
       loupe(g, photo!, center, pointer, scale, size, edges);
     }
-  }, [size, surfaces, node, view, mode, photo, usePhoto, viewW, viewH, viewToScreen, screenToView, projToView, scale, selectedId, selectedCorner, pointer]);
+    }
+  }, [size, surfaces, node, view, mode, photo, usePhoto, viewW, viewH, viewToScreen, screenToView, projToView, uvMapper, scale,
+      selectedId, selectedCorner, pointer, props.media, props.showMedia, props.selectedLayerId]);
 
   // ---- interação
   const eventPoint = (e: React.PointerEvent): Point => {
@@ -182,6 +292,26 @@ export default function Editor(props: Props) {
     const sp = eventPoint(e);
     canvasRef.current!.setPointerCapture(e.pointerId);
     canvasRef.current!.focus();
+    unlockVideos(); // o navegador só dá play depois de um gesto do usuário
+    // Camada selecionada tem prioridade: alças dela, depois arrastar por dentro.
+    if (mode === "surfaces" && props.selectedLayerId) {
+      const s = surfaces.find((x) => x.id === selectedId);
+      const layer = s?.layers.find((l) => l.id === props.selectedLayerId);
+      const map = s ? uvMapper(s) : null;
+      if (s && layer && map) {
+        const corners = rectCorners(layer.rect).map(([u, v]) => map(u, v));
+        const i = nearest(corners, sp);
+        if (i !== null) {
+          dragRef.current = { kind: "layerCorner", sid: s.id, lid: layer.id, corner: i, start: layer.rect };
+          return;
+        }
+        const uv = screenToUv(s, sp);
+        if (uv && pointInQuad(sp, corners)) {
+          dragRef.current = { kind: "layerMove", sid: s.id, lid: layer.id, startUv: uv, start: layer.rect };
+          return;
+        }
+      }
+    }
     if (mode === "boundary") {
       if (!usePhoto) return;
       const frame = node.photo_boundary.map(([x, y]) => viewToScreen([x * viewW, y * viewH]));
@@ -222,6 +352,14 @@ export default function Editor(props: Props) {
     if (!d) return;
     const sp = eventPoint(e);
     const vp = screenToView(sp);
+    if (d.kind === "layerCorner" || d.kind === "layerMove") {
+      const s = surfaces.find((x) => x.id === d.sid);
+      const uv = s ? screenToUv(s, sp) : null;
+      if (!uv) return;
+      const rect = d.kind === "layerMove" ? moveRect(d.start, d.startUv, uv) : resizeRect(d.start, d.corner, uv, !e.shiftKey);
+      props.onLayerRect(d.sid, d.lid, rect);
+      return;
+    }
     if (d.kind === "boundary") {
       setPointer(sp);
       const next = node.photo_boundary.map((p, i) => (i === d.corner ? ([vp[0] / viewW, vp[1] / viewH] as Point) : p));
@@ -377,4 +515,65 @@ function hexA(hex: string, a: number) {
 
 function round2(v: number) {
   return Math.round(v * 100) / 100;
+}
+
+// ------------------------------------------------------------ prévia (F9)
+// Pinta uma fonte ocupando `rect` (uv da superfície). Devolve se desenhou algo.
+function paint(
+  g: CanvasRenderingContext2D,
+  spec: SourceSpec,
+  rect: Layer["rect"],
+  qAspect: number,
+  map: UvToScreen,
+  alpha: number,
+  media: Record<string, MediaItem>,
+  markAnimated: () => void,
+): boolean {
+  const d = drawableFor(spec, media);
+  if (!d || alpha <= 0) return false;
+  g.save();
+  g.globalAlpha = alpha;
+  const [x, y, w, h] = rect;
+  if (d.kind === "color") {
+    poly(g, rectCorners(rect).map(([u, v]) => map(u, v)));
+    g.fillStyle = d.color;
+    g.fill();
+  } else if (d.kind === "image") {
+    if (d.animated) markAnimated();
+    drawWarpedImage(g, d.el, d.w, d.h, textureRegion(rect, spec.fit, d.w / d.h, qAspect), map);
+  } else {
+    const c = map(x + w / 2, y + h / 2);
+    g.font = "600 12px Inter, system-ui, sans-serif";
+    g.fillStyle = "rgba(255,255,255,.75)";
+    g.textAlign = "center";
+    g.fillText(d.text, c[0], c[1] + 18);
+  }
+  g.restore();
+  return true;
+}
+
+const MIN_SIDE = 0.01;
+
+function moveRect(start: Layer["rect"], from: Point, to: Point): Layer["rect"] {
+  const [x, y, w, h] = start;
+  return roundRect([x + to[0] - from[0], y + to[1] - from[1], w, h]);
+}
+
+// O canto oposto fica parado. `keep`: mantém a proporção do início do arraste.
+function resizeRect(start: Layer["rect"], corner: number, p: Point, keep: boolean): Layer["rect"] {
+  const opp = rectCorners(start)[(corner + 2) % 4];
+  let w = Math.max(MIN_SIDE, Math.abs(p[0] - opp[0]));
+  let h = Math.max(MIN_SIDE, Math.abs(p[1] - opp[1]));
+  if (keep) {
+    const r = start[2] / start[3];
+    if (w / r > h) h = w / r;
+    else w = h * r;
+  }
+  const x = p[0] >= opp[0] ? opp[0] : opp[0] - w;
+  const y = p[1] >= opp[1] ? opp[1] : opp[1] - h;
+  return roundRect([x, y, w, h]);
+}
+
+function roundRect(r: Layer["rect"]): Layer["rect"] {
+  return r.map((v) => Math.round(v * 10000) / 10000) as Layer["rect"];
 }

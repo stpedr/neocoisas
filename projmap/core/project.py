@@ -140,6 +140,38 @@ class Warp(_Model):
         return v
 
 
+class Layer(_Model):
+    """Mídia extra dentro de uma superfície (F9), desenhada por cima do fundo (``source``).
+
+    ``rect`` = ``[x, y, w, h]`` no espaço uv da superfície (0..1 é a superfície
+    inteira). Pode passar das bordas: o que sai fica recortado pela superfície.
+    """
+
+    id: str
+    label: str = ""
+    visible: bool = True
+    source: SourceSpec
+    rect: tuple[float, float, float, float] = (0.0, 0.0, 1.0, 1.0)
+    opacity: float = Field(1.0, ge=0.0, le=1.0)
+
+    @field_validator("id")
+    @classmethod
+    def _id(cls, v: str) -> str:
+        if not _ID_RE.match(v):
+            raise ValueError("id deve ser minúsculo, [a-z0-9_-], até 63 caracteres")
+        return v
+
+    @field_validator("rect")
+    @classmethod
+    def _rect(cls, v: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+        x, y, w, h = v
+        if not (w > 1e-4 and h > 1e-4):
+            raise ValueError("rect: largura e altura devem ser positivas")
+        if max(abs(x), abs(y), w, h) > 100:
+            raise ValueError("rect: valores fora do razoável (|x|,|y|,w,h ≤ 100)")
+        return v
+
+
 class Surface(_Model):
     id: str
     label: str = ""
@@ -152,6 +184,7 @@ class Surface(_Model):
     opacity: float = Field(1.0, ge=0.0, le=1.0)
     feather: float = Field(0.0, ge=0.0, le=0.5, description="borda suave, em fração do uv")
     blend_mode: Literal["normal", "add", "multiply"] = "normal"
+    layers: list[Layer] = Field(default_factory=list, description="mídias extras por cima do fundo (F9)")
 
     @field_validator("id")
     @classmethod
@@ -167,6 +200,7 @@ class SurfaceLook(_Model):
     visible: bool = True
     opacity: float = Field(1.0, ge=0.0, le=1.0)
     source: SourceSpec = Field(default_factory=SourceSpec)
+    layers: Optional[list[Layer]] = Field(None, description="None = look antigo: não mexe nas camadas")
 
 
 class Look(_Model):
@@ -211,6 +245,15 @@ class Project(_Model):
                     f"superfície '{s.id}': fonte '{s.source.kind}' não combina com mídia "
                     f"'{self.media[s.source.media].kind}'"
                 )
+            layer_ids = [layer.id for layer in s.layers]
+            if len(set(layer_ids)) != len(layer_ids):
+                raise ValueError(f"superfície '{s.id}': ids de camada duplicados")
+            for layer in s.layers:
+                src = layer.source
+                if src.media and src.media not in self.media:
+                    raise ValueError(f"superfície '{s.id}', camada '{layer.id}': mídia desconhecida {src.media[:8]}…")
+                if src.media and src.kind != self.media[src.media].kind:
+                    raise ValueError(f"superfície '{s.id}', camada '{layer.id}': fonte '{src.kind}' não combina com a mídia")
         return self
 
     def node(self, node_id: str) -> Node:

@@ -79,6 +79,11 @@ def recall_look(project: Project, look: Look) -> list[str]:
         surf.visible = saved.visible
         surf.opacity = saved.opacity
         surf.source = src.model_copy(deep=True)
+        if saved.layers is not None:
+            keep = [layer for layer in saved.layers if not layer.source.media or layer.source.media in project.media]
+            if len(keep) != len(saved.layers):
+                skipped.append(f"{sid}: {len(saved.layers) - len(keep)} camada(s) com mídia removida")
+            surf.layers = [layer.model_copy(deep=True) for layer in keep]
     return skipped
 
 
@@ -129,7 +134,8 @@ def create_router(state: ProjectState, host: str = "127.0.0.1", port: int = 8100
                 id=new_id("look"),
                 name=body.name.strip() or f"Look {len(p.looks) + 1}",
                 surfaces={s.id: SurfaceLook(visible=s.visible, opacity=s.opacity,
-                                            source=s.source.model_copy(deep=True))
+                                            source=s.source.model_copy(deep=True),
+                                            layers=[layer.model_copy(deep=True) for layer in s.layers])
                           for s in p.surfaces},
             )
             p.looks.append(look)

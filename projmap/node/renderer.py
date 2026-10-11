@@ -33,8 +33,8 @@ from ..content.base import FrameSource, StaticSource
 from ..content.factory import get_source
 from ..content.patterns import edges_pattern, grid_pattern, solid
 from ..core.geometry import rect_quad
-from ..core.project import Node, Project, Surface
-from ..mapping.warp import UvTransform, fit_transform, hinv_for
+from ..core.project import Layer, Node, Project, SourceSpec, Surface
+from ..mapping.warp import UvTransform, fit_transform, hinv_for, layer_uvx
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +57,8 @@ def _quad_triangles(quad) -> np.ndarray:
 
 @dataclass
 class _Item:
+    """Uma coisa desenhável: o fundo de uma superfície ou uma das camadas dela (F9)."""
+
     surface: Surface
     source_key: str
     source: Optional[FrameSource]
@@ -66,6 +68,23 @@ class _Item:
     texture: Optional[moderngl.Texture] = None
     frame_key: Optional[int] = None
     uvx: UvTransform = field(default_factory=UvTransform)
+    layer: Optional[Layer] = None
+
+    @property
+    def spec(self) -> SourceSpec:
+        return self.layer.source if self.layer is not None else self.surface.source
+
+    @property
+    def opacity(self) -> float:
+        return self.surface.opacity * (self.layer.opacity if self.layer is not None else 1.0)
+
+    def fit_uvx(self) -> UvTransform:
+        if self.source is None:
+            return UvTransform()
+        quad = self.surface.warp.base
+        if self.layer is not None:
+            return layer_uvx(self.layer.rect, self.layer.source.fit, self.source.size, quad)
+        return fit_transform(self.surface.source.fit, self.source.size, quad)
 
 
 class Renderer:
@@ -83,6 +102,7 @@ class Renderer:
             fragment_shader=shader_source("line.frag", gles),
         )
         self._items: list[_Item] = []
+        self._surfaces: list[Surface] = []
         self._node: Optional[Node] = None
         self._pattern_key: Optional[tuple] = None
         self._pattern: Optional[_Item] = None
@@ -92,32 +112,42 @@ class Renderer:
     # ------------------------------------------------------------------- sync
     def sync(self, project: Project, node_id: str) -> None:
         """Reconstrói a lista de desenho. Fontes são reaproveitadas pela chave da
-        especificação: mover um canto não reinicia o vídeo daquela superfície."""
+        especificação: mover um canto não reinicia o vídeo daquela superfície.
+
+        Cada superfície vira o fundo (``source``) e, por cima, as camadas visíveis
+        (F9), na ordem da lista."""
         self._node = project.node(node_id)
         old = {(i.surface.id, i.source_key): i for i in self._items}
         items: list[_Item] = []
         for surf in project.surfaces_for(node_id):
-            key = json.dumps(surf.source.model_dump(mode="json"), sort_keys=True)
-            prev = old.pop((surf.id, key), None)
-            if prev is not None:
-                source, texture, frame_key = prev.source, prev.texture, prev.frame_key
-                prev.vao.release()
-                prev.vbo.release()
-            else:
-                source, texture, frame_key = self._open_source(surf), None, None
-            vbo = self.ctx.buffer(_quad_triangles(surf.warp.base).tobytes())
-            vao = self.ctx.vertex_array(self.surface_prog, [(vbo, "2f", "in_pos")])
-            uvx = fit_transform(surf.source.fit, source.size, surf.warp.base) if source else UvTransform()
-            items.append(_Item(surf, key, source, vbo, vao, hinv_for(surf.warp.base), texture, frame_key, uvx))
+            parts: list[tuple[Optional[Layer], SourceSpec]] = [(None, surf.source)]
+            parts += [(layer, layer.source) for layer in surf.layers if layer.visible]
+            for layer, spec in parts:
+                key = (f"layer:{layer.id}:" if layer else "base:") + json.dumps(spec.model_dump(mode="json"), sort_keys=True)
+                prev = old.pop((surf.id, key), None)
+                if prev is not None:
+                    source, texture, frame_key = prev.source, prev.texture, prev.frame_key
+                    prev.vao.release()
+                    prev.vbo.release()
+                else:
+                    source, texture, frame_key = self._open_spec(surf.id, spec), None, None
+                if source is None:
+                    continue
+                vbo = self.ctx.buffer(_quad_triangles(surf.warp.base).tobytes())
+                vao = self.ctx.vertex_array(self.surface_prog, [(vbo, "2f", "in_pos")])
+                item = _Item(surf, key, source, vbo, vao, hinv_for(surf.warp.base), texture, frame_key, layer=layer)
+                item.uvx = item.fit_uvx()
+                items.append(item)
         for stale in old.values():
             self._release_item(stale)
         self._items = items
+        self._surfaces = project.surfaces_for(node_id)
 
-    def _open_source(self, surf: Surface) -> Optional[FrameSource]:
+    def _open_spec(self, surface_id: str, spec: SourceSpec) -> Optional[FrameSource]:
         try:
-            return get_source(surf.source, self._media_path)
+            return get_source(spec, self._media_path)
         except Exception as exc:  # noqa: BLE001 — mídia ruim não derruba o show
-            log.error("superfície %s: fonte indisponível (%s)", surf.id, exc)
+            log.error("superfície %s: fonte indisponível (%s)", surface_id, exc)
             return StaticSource(solid(2, 2, (255, 0, 255)))  # magenta = "erro de mídia"
 
     # ----------------------------------------------------------------- render
@@ -154,12 +184,12 @@ class Renderer:
         if item.texture is None or item.frame_key != key or item.texture.size != (rgba.shape[1], rgba.shape[0]):
             item.texture = self._upload(item.texture, rgba)
             item.frame_key = key
-            if surf.source.fit != "stretch":
-                item.uvx = fit_transform(surf.source.fit, item.source.size, surf.warp.base)
+            if item.layer is not None or surf.source.fit != "stretch":
+                item.uvx = item.fit_uvx()
         prog = self.surface_prog
         prog["u_hinv"].write(item.hinv.astype("f4").T.tobytes())  # GLSL mat3 é column-major
         prog["u_uvx"].value = (*item.uvx.scale, *item.uvx.offset)
-        prog["u_opacity"].value = float(surf.opacity * intensity)
+        prog["u_opacity"].value = float(item.opacity * intensity)
         prog["u_feather"].value = float(surf.feather)
         prog["u_multiply"].value = 1 if surf.blend_mode == "multiply" else 0
         if surf.blend_mode == "add":
@@ -204,14 +234,14 @@ class Renderer:
 
     def _draw_outlines(self) -> None:
         """Contorno de cada quad + marcador no canto TL (orientação da textura)."""
-        if not self._items:
+        if not self._surfaces:
             return
         prog = self.line_prog
         self.ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA
         out_w = float(self._node.output.width) if self._node else 1920.0
         r = max(4.0, out_w / 160.0)
-        for item in self._items:
-            q = np.asarray(item.surface.warp.base, dtype="f4")
+        for surf in self._surfaces:
+            q = np.asarray(surf.warp.base, dtype="f4")
             loop = np.vstack([q, q[:1]])
             self._outline_vbo.orphan(loop.nbytes)
             self._outline_vbo.write(loop.tobytes())

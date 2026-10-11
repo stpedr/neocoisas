@@ -358,3 +358,14 @@ details summary { cursor: pointer; margin-bottom: 6px; }
 .remote-link { word-break: break-all; color: var(--accent); }
 .remote .segmented button { font-size: 14px; flex: 1; }
 .remote .segmented { display: flex; }
+
+/* ------------------------------------------------------------ camadas (F9) */
+.layer-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.layer-list li { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 8px; }
+.layer-list li.on { border-color: var(--accent); background: rgba(124, 92, 255, 0.12); }
+.layer-name { flex: 1; min-width: 0; text-align: left; font: inherit; font-size: 13px; color: var(--text); background: none; border: 0; padding: 4px 2px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layer-list .btn-small { min-height: 26px; padding: 2px 8px; }
+.layer-props { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
+.rect-row > label { min-width: 0; }
+.rect-row input { width: 100%; }
+.stage-bar label.toggle { font-size: 12px; white-space: nowrap; }

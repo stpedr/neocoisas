@@ -45,6 +45,16 @@ export interface SourceSpec {
   offset_s: number;
 }
 
+// Mídia extra por cima do fundo da superfície (F9). rect = [x, y, w, h] em uv da superfície.
+export interface Layer {
+  id: string;
+  label: string;
+  visible: boolean;
+  source: SourceSpec;
+  rect: [number, number, number, number];
+  opacity: number;
+}
+
 export interface Surface {
   id: string;
   label: string;
@@ -57,12 +67,13 @@ export interface Surface {
   opacity: number;
   feather: number;
   blend_mode: BlendMode;
+  layers: Layer[];
 }
 
 export interface Look {
   id: string;
   name: string;
-  surfaces: Record<string, { visible: boolean; opacity: number; source: SourceSpec }>;
+  surfaces: Record<string, { visible: boolean; opacity: number; source: SourceSpec; layers?: Layer[] | null }>;
 }
 
 export interface Project {

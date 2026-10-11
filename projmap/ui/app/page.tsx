@@ -5,6 +5,7 @@ import Editor, { type Mode, type View } from "./components/Editor";
 import InteractPanel from "./components/InteractPanel";
 import RemoteCard from "./components/RemoteCard";
 import SurfacePanel from "./components/SurfacePanel";
+import LayersPanel from "./components/LayersPanel";
 import { api, ApiError } from "./lib/api";
 import { applyH, invert3, mul3, photoToProjector, rectQuad, validateQuad } from "./lib/geometry";
 import type { Output, Pattern, Point, Project, Surface } from "./lib/types";
@@ -32,6 +33,8 @@ export default function Page() {
   const [toast, setToast] = useState<{ msg: string; kind: "ok" | "err" } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [photoVersion, setPhotoVersion] = useState(0);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  const [showMedia, setShowMedia] = useState(true);
 
   // ---- salvamento: um PUT por vez, sempre com o estado mais recente.
   // Enquanto o usuário arrasta, os PUTs se encadeiam (~20/s) e a parede acompanha.
@@ -127,12 +130,19 @@ export default function Page() {
   }, [node, photo]);
 
   // ---- edição
+  // Sempre o projeto mais recente: depois de um upload (await), o `project`
+  // do fechamento ainda não tem a mídia nova e o PUT seria recusado.
+  const latest = useRef<Project | null>(null);
+  latest.current = project;
   const updateSurface = useCallback(
     (id: string, fn: (s: Surface) => Surface) => {
-      if (!project) return;
-      commit({ ...project, surfaces: project.surfaces.map((s) => (s.id === id ? fn(s) : s)) });
+      const cur = latest.current;
+      if (!cur) return;
+      const next = { ...cur, surfaces: cur.surfaces.map((s) => (s.id === id ? fn(s) : s)) };
+      latest.current = next;
+      commit(next);
     },
-    [project, commit],
+    [commit],
   );
 
   const onQuad = useCallback(
@@ -203,11 +213,25 @@ export default function Page() {
       opacity: 1,
       feather: 0,
       blend_mode: "normal",
+      layers: [],
     };
     commit({ ...project, surfaces: [...project.surfaces, surface] });
     setSelectedId(id);
     setSelectedCorner(null);
     setMode("surfaces");
+  };
+
+  const uploadMedia = async (file: File) => {
+    const { item } = await api.uploadMedia(file);
+    // Junta só a mídia nova ao estado atual: um getProject() inteiro poderia
+    // atropelar edições ainda não salvas.
+    const cur = latest.current;
+    if (cur) {
+      const next = { ...cur, media: { ...cur.media, [item.sha256]: item } };
+      latest.current = next;
+      setProject(next);
+    }
+    return item;
   };
 
   const deleteSurface = (id: string) => {
@@ -316,6 +340,10 @@ export default function Page() {
                 Projetor
               </button>
             </div>
+            <label className="toggle" title="Mostra vídeo, GIF e imagem dentro das superfícies">
+              <input type="checkbox" checked={showMedia} onChange={(e) => setShowMedia(e.target.checked)} />
+              Prévia da mídia
+            </label>
             <span className="hint">
               {mode === "boundary"
                 ? "Arraste os 4 cantos amarelos até onde o quadro BRANCO do projetor aparece na foto."
@@ -332,12 +360,19 @@ export default function Page() {
             selectedId={selectedId}
             selectedCorner={selectedCorner}
             onSelect={(id, c) => {
+              if (id !== selectedId) setSelectedLayerId(null);
               setSelectedId(id);
               setSelectedCorner(c);
             }}
             onQuad={onQuad}
             onBoundary={onBoundary}
             onReject={(m) => notify(m, "err")}
+            media={project.media}
+            showMedia={showMedia}
+            selectedLayerId={selectedLayerId}
+            onLayerRect={(sid, lid, rect) =>
+              updateSurface(sid, (s) => ({ ...s, layers: s.layers.map((l) => (l.id === lid ? { ...l, rect } : l)) }))
+            }
           />
         </div>
 
@@ -414,12 +449,20 @@ export default function Page() {
               project={project}
               onChange={(fn) => updateSurface(selected.id, fn)}
               onDelete={() => deleteSurface(selected.id)}
-              onUpload={async (file) => {
-                const { item } = await api.uploadMedia(file);
-                const { project: fresh } = await api.getProject();
-                setProject(fresh);
-                return item;
-              }}
+              onUpload={uploadMedia}
+              onError={(m) => notify(m, "err")}
+            />
+          )}
+
+          {selected && (
+            <LayersPanel
+              key={`layers-${selected.id}`}
+              surface={selected}
+              project={project}
+              selectedLayerId={selectedLayerId}
+              onSelectLayer={setSelectedLayerId}
+              onChange={(fn) => updateSurface(selected.id, fn)}
+              onUpload={uploadMedia}
               onError={(m) => notify(m, "err")}
             />
           )}
