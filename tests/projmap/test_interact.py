@@ -270,8 +270,13 @@ def test_saida_osc_para_o_touchdesigner():
         out = OscOutput("127.0.0.1", server.server_address[1])
         sim = Simulation(PRESETS["fantasmas-timidos"])
         out.send(sim.step(1 / 30, [FACING]))
-        deadline = time.time() + 2
-        while time.time() < deadline and sum(a == "/projmap/entity" for a, _ in got) < 5:
+        # Espera TODAS as mensagens: o servidor processa cada datagrama numa thread,
+        # então a ordem de chegada em `got` não é garantida.
+        deadline = time.time() + 3
+        while time.time() < deadline and not (
+            sum(a == "/projmap/entity" for a, _ in list(got)) >= 5
+            and {"/projmap/scene", "/projmap/frame", "/projmap/player"} <= {a for a, _ in list(got)}
+        ):
             time.sleep(0.01)
     finally:
         server.shutdown()
@@ -296,10 +301,13 @@ def test_sensor_osc_recebe_pessoa_do_kinect():
         c.send_message("/player", [0, 0.25, 1.5, 180.0, 1])
         c.send_message("/player/1/x", 0.75)
         c.send_message("/player/1/face", 0)
-        deadline = time.time() + 2
-        while time.time() < deadline and len(sensor.players()) < 2:
+        def ready():
+            ps = {p.id: p for p in sensor.players()}
+            return len(ps) == 2 and ps[1].face_visible is False and ps[1].x == pytest.approx(0.75 * A)
+
+        deadline = time.time() + 3
+        while time.time() < deadline and not ready():
             time.sleep(0.01)
-        time.sleep(0.05)
         ps = {p.id: p for p in sensor.players()}
     finally:
         sensor.close()
