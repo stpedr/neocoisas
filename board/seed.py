@@ -454,8 +454,15 @@ SEED_CARDS: list[dict] = [
         'labels': ['backend', 'projmap', 'prioridade:alta'],
     },
     {
-        'title': 'ProjMap F3 — Detecção de superfícies com IA (SAM 2)',
-        'description': 'get_segmenter: manual|classic|sam2. Máscara → polígono editável, detecção do quad projetado, ids estáveis por IoU ao re-segmentar, alinhamento foto-dia → foto-branco.',
+        'title': 'ProjMap F3a — Detecção automática de superfícies (OpenCV)',
+        'description': 'projmap/detect (contrato + get_detector): classic = mean-shift + bordas + k-means Lab adaptativo, junção de pedaços ocluídos, quad pelo casco convexo, NMS com regra de cor. POST /api/nodes/{id}/detect e card na UI (marcar e criar). Testado em foto real (porta/paredes/teto).',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['backend', 'frontend', 'ia', 'projmap', 'prioridade:alta'],
+    },
+    {
+        'title': 'ProjMap F3b — SAM 2 + área projetada automática + re-detecção estável',
+        'description': 'get_detector("sam2") por clique/caixa e automático; detecção do quad projetado na foto com branco; ids estáveis por IoU ao re-detectar; alinhamento foto-dia → foto-branco.',
         'column': 'backlog',
         'sprint': 'Sprint 11 · Projeção mapeada',
         'labels': ['backend', 'ia', 'projmap', 'prioridade:média'],

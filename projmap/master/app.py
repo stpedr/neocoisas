@@ -24,7 +24,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from .. import __version__
 from ..core.project import Output, Project, parse_project
@@ -35,6 +35,12 @@ from .remote import create_router as create_remote_router
 
 class ProjectBody(BaseModel):
     project: dict[str, Any]
+
+
+class DetectBody(BaseModel):
+    detector: str = "classic"
+    sensitivity: float = Field(0.5, ge=0.0, le=1.0)
+    max_candidates: int = Field(12, ge=1, le=40)
 
 
 def _validation_detail(exc: ValidationError) -> list[str]:
@@ -160,6 +166,30 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
         if path is None or not path.is_file():
             raise HTTPException(404, "nó sem foto")
         return FileResponse(path, headers={"Cache-Control": "no-cache"})
+
+    @app.post("/api/nodes/{node_id}/detect")
+    def detect_surfaces(node_id: str, body: DetectBody) -> dict:
+        """Sugere superfícies a partir da foto do nó (F3). Não altera o projeto:
+        a UI mostra os candidatos e cria só os que o operador escolher."""
+        import cv2
+        import numpy as np
+
+        from ..detect import get_detector
+
+        _, project = state.snapshot()
+        node = _node_or_404(project, node_id)
+        path = store.resolve(node.photo)
+        if path is None or not path.is_file():
+            raise HTTPException(422, ["envie a foto da posição do projetor antes de detectar"])
+        bgr = cv2.imdecode(np.fromfile(str(path), dtype=np.uint8), cv2.IMREAD_COLOR)
+        if bgr is None:
+            raise HTTPException(422, ["foto ilegível"])
+        try:
+            detector = get_detector(body.detector)
+        except ValueError as exc:
+            raise HTTPException(422, [str(exc)]) from exc
+        cands = detector.detect(bgr, sensitivity=body.sensitivity, max_candidates=body.max_candidates)
+        return {"detector": detector.name, "candidates": [c.to_dict() for c in cands]}
 
     @app.get("/api/project/export")
     def export_project() -> FileResponse:

@@ -6,9 +6,10 @@ import InteractPanel from "./components/InteractPanel";
 import RemoteCard from "./components/RemoteCard";
 import SurfacePanel from "./components/SurfacePanel";
 import LayersPanel from "./components/LayersPanel";
+import DetectPanel from "./components/DetectPanel";
 import { api, ApiError } from "./lib/api";
 import { applyH, invert3, mul3, photoToProjector, rectQuad, validateQuad } from "./lib/geometry";
-import type { Output, Pattern, Point, Project, Surface } from "./lib/types";
+import type { DetectCandidate, Output, Pattern, Point, Project, Surface } from "./lib/types";
 import { DEFAULT_SOURCE } from "./lib/types";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -35,6 +36,15 @@ export default function Page() {
   const [photoVersion, setPhotoVersion] = useState(0);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [showMedia, setShowMedia] = useState(true);
+  const [cands, setCands] = useState<DetectCandidate[]>([]);
+  const [candOn, setCandOn] = useState<Set<number>>(new Set());
+  const toggleCand = (i: number) =>
+    setCandOn((cur) => {
+      const next = new Set(cur);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
 
   // ---- salvamento: um PUT por vez, sempre com o estado mais recente.
   // Enquanto o usuário arrasta, os PUTs se encadeiam (~20/s) e a parede acompanha.
@@ -221,6 +231,55 @@ export default function Page() {
     setMode("surfaces");
   };
 
+  // ---- detecção (F3): candidatos em coordenadas normalizadas da foto
+  const createFromCandidates = () => {
+    const cur = latest.current;
+    if (!cur || !node || !photo || !photoToProj) return;
+    const added: Surface[] = [];
+    const skipped: string[] = [];
+    let z = Math.max(0, ...surfaces.map((s) => s.z + 1));
+    const ids = { surfaces: [...cur.surfaces] } as Project;
+    [...candOn].sort((a, b) => a - b).forEach((i) => {
+      const c = cands[i];
+      const quad = c.quad
+        .map(([x, y]) => applyH(photoToProj, [x * photo.naturalWidth, y * photo.naturalHeight]))
+        .map(([x, y]) => [Math.round(x * 100) / 100, Math.round(y * 100) / 100] as Point);
+      if (validateQuad(quad)) {
+        skipped.push(c.label);
+        return;
+      }
+      const id = uniqueId({ ...ids, surfaces: [...ids.surfaces, ...added] } as Project, "superficie");
+      added.push({
+        id,
+        label: c.label,
+        node_id: node.id,
+        z: z++,
+        visible: true,
+        polygon_src: c.polygon,
+        warp: { type: "homography", base: quad },
+        source: { ...DEFAULT_SOURCE },
+        opacity: 1,
+        feather: 0,
+        blend_mode: "normal",
+        layers: [],
+      });
+    });
+    if (added.length) {
+      const next = { ...cur, surfaces: [...cur.surfaces, ...added] };
+      latest.current = next;
+      commit(next);
+      setSelectedId(added[0].id);
+      setSelectedLayerId(null);
+    }
+    setCands([]);
+    setCandOn(new Set());
+    notify(
+      `${added.length} superfície(s) criada(s).` +
+        (skipped.length ? ` Ignoradas (fora da área projetada): ${skipped.join(", ")}.` : " Ajuste os cantos se precisar."),
+      skipped.length ? "err" : "ok",
+    );
+  };
+
   const uploadMedia = async (file: File) => {
     const { item } = await api.uploadMedia(file);
     // Junta só a mídia nova ao estado atual: um getProject() inteiro poderia
@@ -370,6 +429,9 @@ export default function Page() {
             media={project.media}
             showMedia={showMedia}
             selectedLayerId={selectedLayerId}
+            candidates={cands}
+            candidateOn={candOn}
+            onToggleCandidate={toggleCand}
             onLayerRect={(sid, lid, rect) =>
               updateSurface(sid, (s) => ({ ...s, layers: s.layers.map((l) => (l.id === lid ? { ...l, rect } : l)) }))
             }
@@ -391,6 +453,28 @@ export default function Page() {
               />
             </label>
           </section>
+
+          <DetectPanel
+            nodeId={node.id}
+            hasPhoto={!!photo}
+            candidates={cands}
+            selected={candOn}
+            onResult={(c) => {
+              setCands(c);
+              // Pré-marca as regiões grandes e razoavelmente retangulares (paredes, portas,
+              // teto); objetos soltos costumam ser pequenos. O operador ajusta a seleção.
+              setCandOn(new Set(c.map((x, i) => (x.area >= 0.04 && x.score >= 0.55 ? i : -1)).filter((i) => i >= 0)));
+              setView("photo");
+              setMode("surfaces");
+            }}
+            onToggle={toggleCand}
+            onCreate={createFromCandidates}
+            onClear={() => {
+              setCands([]);
+              setCandOn(new Set());
+            }}
+            onError={(m) => notify(m, "err")}
+          />
 
           <section className="card">
             <h2>2 · Área projetada</h2>
