@@ -16,7 +16,7 @@ Telegram — útil em estúdio/bancada ou com o Pi como controle remoto da stack
 | `requirements-rpi.txt` · `Dockerfile.rpi` | Imagem enxuta do controlador |
 | `docker-compose.yml` | Serviço `rpi` (profile `rpi`, acesso a `/dev/gpiochip0`) |
 | `.env.example` | `RPI_BACKEND`, `RPI_POLL_INTERVAL`, `RPI_PIN_*` |
-| `board/seed.py` | Card "Controlador Raspberry Pi" (Sprint 11 · Hardware) |
+| `board/seed.py` | Card "Controlador Raspberry Pi" (Sprint 12 · Hardware) |
 
 ## Como funciona
 Igual ao bot do Telegram: processo separado que só fala com a API por HTTP.
