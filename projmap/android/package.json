@@ -1,0 +1,20 @@
+{
+  "name": "projmap-android",
+  "version": "0.1.0",
+  "private": true,
+  "description": "App Android do ProjMap (Capacitor): lançador que pareia com o mestre e abre o remote.",
+  "scripts": {
+    "vendor": "node scripts/vendor.mjs",
+    "sync": "npm run vendor && cap sync android",
+    "apk": "npm run sync && cd android && gradlew assembleDebug",
+    "test": "node --test tests/launcher.test.cjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "jsqr": "1.4.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  }
+}

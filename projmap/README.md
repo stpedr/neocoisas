@@ -17,7 +17,8 @@ GIF ou imagem para cada uma, e a parede atualiza ao vivo.
 | F3 Detecção de superfícies com IA (SAM 2) | — |
 | F4 Calibração Gray code + edge blending | — |
 | F5 NDI + PJLink | — |
-| **F6a Remote no celular (web/PWA)** | ✅ entregue — ver abaixo · app Android (F6b) pendente |
+| **F6a Remote no celular (web/PWA)** | ✅ entregue — ver abaixo |
+| **F6b App Android (APK)** | ✅ APK de debug — [`android/README.md`](android/README.md) |
 | **F8 Camada interativa (IA + sensores + TouchDesigner)** | ✅ MVP — [`interact/README.md`](interact/README.md) |
 
 ---
@@ -118,6 +119,8 @@ No menu do navegador, **Adicionar à tela inicial** instala como app.
 
 - Fora do mestre, nada é aceito sem o token (401). Ele muda a cada execução;
   use `--token <valor>` para fixar.
+- **App Android:** o APK faz o mesmo e lembra o mestre. Build em
+  [`android/README.md`](android/README.md).
 - O QR usa `segno` (já em `requirements-projmap-master.txt`). Sem ele, copie o
   link do log.
 

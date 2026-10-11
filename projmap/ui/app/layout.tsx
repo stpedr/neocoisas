@@ -14,6 +14,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Sem zoom por pinça: no celular o gesto é para arrastar cantos.
   maximumScale: 1,
+  viewportFit: "cover",
   themeColor: "#0b0f17",
 };
 
