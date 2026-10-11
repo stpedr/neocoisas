@@ -60,3 +60,6 @@ jobs:
         run: npm ci
       - name: Build (export estático)
         run: npm run build
+      - name: Testes do lançador do app Android
+        working-directory: projmap/android
+        run: node --test tests/launcher.test.cjs
