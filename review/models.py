@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
 
+from agents.slides import Slide
 from agents.video_pipeline import Scene
 
 
@@ -37,6 +38,10 @@ class Idea:
     prompt: str
     title: str
     scenes: list[Scene] = field(default_factory=list)
+    slides: list[Slide] = field(default_factory=list)   # carrossel (formato padrão)
+    post_format: str = "reels"     # reels | carousel | feed | story
+    caption: str = ""              # legenda pronta do post
+    hashtags: list[str] = field(default_factory=list)
     id: str = field(default_factory=lambda: uuid4().hex[:12])
     status: str = IdeaStatus.PENDING
     mode: str = "manual"           # "manual" (revisão) ou "auto" (prompta-e-posta)
@@ -62,6 +67,10 @@ class Idea:
                 }
                 for s in self.scenes
             ],
+            "slides": [s.to_dict() for s in self.slides],
+            "post_format": self.post_format,
+            "caption": self.caption,
+            "hashtags": list(self.hashtags),
             "status": self.status,
             "mode": self.mode,
             "video_path": self.video_path,
@@ -88,6 +97,10 @@ class Idea:
             prompt=data.get("prompt", ""),
             title=data.get("title", ""),
             scenes=scenes,
+            slides=[Slide.from_dict(s) for s in data.get("slides", [])],
+            post_format=data.get("post_format", "reels"),
+            caption=data.get("caption", ""),
+            hashtags=list(data.get("hashtags", [])),
             id=data.get("id", uuid4().hex[:12]),
             status=data.get("status", IdeaStatus.PENDING),
             mode=data.get("mode", "manual"),

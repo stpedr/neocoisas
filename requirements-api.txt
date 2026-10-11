@@ -15,3 +15,6 @@ google-genai>=0.3
 # Publicação no YouTube (Data API v3) — usada só se ANE_PUBLISHER=youtube.
 google-api-python-client>=2.100
 google-auth>=2.30
+
+# Motor de slides do carrossel (composição de texto sobre imagem).
+pillow>=10.0
