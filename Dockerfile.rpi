@@ -1,0 +1,13 @@
+# Controlador Raspberry Pi do Auto Niche Engine (botões/LEDs no GPIO).
+# Rode no próprio Pi com acesso a /dev/gpiochip* (ver serviço "rpi" no compose).
+FROM python:3.11-slim
+
+WORKDIR /app
+
+
+COPY requirements-rpi.txt .
+RUN pip install --no-cache-dir -r requirements-rpi.txt
+
+COPY raspberry_pi.py .
+
+CMD ["python", "raspberry_pi.py"]

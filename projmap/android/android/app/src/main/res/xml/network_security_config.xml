@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- O mestre do ProjMap fala HTTP puro na LAN (http://192.168.x.x:8100), sem TLS.
+     O Android não aceita faixas de IP aqui, então o texto claro é liberado no app
+     inteiro; quem restringe aos IPs privados é o lançador (www/launcher.js) e o
+     allowNavigation do capacitor.config.json. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

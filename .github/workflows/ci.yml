@@ -15,9 +15,13 @@ jobs:
         with:
           python-version: "3.11"
       - name: Instalar dependências
-        run: pip install -r requirements-dev.txt
+        run: pip install -r requirements-dev.txt -r requirements-projmap-master.txt
+      # Xvfb + Mesa (llvmpipe): contexto OpenGL headless para os testes do
+      # renderer do ProjMap (GPU vs. referência em CPU).
+      - name: Instalar Xvfb/Mesa
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1 libgl1-mesa-dri
       - name: Rodar testes
-        run: pytest -q
+        run: xvfb-run -a pytest -q
 
   frontend:
     name: Frontend (next build)
@@ -38,3 +42,24 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
+
+  projmap-ui:
+    name: ProjMap UI (next build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projmap/ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: projmap/ui/package-lock.json
+      - name: Instalar dependências
+        run: npm ci
+      - name: Build (export estático)
+        run: npm run build
+      - name: Testes do lançador do app Android
+        working-directory: projmap/android
+        run: node --test tests/launcher.test.cjs
