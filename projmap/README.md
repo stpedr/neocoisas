@@ -5,6 +5,7 @@ Mapeamento de projeção com vários projetores em rede, controlados a partir de
 você desenha as superfícies sobre uma foto, arrasta os cantos, escolhe vídeo,
 GIF ou imagem para cada uma, e a parede atualiza ao vivo.
 
+- **Guia de configuração e uso (comece por aqui): [`GUIA.md`](GUIA.md)**
 - Plano e fases: [`docs/projmap/PLANO.md`](../docs/projmap/PLANO.md)
 - Estudo das referências: [`docs/projmap/BLUEPRINT.md`](../docs/projmap/BLUEPRINT.md)
 - Decisões de engenharia: [`ARCHITECTURE.md`](ARCHITECTURE.md)
@@ -123,6 +124,19 @@ lisas com arestas retas: paredes, portas, teto, colunas, painéis.
   quadrilátero por trás do objeto.
 - Funciona melhor com superfícies lisas e boa luz. Textura forte, sombra dura e
   pouco contraste confundem; para isso virá o modo com IA (SAM 2).
+
+### Galeria de mídias (pastas do PC e Google Drive) e sugestões
+
+A galeria substitui as listas suspensas: miniaturas de tudo o que está no
+projeto e nas suas **pastas** (`--library PASTA` ou o card *Biblioteca de
+mídias*). Para o Google Drive, use o *Google Drive para computador* e aponte
+para a pasta espelhada (ex.: `G:\Meu Drive\Projeção`). Escolher um arquivo da
+pasta o importa para o projeto (por hash, sem duplicar).
+
+**Sugestões:** para cada superfície, as mídias são ordenadas pelo formato
+(proporção), pela resolução para o tamanho na parede e pelo tipo (vídeo em
+superfícies grandes). **⭐ Sugerir mídias** propõe uma por superfície, evitando
+repetir. Passo a passo no [GUIA](GUIA.md#4-escolher-as-mídias).
 
 ### Prévia e camadas (ver a mídia enquanto mapeia)
 

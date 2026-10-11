@@ -42,6 +42,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--import", dest="import_pmz", help="extrai este .pmz em --project antes de abrir")
     parser.add_argument("--host", default="127.0.0.1", help="interface do servidor (padrão: só esta máquina)")
     parser.add_argument("--port", type=int, default=8100)
+    parser.add_argument("--library", action="append", default=None, metavar="PASTA",
+                        help="pasta de mídias para a galeria (pode repetir; ex.: a pasta do Google Drive). "
+                             "Padrão: as salvas na UI (~/.projmap/library.json)")
     parser.add_argument("--token", default=None,
                         help="token de pareamento do remote (padrão: gerado a cada execução, se exposto na LAN)")
     parser.add_argument("--node", default=None, help="nó desta saída (padrão: o primeiro do projeto)")
@@ -92,7 +95,8 @@ def main(argv: list[str] | None = None) -> None:
 
     exposed = args.host not in ("127.0.0.1", "localhost")
     token = args.token or (new_token() if exposed else None)
-    app = create_app(state, UI_DIR, runtime=runtime, token=token, host=args.host, port=args.port)
+    app = create_app(state, UI_DIR, runtime=runtime, token=token, host=args.host, port=args.port,
+                     library_roots=args.library)
     if exposed:
         log.info("remote no celular (mesma rede): %s", remote_url(args.host, args.port, token))
         log.info("ou abra o card 'Remote' no editor e escaneie o QR")

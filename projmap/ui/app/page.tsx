@@ -7,9 +7,12 @@ import RemoteCard from "./components/RemoteCard";
 import SurfacePanel from "./components/SurfacePanel";
 import LayersPanel from "./components/LayersPanel";
 import DetectPanel from "./components/DetectPanel";
+import LibraryCard from "./components/LibraryCard";
+import MediaGallery from "./components/MediaGallery";
+import SuggestAll from "./components/SuggestAll";
 import { api, ApiError } from "./lib/api";
 import { applyH, invert3, mul3, photoToProjector, rectQuad, validateQuad } from "./lib/geometry";
-import type { DetectCandidate, Output, Pattern, Point, Project, Surface } from "./lib/types";
+import type { DetectCandidate, MediaItem, Output, Pattern, Point, Project, Surface } from "./lib/types";
 import { DEFAULT_SOURCE } from "./lib/types";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -36,6 +39,8 @@ export default function Page() {
   const [photoVersion, setPhotoVersion] = useState(0);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [showMedia, setShowMedia] = useState(true);
+  const [gallery, setGallery] = useState<{ surfaceId: string | null; title: string; onPick: (m: MediaItem) => void } | null>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
   const [cands, setCands] = useState<DetectCandidate[]>([]);
   const [candOn, setCandOn] = useState<Set<number>>(new Set());
   const toggleCand = (i: number) =>
@@ -280,6 +285,36 @@ export default function Page() {
     );
   };
 
+  // Mídia importada da galeria entra no estado sem recarregar o projeto inteiro.
+  const rememberMedia = (item: MediaItem) => {
+    const cur = latest.current;
+    if (cur && !cur.media[item.sha256]) {
+      const next = { ...cur, media: { ...cur.media, [item.sha256]: item } };
+      latest.current = next;
+      setProject(next);
+    }
+  };
+
+  const openGallery = (surfaceId: string | null, title: string) => (onPick: (m: MediaItem) => void) =>
+    setGallery({ surfaceId, title, onPick: (m) => { rememberMedia(m); onPick(m); } });
+
+  const applySuggestions = (picks: { surfaceId: string; item: MediaItem }[]) => {
+    picks.forEach((p) => rememberMedia(p.item));
+    const cur = latest.current;
+    if (!cur) return;
+    const bySurface = new Map(picks.map((p) => [p.surfaceId, p.item]));
+    const next = {
+      ...cur,
+      surfaces: cur.surfaces.map((s) => {
+        const m = bySurface.get(s.id);
+        return m ? { ...s, source: { ...s.source, kind: m.kind, media: m.sha256 } } : s;
+      }),
+    };
+    latest.current = next;
+    commit(next);
+    notify(`Mídia aplicada em ${picks.length} superfície(s).`);
+  };
+
   const uploadMedia = async (file: File) => {
     const { item } = await api.uploadMedia(file);
     // Junta só a mídia nova ao estado atual: um getProject() inteiro poderia
@@ -379,10 +414,18 @@ export default function Page() {
               onChange={(e) => patchOutput({ intensity: Number(e.target.value) })}
             />
           </label>
-          <button className={`btn ${out.blackout ? "btn-danger" : ""}`} onClick={() => patchOutput({ blackout: !out.blackout })}>
+          <button
+            className={`btn ${out.blackout ? "btn-danger" : ""}`}
+            title="Apaga o projetor na hora (tela preta) sem perder nada do mapeamento. Use entre cenas, para ajustar algo na parede ou numa emergência. Clique de novo para voltar."
+            onClick={() => patchOutput({ blackout: !out.blackout })}
+          >
             {out.blackout ? "Blackout ATIVO" : "Blackout"}
           </button>
-          <a className="btn" href={api.exportUrl()}>
+          <a
+            className="btn"
+            href={api.exportUrl()}
+            title="Baixa o projeto inteiro (mapeamento, mídias e foto) num único arquivo .pmz: serve de backup ou para abrir o show em outro computador."
+          >
             Exportar .pmz
           </a>
         </div>
@@ -496,9 +539,16 @@ export default function Page() {
           <section className="card">
             <div className="card-head">
               <h2>3 · Superfícies</h2>
-              <button className="btn btn-accent" onClick={addSurface}>
-                + Nova
-              </button>
+              <div className="row">
+                {surfaces.length > 0 && (
+                  <button className="btn btn-small" title="Sugere uma mídia para cada superfície (formato e resolução)" onClick={() => setSuggestOpen(true)}>
+                    ⭐ Sugerir mídias
+                  </button>
+                )}
+                <button className="btn btn-accent btn-small" onClick={addSurface}>
+                  + Nova
+                </button>
+              </div>
             </div>
             {surfaces.length === 0 ? (
               <p className="dim">Nenhuma superfície. Crie uma e arraste os cantos sobre a parede/coluna/caixa.</p>
@@ -535,6 +585,7 @@ export default function Page() {
               onDelete={() => deleteSurface(selected.id)}
               onUpload={uploadMedia}
               onError={(m) => notify(m, "err")}
+              onOpenGallery={openGallery(selected.id, `Mídia de "${selected.label || selected.id}"`)}
             />
           )}
 
@@ -548,8 +599,11 @@ export default function Page() {
               onChange={(fn) => updateSurface(selected.id, fn)}
               onUpload={uploadMedia}
               onError={(m) => notify(m, "err")}
+              onOpenGallery={openGallery(selected.id, `Camada em "${selected.label || selected.id}"`)}
             />
           )}
+
+          <LibraryCard onError={(m) => notify(m, "err")} onOk={(m) => notify(m)} />
 
           <RemoteCard />
 
@@ -581,6 +635,22 @@ export default function Page() {
           </section>
         </aside>
       </section>
+
+      <MediaGallery
+        open={!!gallery}
+        title={gallery?.title}
+        surfaceId={gallery?.surfaceId}
+        onPick={(m) => gallery?.onPick(m)}
+        onClose={() => setGallery(null)}
+        onError={(m) => notify(m, "err")}
+      />
+      <SuggestAll
+        open={suggestOpen}
+        surfaces={surfaces}
+        onApply={applySuggestions}
+        onClose={() => setSuggestOpen(false)}
+        onError={(m) => notify(m, "err")}
+      />
 
       {toast && (
         <div className={`toast toast-${toast.kind}`} role="status">

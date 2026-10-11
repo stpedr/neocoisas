@@ -1,7 +1,7 @@
 // Cliente da API do mestre. Em produção a UI é servida pelo próprio mestre
 // (mesma origem, base ""); no `npm run dev` aponte NEXT_PUBLIC_PROJMAP_API
 // para o mestre (ex.: http://localhost:8100).
-import type { DetectCandidate, InteractState, MediaItem, Output, Project, SourceSpec } from "./types";
+import type { DetectCandidate, InteractState, LibraryItem, MediaInfo, MediaItem, Output, Project, SourceSpec, Suggestion } from "./types";
 
 export const API_BASE = process.env.NEXT_PUBLIC_PROJMAP_API ?? "";
 
@@ -101,6 +101,28 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sensitivity }),
+    }),
+  // galeria
+  library: (rescan = false) =>
+    call<{ roots: { path: string; exists: boolean }[]; can_edit_roots: boolean; folders: string[]; items: LibraryItem[] }>(
+      `/api/library${rescan ? "?rescan=true" : ""}`,
+    ),
+  setLibraryRoots: (roots: string[]) =>
+    call<{ roots: { path: string; exists: boolean }[]; items: LibraryItem[] }>("/api/library/roots", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roots }),
+    }),
+  libraryThumbUrl: (id: string) => withToken(`${API_BASE}/api/library/${encodeURIComponent(id)}/thumb`),
+  importLibrary: (id: string) =>
+    call<{ revision: number; item: MediaItem }>(`/api/library/${encodeURIComponent(id)}/import`, { method: "POST" }),
+  mediaInfo: () => call<{ items: MediaInfo[] }>("/api/media-info"),
+  mediaThumbUrl: (sha: string) => withToken(`${API_BASE}/api/media/${sha}/thumb`),
+  suggest: (surfaceIds?: string[]) =>
+    call<{ suggestions: Record<string, { pick: Suggestion | null; ranking: Suggestion[] }>; media_count: number }>("/api/suggest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(surfaceIds ? { surface_ids: surfaceIds } : {}),
     }),
   photoUrl: (nodeId: string, bust: string) =>
     withToken(`${API_BASE}/api/nodes/${encodeURIComponent(nodeId)}/photo?v=${bust}`),

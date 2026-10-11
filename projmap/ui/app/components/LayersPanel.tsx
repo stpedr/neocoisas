@@ -7,6 +7,7 @@
 import type { Layer, MediaItem, Project, SourceSpec, Surface } from "../lib/types";
 import { DEFAULT_SOURCE } from "../lib/types";
 import { mediaAspect, quadAspect } from "../lib/preview";
+import { api } from "../lib/api";
 
 interface Props {
   surface: Surface;
@@ -16,11 +17,12 @@ interface Props {
   onChange: (fn: (s: Surface) => Surface) => void;
   onUpload: (file: File) => Promise<MediaItem>;
   onError: (msg: string) => void;
+  onOpenGallery: (onPick: (item: MediaItem) => void) => void;
 }
 
 const ICON: Record<string, string> = { video: "🎬", gif: "🌀", image: "🖼", color: "■", test: "▦", interactive: "✦", none: "∅" };
 
-export default function LayersPanel({ surface: s, project, selectedLayerId, onSelectLayer, onChange, onUpload, onError }: Props) {
+export default function LayersPanel({ surface: s, project, selectedLayerId, onSelectLayer, onChange, onUpload, onError, onOpenGallery }: Props) {
   const layers = s.layers;
   const sel = layers.find((l) => l.id === selectedLayerId) ?? null;
   const media = Object.values(project.media);
@@ -107,15 +109,7 @@ export default function LayersPanel({ surface: s, project, selectedLayerId, onSe
           <input type="file" accept="video/*,image/*,.mp4,.mov,.mkv,.webm,.m4v,.gif" hidden
                  onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void upload(f); }} />
         </label>
-        {media.length > 0 && (
-          <select className="btn-small" value="" aria-label="Adicionar mídia do projeto"
-                  onChange={(e) => { const m = project.media[e.target.value]; if (m) addLayer(m); }}>
-            <option value="">+ Do projeto…</option>
-            {media.map((m) => (
-              <option key={m.sha256} value={m.sha256}>{ICON[m.kind]} {m.filename}</option>
-            ))}
-          </select>
-        )}
+        <button className="btn btn-small" onClick={() => onOpenGallery((m) => addLayer(m))}>+ Da galeria</button>
         <button className="btn btn-small" onClick={() => addLayer(null)}>+ Cartela</button>
       </div>
 
@@ -128,27 +122,19 @@ export default function LayersPanel({ surface: s, project, selectedLayerId, onSe
             Nome
             <input value={sel.label} onChange={(e) => patch(sel.id, { label: e.target.value })} />
           </label>
-          <label>
-            Mídia
-            <select
-              value={sel.source.media ?? `kind:${sel.source.kind}`}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v.startsWith("kind:")) {
-                  patch(sel.id, { source: { ...sel.source, kind: v.slice(5) as SourceSpec["kind"], media: null } });
-                } else {
-                  const m = project.media[v];
-                  patch(sel.id, { source: { ...sel.source, kind: m.kind, media: m.sha256 } });
-                }
-              }}
-            >
-              {media.map((m) => (
-                <option key={m.sha256} value={m.sha256}>{ICON[m.kind]} {m.filename}</option>
-              ))}
-              <option value="kind:test">▦ Cartela de teste</option>
-              <option value="kind:color">■ Cor sólida</option>
-            </select>
-          </label>
+          <div className="row">
+            <button className="media-pick" onClick={() => onOpenGallery((m) => patch(sel.id, { source: { ...sel.source, kind: m.kind, media: m.sha256 } }))}>
+              {selMedia ? <img src={api.mediaThumbUrl(selMedia.sha256)} alt="" /> : <span className="media-pick-empty">{ICON[sel.source.kind]}</span>}
+              <span>
+                <b>{selMedia ? selMedia.filename : sel.source.kind === "color" ? "Cor sólida" : "Cartela de teste"}</b>
+                <span className="dim small">trocar pela galeria</span>
+              </span>
+            </button>
+          </div>
+          <div className="upload-row">
+            <button className="btn btn-small" onClick={() => patch(sel.id, { source: { ...sel.source, kind: "test", media: null } })}>▦ Cartela</button>
+            <button className="btn btn-small" onClick={() => patch(sel.id, { source: { ...sel.source, kind: "color", media: null } })}>■ Cor</button>
+          </div>
           {sel.source.kind === "color" && (
             <label>
               Cor

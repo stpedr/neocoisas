@@ -30,6 +30,8 @@ from .. import __version__
 from ..core.project import Output, Project, parse_project
 from ..core.state import ProjectState
 from .auth import PairingTokenMiddleware
+from ..library import Library, load_roots
+from .library_api import create_router as create_library_router
 from .remote import create_router as create_remote_router
 
 
@@ -54,11 +56,13 @@ def _validation_detail(exc: ValidationError) -> list[str]:
 
 def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any = None,
                nlp_client_factory: Any = None, token: Optional[str] = None,
-               host: str = "127.0.0.1", port: int = 8100) -> FastAPI:
+               host: str = "127.0.0.1", port: int = 8100,
+               library_roots: Optional[list[str]] = None, save_library_config: bool = True) -> FastAPI:
     """``runtime``: ``InteractionRuntime`` da camada interativa (opcional).
     ``nlp_client_factory``: devolve o cliente LLM para texto→cena (padrão: o do repo).
     ``token``: token de pareamento; exigido de clientes fora desta máquina (F6).
-    ``host``/``port``: onde o servidor escuta, para montar a URL do remote."""
+    ``host``/``port``: onde o servidor escuta, para montar a URL do remote.
+    ``library_roots``: pastas da galeria (padrão: ``~/.projmap/library.json``)."""
     app = FastAPI(title="ProjMap — mestre", version=__version__)
     # Dev: UI no `next dev` (outra porta) chamando a API local.
     app.add_middleware(
@@ -200,6 +204,8 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
         return FileResponse(tmp, filename=f"{safe}.pmz", media_type="application/zip")
 
     app.include_router(create_remote_router(state, host=host, port=port, token=token))
+    library = Library(load_roots() if library_roots is None else library_roots, store.root / "cache")
+    app.include_router(create_library_router(state, library, save_config=save_library_config))
 
     if runtime is not None:
         from ..interact.api import create_router

@@ -106,6 +106,34 @@ export interface DetectCandidate {
   color: [number, number, number];
 }
 
+// ---- galeria: biblioteca de pastas (ex.: Google Drive sincronizado) e mídias do projeto
+export interface LibraryItem {
+  id: string;
+  name: string;
+  folder: string;
+  kind: MediaKind;
+  size_bytes: number;
+  width: number;
+  height: number;
+  duration: number;
+  aspect: number;
+}
+
+export interface MediaInfo extends MediaItem {
+  width: number;
+  height: number;
+  duration: number;
+  aspect: number;
+}
+
+export interface Suggestion {
+  ref: string; // "lib:<id>" ou "sha:<sha256>"
+  name: string;
+  kind: MediaKind;
+  score: number;
+  reasons: string[];
+}
+
 // ---- camada interativa (projmap/interact)
 export interface InteractEntity {
   id: number;
