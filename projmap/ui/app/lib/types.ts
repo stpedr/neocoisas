@@ -96,6 +96,16 @@ export const DEFAULT_SOURCE: SourceSpec = {
   offset_s: 0,
 };
 
+// ---- detecção de superfícies (F3): coordenadas normalizadas da foto [0,1]
+export interface DetectCandidate {
+  quad: Point[]; // TL, TR, BR, BL
+  polygon: Point[];
+  area: number;
+  score: number;
+  label: string;
+  color: [number, number, number];
+}
+
 // ---- camada interativa (projmap/interact)
 export interface InteractEntity {
   id: number;

@@ -1,7 +1,7 @@
 // Cliente da API do mestre. Em produção a UI é servida pelo próprio mestre
 // (mesma origem, base ""); no `npm run dev` aponte NEXT_PUBLIC_PROJMAP_API
 // para o mestre (ex.: http://localhost:8100).
-import type { InteractState, MediaItem, Output, Project, SourceSpec } from "./types";
+import type { DetectCandidate, InteractState, MediaItem, Output, Project, SourceSpec } from "./types";
 
 export const API_BASE = process.env.NEXT_PUBLIC_PROJMAP_API ?? "";
 
@@ -96,6 +96,12 @@ export const api = {
     form.append("file", file);
     return call<ProjectPayload>(`/api/nodes/${encodeURIComponent(nodeId)}/photo`, { method: "POST", body: form });
   },
+  detect: (nodeId: string, sensitivity: number) =>
+    call<{ detector: string; candidates: DetectCandidate[] }>(`/api/nodes/${encodeURIComponent(nodeId)}/detect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sensitivity }),
+    }),
   photoUrl: (nodeId: string, bust: string) =>
     withToken(`${API_BASE}/api/nodes/${encodeURIComponent(nodeId)}/photo?v=${bust}`),
   exportUrl: () => withToken(`${API_BASE}/api/project/export`),
