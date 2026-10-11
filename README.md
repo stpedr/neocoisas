@@ -114,6 +114,15 @@ uvicorn server:app --reload --port 8000
 cd web && npm install && npm run dev
 ```
 
+## Controlador Raspberry Pi (opcional)
+
+`raspberry_pi.py` opera a esteira por **botões e LEDs no GPIO** (aprovar,
+rejeitar, renderizar, publicar, gerar; LEDs de pendente/ocupado/erro), falando
+com a API por HTTP. No Pi: `pip install -r requirements-rpi.txt && python
+raspberry_pi.py` (ou `docker compose --profile rpi up -d rpi`). Para testar sem
+hardware: `RPI_BACKEND=mock python raspberry_pi.py`. Pinagem e detalhes em
+`docs/entregas/controlador-raspberry-pi.md`.
+
 ## Como executar localmente (CLI / Streamlit)
 
 1. **Suba o Ollama** na sua máquina, usando a GPU:

@@ -1,0 +1,5 @@
+# Dependências do controlador Raspberry Pi (serviço à parte; fala com a API por HTTP).
+requests>=2.31
+gpiozero>=2.0
+# Backend de pinos recomendado no Pi 5 / Raspberry Pi OS Bookworm.
+lgpio>=0.2; platform_machine == "aarch64" or platform_machine == "armv7l"
