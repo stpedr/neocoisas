@@ -1,0 +1,79 @@
+// Espelho dos modelos pydantic de projmap/core/project.py (fonte de verdade).
+
+export type Point = [number, number];
+export type Quad = [Point, Point, Point, Point];
+
+export type MediaKind = "video" | "image" | "gif";
+export type SourceKind = "none" | "video" | "image" | "gif" | "color" | "test";
+export type Pattern = "none" | "white" | "grid" | "edges" | "black";
+export type Fit = "stretch" | "cover" | "contain";
+export type BlendMode = "normal" | "add" | "multiply";
+
+export interface MediaItem {
+  sha256: string;
+  filename: string;
+  ext: string;
+  kind: MediaKind;
+  size_bytes: number;
+}
+
+export interface Output {
+  width: number;
+  height: number;
+  intensity: number;
+  blackout: boolean;
+  pattern: Pattern;
+  show_outlines: boolean;
+  latency_ms: number;
+}
+
+export interface Node {
+  id: string;
+  name: string;
+  output: Output;
+  photo: string | null;
+  photo_boundary: Point[];
+}
+
+export interface SourceSpec {
+  kind: SourceKind;
+  media: string | null;
+  color: [number, number, number];
+  fit: Fit;
+  loop: boolean;
+  speed: number;
+  offset_s: number;
+}
+
+export interface Surface {
+  id: string;
+  label: string;
+  node_id: string;
+  z: number;
+  visible: boolean;
+  polygon_src: Point[] | null;
+  warp: { type: "homography"; base: Point[] };
+  source: SourceSpec;
+  opacity: number;
+  feather: number;
+  blend_mode: BlendMode;
+}
+
+export interface Project {
+  version: number;
+  name: string;
+  fps: number;
+  nodes: Node[];
+  surfaces: Surface[];
+  media: Record<string, MediaItem>;
+}
+
+export const DEFAULT_SOURCE: SourceSpec = {
+  kind: "test",
+  media: null,
+  color: [255, 255, 255],
+  fit: "stretch",
+  loop: true,
+  speed: 1,
+  offset_s: 0,
+};

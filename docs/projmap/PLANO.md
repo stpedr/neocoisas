@@ -1,8 +1,8 @@
 # ProjMap — Plano de implementação
 
 > Baseado no [`BLUEPRINT.md`](BLUEPRINT.md) (Fase 0).
-> **Status: aguardando aprovação.** Nada de código de produto foi escrito.
-> Ao aprovar, responda às decisões D1–D8 (§1) ou diga "aprovado como está".
+> **Status:** aprovado como proposto (D1–D8) em 2026-10-11.
+> F1 entregue — ver `projmap/README.md` e `docs/entregas/projmap-f1-um-projetor.md`.
 
 ---
 

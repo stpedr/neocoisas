@@ -1,0 +1,13 @@
+# ProjMap — mestre (Windows/Linux): UI/API + saída local (F1).
+# Instale num venv próprio: pip install -r requirements-projmap-master.txt
+# Ver projmap/README.md.
+numpy>=1.26
+opencv-python-headless>=4.9
+pillow>=10.0
+av>=12.0
+pydantic>=2.6
+fastapi>=0.111
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+moderngl>=5.10
+pyglet>=2.0

@@ -1,0 +1,9 @@
+# ProjMap — nó de projeção (Linux / Raspberry Pi OS / mini PC). Sem torch: leve.
+# Ver projmap/README.md (seção "Nó").
+numpy>=1.26
+opencv-python-headless>=4.9
+pillow>=10.0
+av>=12.0
+pydantic>=2.6
+moderngl>=5.10
+pyglet>=2.0

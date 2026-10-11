@@ -19,3 +19,7 @@ env/
 .vscode/
 .idea/
 .DS_Store
+
+# Projetos do ProjMap (mídia pesada; exporte .pmz para compartilhar)
+shows/
+*.pmz
