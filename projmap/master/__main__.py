@@ -44,8 +44,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--windowed", action="store_true", help="saída em janela (preview) em vez de tela cheia")
     parser.add_argument("--no-output", action="store_true", help="não abre a janela de saída")
     parser.add_argument("--open", action="store_true", help="abre a UI no navegador")
-    parser.add_argument("--sensor", default="sim", choices=["sim", "osc", "webcam"],
-                        help="camada interativa: de onde vêm as pessoas (sim = pessoa virtual)")
+    parser.add_argument("--sensor", default="sim", choices=["sim", "osc", "webcam", "phone"],
+                        help="camada interativa: de onde vêm as pessoas (sim = pessoa virtual; "
+                             "phone = celular na parede via /sensor)")
+    parser.add_argument("--adb", action="store_true",
+                        help="celular por USB: adb reverse da porta e abre /sensor no celular")
     parser.add_argument("--sensor-port", type=int, default=7001, help="porta OSC do sensor 'osc' (Kinect via TD)")
     parser.add_argument("--osc-out", default=None, metavar="HOST:PORTA",
                         help="envia o estado da cena por OSC (ex.: 127.0.0.1:7000 para o TouchDesigner)")
@@ -89,6 +92,18 @@ def main(argv: list[str] | None = None) -> None:
         log.warning("UI não compilada (%s). Rode: cd projmap/ui && npm ci && npm run build", UI_DIR)
     if args.open:
         threading.Timer(1.0, webbrowser.open, args=(url,)).start()
+    if args.adb:
+        def _adb() -> None:
+            from ..tools.adb import AdbError, connect_phone
+
+            try:
+                dev = connect_phone(args.port)
+                log.info("celular %s ligado por USB: abrindo http://localhost:%d/sensor/ nele",
+                         dev.model or dev.serial, args.port)
+            except AdbError as exc:
+                log.error("ADB: %s", exc)
+
+        threading.Timer(1.5, _adb).start()
 
     server = uvicorn.Server(uvicorn.Config(app, host=args.host, port=args.port, log_level="warning"))
     if args.no_output:

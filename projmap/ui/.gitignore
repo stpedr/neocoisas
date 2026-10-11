@@ -2,3 +2,5 @@ node_modules/
 .next/
 out/
 *.tsbuildinfo
+# wasm do MediaPipe copiado no build (scripts/copy-mediapipe.mjs)
+public/mediapipe/

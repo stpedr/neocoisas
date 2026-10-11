@@ -5,13 +5,21 @@ from __future__ import annotations
 import math
 from typing import Any, Callable, Optional
 
-from fastapi import APIRouter, HTTPException
+import json
+import logging
+import os
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, ValidationError
 
 from .nlp import TextClient, scene_from_text
 from .runtime import InteractionRuntime
 from .scene import PRESETS, SceneSpec
-from .sensors import SimSensor, get_sensor
+from .sensors import PhoneSensor, SimSensor, get_sensor
+
+log = logging.getLogger(__name__)
 
 
 class GenerateBody(BaseModel):
@@ -42,6 +50,8 @@ def create_router(runtime: InteractionRuntime,
         return {
             "spec": spec.model_dump(mode="json"),
             "sensor": runtime.sensor.kind,
+            "phone": ({"connected": runtime.sensor.connected, "fps": runtime.sensor.fps}
+                      if isinstance(runtime.sensor, PhoneSensor) else None),
             "scripted": isinstance(runtime.sensor, SimSensor) and runtime.sensor.script is not None,
             "paused": runtime.paused,
             "debug": runtime.debug_overlay,
@@ -108,6 +118,57 @@ def create_router(runtime: InteractionRuntime,
         except (ValueError, RuntimeError, OSError, TypeError) as exc:
             raise HTTPException(422, [str(exc)]) from exc
         return state()
+
+    # HEAD também: a página /sensor testa com HEAD se há modelo local antes de baixar
+    # da internet (sem isso o HEAD caía no StaticFiles e dava 404).
+    @r.api_route("/face-model", methods=["GET", "HEAD"])
+    def face_model() -> FileResponse:
+        """Modelo do MediaPipe servido localmente (celular sem internet).
+
+        Procura ``PROJMAP_FACE_MODEL`` ou ``models/face_landmarker.task``; sem ele, a
+        página ``/sensor`` baixa do servidor oficial do MediaPipe.
+        """
+        path = Path(os.environ.get("PROJMAP_FACE_MODEL", "models/face_landmarker.task"))
+        if not path.is_file():
+            raise HTTPException(404, "modelo local ausente (rode: python -m projmap.tools.fetch_models)")
+        return FileResponse(path, media_type="application/octet-stream")
+
+    @r.websocket("/phone")
+    async def phone(ws: WebSocket) -> None:
+        """Celular-sensor. Conectar já troca o sensor ativo para ``phone``."""
+        await ws.accept()
+        if not isinstance(runtime.sensor, PhoneSensor):
+            log.info("celular conectado: sensor ativo → phone")
+            runtime.set_sensor(PhoneSensor(aspect=runtime.spec.aspect))
+        sensor = runtime.sensor
+        assert isinstance(sensor, PhoneSensor)
+        sensor.connected += 1
+        n = 0
+        try:
+            while True:
+                msg = await ws.receive_text()
+                try:
+                    sensor.update(json.loads(msg))
+                except (ValueError, TypeError) as exc:
+                    await ws.send_text(json.dumps({"error": str(exc)}))
+                    continue
+                n += 1
+                if n % 5 == 0:  # retorno leve para a tela do celular
+                    snap = runtime.snapshot()
+                    p = snap.players[0] if snap.players else None
+                    g = snap.gazes[0] if snap.gazes else None
+                    await ws.send_text(json.dumps({
+                        "tracked": bool(p and p.tracked), "watching": bool(g and g.active),
+                        "yaw_deg": math.degrees(p.yaw) if p else 0.0,
+                        "x": (p.x / snap.spec.aspect) if p else 0.5,
+                        "scene": snap.spec.title,
+                        "moving": sum(e.state == "move" for e in snap.entities),
+                        "frozen": sum(e.state in ("shy", "frozen") for e in snap.entities),
+                    }))
+        except WebSocketDisconnect:
+            pass
+        finally:
+            sensor.connected = max(0, sensor.connected - 1)
 
     @r.post("/reset")
     def reset() -> dict:

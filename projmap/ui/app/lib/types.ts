@@ -99,7 +99,8 @@ export interface InteractPlayer {
 
 export interface InteractState {
   spec: { title: string; description: string; groups: { name: string; sprite: string; count: number }[] } & Record<string, unknown>;
-  sensor: "sim" | "osc" | "webcam";
+  sensor: "sim" | "osc" | "webcam" | "phone";
+  phone?: { connected: number; fps: number } | null;
   scripted: boolean;
   paused: boolean;
   debug: boolean;

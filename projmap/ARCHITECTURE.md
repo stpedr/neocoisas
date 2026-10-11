@@ -139,6 +139,13 @@ Guia de uso: [`interact/README.md`](interact/README.md).
     SDKs por modelo dentro do nosso processo.
   - A webcam usa MediaPipe Tasks + `solvePnP`. Rosto ausente conta como "de
     costas".
+- **Celular como sensor (ADB).** `adb reverse` torna o mestre `localhost` para
+  o celular, que é contexto seguro, então a câmera funciona em `http://`. A
+  rede neural do rosto roda no navegador do celular (MediaPipe WASM, servido
+  pelo mestre). O PC recebe 6 pontos por WebSocket e reusa o `solvePnP`.
+  - Histerese de 0,35 s para "sem rosto".
+  - Um bug de lateralidade do modelo 3D (de frente virava de costas) foi pego
+    com landmarks reais e virou teste de regressão.
 - **NLP sem execução de código.** O LLM preenche uma `SceneSpec` com peças
   prontas, validada por pydantic. Um erro volta ao LLM uma vez para correção;
   se falhar de novo, entra o parser por palavras-chave. A resposta sempre diz

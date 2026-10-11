@@ -298,3 +298,21 @@ textarea {
 .card-alert { border-color: var(--red); box-shadow: 0 0 0 2px var(--red-soft); }
 code { font-size: 11px; background: var(--bg-elev-2); padding: 1px 4px; border-radius: 4px; }
 details summary { cursor: pointer; margin-bottom: 6px; }
+
+/* ------------------------------------------------------------ celular-sensor */
+.sensor { max-width: 560px; margin: 0 auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.sensor-head { display: flex; align-items: center; gap: 8px; }
+.sensor-head .dot-status { margin-left: auto; font-size: 12px; color: var(--red); }
+.sensor-head .dot-status.ok { color: var(--green); }
+.sensor-warn { border: 1px solid var(--amber); color: var(--amber); border-radius: var(--radius-sm); padding: 10px; font-size: 13px; }
+.sensor-view { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: var(--radius); overflow: hidden; }
+.sensor-view video, .sensor-view canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sensor-view.selfie video, .sensor-view.selfie canvas { transform: scaleX(-1); }
+.sensor-placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-dim); }
+.sensor-status { display: flex; flex-direction: column; gap: 4px; }
+.sensor-status .big { font-size: 20px; font-weight: 700; }
+.sensor-status .ok { color: var(--green); }
+.sensor-status .warn { color: var(--amber); }
+.sensor-status .err { color: var(--red); font-size: 13px; }
+.sensor-controls { display: flex; flex-direction: column; gap: 10px; }
+.sensor-controls .btn-block { min-height: 52px; font-size: 16px; }

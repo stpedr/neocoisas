@@ -95,6 +95,14 @@ param quando eu olho e me perseguem quando viro de costas"*) e escolha a fonte
 webcam, Kinect via TouchDesigner e visuais no TD, siga o
 [guia da camada interativa](interact/README.md).
 
+**Sem Kinect?** Use um celular Android na parede como sensor, ligado por USB:
+```bash
+python -m projmap.tools.fetch_models                     # uma vez: modelo do rosto (offline)
+python -m projmap.master --project shows/meu-show.projmap --sensor phone --adb
+```
+A página `/sensor/` abre no celular; toque em **Iniciar sensor**. Passo a
+passo em [interact/README.md](interact/README.md#celular-por-usbadb-phone--recomendado-sem-kinect).
+
 ### Medir desempenho
 
 ```bash

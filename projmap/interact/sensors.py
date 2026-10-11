@@ -10,6 +10,8 @@ Todo sensor responde ``players() -> list[Player]`` no espaço da parede
             Kinect v2/Azure/Orbbec nativamente (Kinect CHOP) e repassa a cabeça
             por OSC — sem driver nem SDK no nosso processo. Serve também para
             NI mate, ZIG, um script com OpenPose etc.
+``phone``   celular na parede, ligado por USB (ADB): a página ``/sensor`` roda a
+            detecção de rosto no navegador e manda os pontos por WebSocket.
 ``webcam``  câmera comum na parede (centro, apontada para o público) + MediaPipe
             FaceLandmarker: posição do rosto → ``x``/``distance``; pose da cabeça
             (solvePnP) → ``yaw``. Rosto não detectado ⇒ pessoa de costas.
@@ -170,14 +172,18 @@ class OscSensor:
 
 
 # ------------------------------------------------------------------ webcam
-# Modelo 3D genérico de rosto (mm) e índices da malha de 468 pontos do MediaPipe.
+# Modelo 3D genérico de rosto (mm; x para a ESQUERDA DA PESSOA, y para cima, z para
+# fora do rosto) e índices da malha de 468 pontos do MediaPipe. Atenção ao lado: o
+# ponto 263 (olho esquerdo da pessoa) aparece à DIREITA da imagem quando a pessoa
+# encara a câmera. Com o lado trocado, o solvePnP só "encaixa" girando o rosto 180°
+# — e uma pessoa de frente vira "de costas" (bug pego com landmarks reais).
 FACE_MODEL_3D = np.array([
     (0.0, 0.0, 0.0),        # 1   ponta do nariz
     (0.0, -63.6, -12.5),    # 152 queixo
-    (-43.3, 32.7, -26.0),   # 263 canto externo do olho esquerdo (da pessoa)
-    (43.3, 32.7, -26.0),    # 33  canto externo do olho direito
-    (-28.9, -28.9, -24.1),  # 291 canto esquerdo da boca
-    (28.9, -28.9, -24.1),   # 61  canto direito da boca
+    (43.3, 32.7, -26.0),    # 263 canto externo do olho esquerdo (da pessoa)
+    (-43.3, 32.7, -26.0),   # 33  canto externo do olho direito
+    (28.9, -28.9, -24.1),   # 291 canto esquerdo da boca
+    (-28.9, -28.9, -24.1),  # 61  canto direito da boca
 ], dtype=np.float64)
 FACE_LANDMARKS = [1, 152, 263, 33, 291, 61]
 
@@ -201,6 +207,86 @@ def head_yaw_from_points(image_points: np.ndarray, width: int, height: int) -> O
     forward = rot @ np.array([0.0, 0.0, 1.0])
     # Olhando a câmera, o rosto aponta para -z da câmera; yaw = desvio horizontal.
     return math.atan2(forward[0], -forward[2])
+
+
+def apply_face(p: Player, norm_pts, width: int, height: int, aspect: float, mirror: bool = True,
+               distance_scale: float = 0.18) -> None:
+    """Atualiza a pessoa a partir dos 6 pontos do rosto (normalizados 0..1, ordem de
+    ``FACE_LANDMARKS``: nariz, queixo, olho esq., olho dir., boca esq., boca dir.).
+
+    Usado pela webcam local e pelo celular (que manda só esses pontos). Supõe a
+    câmera **na parede, olhando o público**: a esquerda da imagem é a direita de
+    quem olha a parede, daí ``mirror`` (x e yaw invertidos).
+    """
+    pts = np.array([(x * width, y * height) for x, y in norm_pts], dtype=np.float64)
+    yaw = head_yaw_from_points(pts, width, height)
+    nose_x = norm_pts[0][0]
+    iod = math.dist(pts[2], pts[3]) / width  # distância entre os olhos, fração da largura
+    p.x = ((1 - nose_x) if mirror else nose_x) * aspect
+    p.distance = max(0.2, distance_scale / max(iod, 1e-3))
+    if yaw is not None:
+        p.yaw = -yaw if mirror else yaw
+    p.tracked, p.face_visible = True, True
+
+
+# -------------------------------------------------------------------- phone
+class PhoneSensor:
+    """Celular como sensor: a página ``/sensor`` roda o MediaPipe no navegador e
+    manda os 6 pontos do rosto por WebSocket (``/api/interact/phone``).
+
+    Com o celular ligado por USB e ``adb reverse tcp:8100 tcp:8100``, a página abre
+    em ``http://localhost:8100/sensor`` — ``localhost`` é contexto seguro, então o
+    navegador libera a câmera sem HTTPS, e o tráfego vai pelo cabo (sem Wi-Fi).
+    O processamento pesado (rede neural do rosto) fica no celular; o PC só faz o
+    ``solvePnP`` (mesma função testada da webcam).
+    """
+
+    kind = "phone"
+
+    def __init__(self, aspect: float = 16 / 9, mirror: bool = True, distance_scale: float = 0.18,
+                 timeout: float = 2.0, face_lost_after: float = 0.35):
+        self.aspect, self.mirror, self.distance_scale, self.timeout = aspect, mirror, distance_scale, timeout
+        # Histerese: a detecção "pisca" (frame sem rosto no meio de vários com rosto).
+        # Só declaramos "de costas" depois de um tempo contínuo sem rosto — senão cada
+        # piscada faria os fantasmas darem um tranco para a frente.
+        self.face_lost_after = face_lost_after
+        self._player = Player(x=aspect / 2, tracked=False)
+        self._last = 0.0
+        self._noface_since: Optional[float] = None
+        self._lock = threading.Lock()
+        self.fps = 0.0
+        self.connected = 0
+
+    def update(self, msg: dict) -> None:
+        """Mensagem da página: ``{face: bool, pts: [[x,y]×6], w, h, mirror?, fps?}``."""
+        with self._lock:
+            p = self._player
+            self._last = time.monotonic()
+            self.fps = float(msg.get("fps") or 0.0)
+            mirror = bool(msg.get("mirror", self.mirror))
+            if not msg.get("face"):
+                now = self._last
+                if self._noface_since is None:
+                    self._noface_since = now
+                if now - self._noface_since >= self.face_lost_after or p.face_visible is None:
+                    p.face_visible = False  # sem rosto por um tempo: de costas (mantém a posição)
+                p.tracked = True
+                return
+            self._noface_since = None
+            pts = msg.get("pts") or []
+            w, h = int(msg.get("w") or 0), int(msg.get("h") or 0)
+            if len(pts) != len(FACE_LANDMARKS) or w <= 0 or h <= 0:
+                raise ValueError("mensagem do celular inválida: esperado pts com 6 pontos, w e h")
+            apply_face(p, [(float(x), float(y)) for x, y in pts], w, h, self.aspect, mirror, self.distance_scale)
+
+    def players(self) -> list[Player]:
+        with self._lock:
+            p = self._player
+            fresh = time.monotonic() - self._last <= self.timeout
+            return [Player(p.id, p.x, p.distance, p.yaw, p.eye_y, p.tracked and fresh, p.face_visible)]
+
+    def close(self) -> None:
+        pass
 
 
 class WebcamSensor:
@@ -257,15 +343,8 @@ class WebcamSensor:
                     p.face_visible = False  # sem rosto: de costas (ou saiu) — mantém a última posição
                     continue
                 lm = result.face_landmarks[0]
-                pts = np.array([(lm[i].x * w, lm[i].y * h) for i in FACE_LANDMARKS])
-                yaw = head_yaw_from_points(pts, w, h)
-                nose_x = lm[1].x
-                iod = math.dist((lm[263].x * w, lm[263].y * h), (lm[33].x * w, lm[33].y * h)) / w
-                p.x = ((1 - nose_x) if self.mirror else nose_x) * self.aspect
-                p.distance = max(0.2, self.distance_scale / max(iod, 1e-3))
-                if yaw is not None:
-                    p.yaw = -yaw if self.mirror else yaw
-                p.tracked, p.face_visible = True, True
+                norm = [(lm[i].x, lm[i].y) for i in FACE_LANDMARKS]
+                apply_face(p, norm, w, h, self.aspect, self.mirror, self.distance_scale)
 
     def players(self) -> list[Player]:
         with self._lock:
@@ -285,4 +364,6 @@ def get_sensor(kind: str = "sim", aspect: float = 16 / 9, **options) -> Sensor:
         return OscSensor(aspect=aspect, **options)
     if kind == "webcam":
         return WebcamSensor(aspect=aspect, **options)
-    raise ValueError(f"sensor desconhecido: {kind} (sim | osc | webcam)")
+    if kind == "phone":
+        return PhoneSensor(aspect=aspect, **options)
+    raise ValueError(f"sensor desconhecido: {kind} (sim | osc | webcam | phone)")

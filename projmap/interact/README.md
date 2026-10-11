@@ -60,7 +60,8 @@ Opções do mestre:
 
 | Flag | Para quê |
 |---|---|
-| `--sensor sim\|osc\|webcam` | de onde vêm as pessoas (padrão `sim`) |
+| `--sensor sim\|osc\|webcam\|phone` | de onde vêm as pessoas (padrão `sim`) |
+| `--adb` | celular por USB: `adb reverse` + abre `/sensor/` no celular |
 | `--sensor-port 7001` | porta OSC do sensor `osc` (Kinect via TD) |
 | `--osc-out 127.0.0.1:7000` | manda o estado da cena para o TouchDesigner |
 | `--no-interact` | desliga a camada |
@@ -108,6 +109,58 @@ Exemplos que o parser entende sozinho:
 | "três bolas vermelhas flutuando devagar" | 3 orbes vagando |
 
 ## Sensores
+
+### Celular por USB/ADB (`phone`) — recomendado sem Kinect
+
+Um celular Android **preso na parede projetada, com a câmera virada para o
+público**, faz o papel do Kinect. Não é preciso instalar app nem ter Wi-Fi:
+
+```
+celular (navegador: câmera + MediaPipe) ──USB / adb reverse──► PC (mestre :8100)
+   detecta o rosto e manda 6 pontos (~20×/s)          calcula posição + rotação da cabeça
+```
+
+- **Por que ADB.** Com `adb reverse tcp:8100 tcp:8100`, o `localhost:8100` do
+  celular aponta para o PC. Para o navegador, `localhost` é contexto seguro,
+  então ele libera a câmera **sem HTTPS**. Pelo Wi-Fi, com IP, o navegador
+  bloquearia a câmera. Os dados vão pelo cabo, e o mestre continua fechado em
+  `127.0.0.1`.
+- **Divisão de trabalho.** A rede neural do rosto roda **no celular**. O PC só
+  recebe 6 pontos e faz o `solvePnP`, a mesma conta da webcam, coberta por
+  testes com pontos reais.
+- **Funciona offline.** O WASM do MediaPipe vai junto no build da UI, e o
+  modelo do rosto é servido pelo mestre (`python -m projmap.tools.fetch_models`,
+  uma vez).
+
+Passo a passo:
+
+1. **No celular:** Configurações → Sobre o telefone → toque 7× em "Número da
+   versão". Depois, em Opções do desenvolvedor, ligue **Depuração USB**.
+2. **No PC:**
+   - instale o **Android Platform Tools** (`adb`) e deixe-o no PATH;
+   - rode uma vez `python -m projmap.tools.fetch_models` (modelo do rosto,
+     para funcionar sem internet);
+   - conecte o cabo e aceite o aviso "Permitir depuração USB" no celular.
+3. **Rode o mestre:**
+   ```bash
+   python -m projmap.master --project shows/meu-show.projmap --display 1 --sensor phone --adb
+   ```
+   O `--adb` faz o `adb reverse` e abre `http://localhost:8100/sensor/` no
+   celular. Para fazer à mão: `python -m projmap.tools.adb`.
+4. **Na página do celular**, toque em **Iniciar sensor**:
+   - use a câmera traseira (melhor) e deixe marcado "Celular na parede olhando
+     o público";
+   - a tela mostra "Rosto detectado" e o que o PC está vendo (olhando ou de
+     costas, rotação da cabeça, quantos fantasmas andam ou estão parados);
+   - a tela fica ligada sozinha.
+5. **Posicionamento:** na altura dos olhos, centralizado na área projetada,
+   carregando pelo USB. A posição da pessoa na parede vem de onde o rosto
+   aparece na imagem; a distância vem do tamanho do rosto.
+
+**Rosto ausente conta como "de costas"**, que é o que a mecânica dos fantasmas
+precisa. Há uma tolerância de ~0,35 s: uma piscada da detecção não faz os
+fantasmas avançarem. Se o celular parar de mandar dados por 2 s, a pessoa vira
+"não detectada".
 
 ### Simulado (`sim`)
 Pessoa virtual controlada pela UI ou pela API (`POST /api/interact/player`) ou
@@ -201,3 +254,5 @@ próprio mapeamento.
 | POST | `/player` `{x, distance, yaw_deg, tracked}` | pessoa simulada |
 | POST | `/player/auto` · `/reset` · `/pause?paused=` · `/debug?on=` | controles |
 | POST | `/sensor` `{kind, options}` | troca o sensor em execução |
+| WS | `/phone` | celular-sensor: `{face, pts[6], w, h, mirror, fps}`; responde com o que o PC vê |
+| GET/HEAD | `/face-model` | modelo do rosto local para o celular (offline) |

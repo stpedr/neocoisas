@@ -4,11 +4,13 @@
   "private": true,
   "description": "UI do mestre ProjMap: editor de mapeamento sobre a foto (export estático servido pelo FastAPI).",
   "scripts": {
-    "dev": "next dev -p 3100",
+    "dev": "node scripts/copy-mediapipe.mjs && next dev -p 3100",
+    "prebuild": "node scripts/copy-mediapipe.mjs",
     "build": "next build",
     "lint": "next lint"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.0.1",
     "next": "14.2.35",
     "react": "18.3.1",
     "react-dom": "18.3.1"

@@ -92,7 +92,11 @@ export default function InteractPanel({ onError }: { onError: (msg: string) => v
     <section className={`card ${caughtFlash ? "card-alert" : ""}`}>
       <div className="card-head">
         <h2>Interativo · IA + sensores</h2>
-        {st && <span className="pill">{st.sensor === "sim" ? "pessoa simulada" : st.sensor === "osc" ? "OSC / Kinect" : "webcam"}</span>}
+        {st && (
+          <span className="pill">
+            {{ sim: "pessoa simulada", osc: "OSC / Kinect", webcam: "webcam", phone: "celular" }[st.sensor]}
+          </span>
+        )}
       </div>
 
       <label>
@@ -155,6 +159,21 @@ export default function InteractPanel({ onError }: { onError: (msg: string) => v
           )}
           {caughtFlash && <span className="caught">Pegou! 👻</span>}
         </div>
+      )}
+
+      {st?.sensor === "phone" ? (
+        <p className="dim small">
+          Celular-sensor: {st.phone?.connected ? `conectado (${Math.round(st.phone.fps)} fps)` : "desconectado"}.
+        </p>
+      ) : (
+        <details>
+          <summary className="dim small">Usar o celular como sensor (USB/ADB)</summary>
+          <p className="dim small">
+            Ligue a Depuração USB, conecte o cabo e rode o mestre com <code>--sensor phone --adb</code> (ou{" "}
+            <code>python -m projmap.tools.adb</code>). A página <code>/sensor/</code> abre no celular; toque em
+            &quot;Iniciar sensor&quot;.
+          </p>
+        </details>
       )}
 
       {sim && player && (
