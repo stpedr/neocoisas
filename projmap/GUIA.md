@@ -35,7 +35,30 @@ cd ../..
 
 Repita o `npm run build` sempre que atualizar o código.
 
+**Atalho no Menu Iniciar (recomendado):** com o ambiente ativado, rode uma vez:
+
+```bash
+python -m projmap.desktop.install            # cria "ProjMap" no Menu Iniciar
+python -m projmap.desktop.install --desktop  # + atalho na Área de Trabalho
+python -m projmap.desktop.install --uninstall  # remove
+```
+
 ## 2. Abrir o programa
+
+**Pelo Menu Iniciar:** procure **ProjMap**. Abre um lançador:
+1. Em **Show**, escolha um show ou **＋ Novo show…**. Os shows ficam em
+   `Documentos\ProjMap`; troque em **Pasta…**.
+2. Em **Onde sai a imagem**, escolha:
+   - **Projetor:** tela cheia no monitor indicado; o projetor costuma ser o 1.
+   - **Janela de teste:** quando não há projetor.
+   - **Só o editor:** sem saída.
+3. Em **Celular**, deixe marcado para controlar pelo celular na mesma rede.
+4. Clique em **Abrir**. O editor abre no navegador, e **Copiar link do
+   celular** copia o endereço com o token.
+
+Fechar o lançador encerra o show. As escolhas ficam salvas para a próxima vez.
+
+**Pelo terminal** (o que o lançador faz por baixo):
 
 ```bash
 python -m projmap.master --project shows/meu-show.projmap --display 1 --host 0.0.0.0 --open
