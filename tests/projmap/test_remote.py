@@ -164,3 +164,25 @@ def test_apagar_look(remote):
     assert c.delete(f"/api/looks/{look_id}", headers=H).status_code == 200
     assert state.store.load().looks == []
     assert c.delete(f"/api/looks/{look_id}", headers=H).status_code == 404
+
+
+def test_look_guarda_e_restaura_camadas(remote):
+    c, state = remote
+
+    def add_layer(p):
+        from projmap.core.project import Layer
+
+        p.surfaces[0].layers = [Layer(id="l1", source={"kind": "color", "color": [255, 0, 0]}, rect=(0.1, 0.1, 0.3, 0.3))]
+        return p
+
+    state.update(add_layer)
+    look_id = c.post("/api/looks", headers=H, json={"name": "com camada"}).json()["project"]["looks"][0]["id"]
+
+    def clear(p):
+        p.surfaces[0].layers = []
+        return p
+
+    state.update(clear)
+    c.post(f"/api/looks/{look_id}/recall", headers=H)
+    layers = state.store.load().surfaces[0].layers
+    assert [layer.id for layer in layers] == ["l1"] and layers[0].rect == (0.1, 0.1, 0.3, 0.3)

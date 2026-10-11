@@ -19,6 +19,7 @@ GIF ou imagem para cada uma, e a parede atualiza ao vivo.
 | F5 NDI + PJLink | — |
 | **F6a Remote no celular (web/PWA)** | ✅ entregue — ver abaixo |
 | **F6b App Android (APK)** | ✅ APK de debug — [`android/README.md`](android/README.md) |
+| **F9 Prévia ao vivo no editor + camadas por superfície** | ✅ entregue — ver "Prévia e camadas" abaixo |
 | **F8 Camada interativa (IA + sensores + TouchDesigner)** | ✅ MVP — [`interact/README.md`](interact/README.md) |
 
 ---
@@ -103,6 +104,31 @@ python -m projmap.master --project shows/meu-show.projmap --sensor phone --adb
 ```
 A página `/sensor/` abre no celular; toque em **Iniciar sensor**. Passo a
 passo em [interact/README.md](interact/README.md#celular-por-usbadb-phone--recomendado-sem-kinect).
+
+### Prévia e camadas (ver a mídia enquanto mapeia)
+
+O editor mostra o conteúdo **dentro** de cada superfície, já em perspectiva:
+vídeo tocando, GIF animado, imagem, cor ou cartela. Assim dá para mapear olhando
+o resultado, nas vistas Foto e Projetor. Para mapear só pelos contornos,
+desmarque **Prévia da mídia** na barra acima do editor.
+
+Cada superfície tem um **fundo** (a fonte do card *Superfície*) e quantas
+**camadas** quiser por cima (card *Camadas*):
+
+- **+ Vídeo/foto/GIF** envia um arquivo e já cria a camada. **+ Do projeto…**
+  reaproveita uma mídia enviada antes.
+- Clique na camada para selecioná-la. No editor aparecem quadrados brancos:
+  **arraste um canto** para redimensionar (mantém a proporção; **Shift** solta)
+  e **arraste por dentro** para mover. Também dá para digitar X/Y/largura/altura
+  em %.
+- ▲▼ mudam a ordem (o topo da lista fica na frente). Há ainda visibilidade,
+  opacidade, ajuste (esticar/caber/preencher), velocidade e os atalhos
+  *Preencher superfície*, *Proporção da mídia* e *Centralizar*.
+- A camada pode passar das bordas: o que sai fica recortado pela superfície.
+- Os looks do remote guardam e restauram as camadas.
+
+A prévia é aproximada no tempo (o vídeo do navegador não segue o relógio do
+projetor). A posição e a deformação são as mesmas da saída.
 
 ### Controlar pelo celular (remote)
 
