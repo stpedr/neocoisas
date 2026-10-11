@@ -27,7 +27,7 @@ _ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,62}$")
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 
 MediaKind = Literal["video", "image", "gif"]
-SourceKind = Literal["none", "video", "image", "gif", "color", "test"]
+SourceKind = Literal["none", "video", "image", "gif", "color", "test", "interactive"]
 Pattern = Literal["none", "white", "grid", "edges", "black"]
 
 

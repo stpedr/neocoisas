@@ -122,7 +122,35 @@ software (Mesa llvmpipe), 4 vCPUs, sem GPU**. É o pior caso.
 identificada para quando precisar: enviar os planos YUV direto à GPU e converter
 no shader. Isso evita o `swscale` RGBA na CPU e reduz o upload em ~2,7×.
 
-## 8. Segurança
+## 8. Camada interativa (F8)
+
+Guia de uso: [`interact/README.md`](interact/README.md).
+
+- **Separação estado × visual.** O motor (`interact/sim.py`) só decide posições
+  e estados. Quem desenha é intercambiável: o renderer nativo (fonte
+  `interactive` de qualquer superfície) ou o TouchDesigner, via OSC. Assim o TD
+  cuida da estética e o Python cuida das regras, que são testáveis.
+- **Olhar como região da parede.** A partir de posição + yaw da cabeça,
+  calculamos o ponto onde o olhar cruza a parede e um disco pelo FOV
+  (`world.py`). A pergunta "o fantasma está sendo olhado?" vira um teste de
+  distância, o que funciona igual com webcam, Kinect ou simulação.
+- **Sensores por factory** (`sim | osc | webcam`), no padrão do repo.
+  - O Kinect entra pelo TouchDesigner (Kinect CHOP → OSC). Evitamos drivers e
+    SDKs por modelo dentro do nosso processo.
+  - A webcam usa MediaPipe Tasks + `solvePnP`. Rosto ausente conta como "de
+    costas".
+- **NLP sem execução de código.** O LLM preenche uma `SceneSpec` com peças
+  prontas, validada por pydantic. Um erro volta ao LLM uma vez para correção;
+  se falhar de novo, entra o parser por palavras-chave. A resposta sempre diz
+  a origem (`llm`/`fallback`).
+- **Determinismo.** RNG com a semente da cena e `dt` explícito: os testes
+  reproduzem partidas exatas. O laço em tempo real (60 Hz) fica separado em
+  `runtime.py`.
+- **Custo.** Simular 5 a 40 entidades custa microssegundos. O render nativo é
+  desenhado só na janela em volta de cada sprite: 6–9 ms por frame em 1280×720
+  na CPU, cacheado por tick.
+
+## 9. Segurança
 
 - O mestre escuta em `127.0.0.1` por padrão. Expor na LAN gera um aviso no log
   até o token de pareamento chegar (F2/F6).

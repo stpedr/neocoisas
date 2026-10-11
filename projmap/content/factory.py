@@ -40,6 +40,37 @@ class _TimeShift:
         self.inner.close()
 
 
+class InteractiveSource:
+    """Mostra a cena interativa ativa (``projmap.interact``) como uma fonte comum.
+
+    Passa pelo mesmo warp/máscara/blend de um vídeo. Sem cena rodando, mostra
+    preto (a parede fica apagada, não "quebrada").
+    """
+
+    def __init__(self, size: tuple[int, int] = (1280, 720)):
+        self._size = size
+        self._idle = StaticSource(solid(4, 4, (0, 0, 0)))
+
+    @property
+    def size(self):
+        return self._size
+
+    @property
+    def duration(self):
+        return None
+
+    def frame_at(self, t: float):
+        from ..interact.runtime import current
+
+        rt = current()
+        if rt is None:
+            return -1, self._idle.frame_at(t)[1]
+        return rt.render(self._size)
+
+    def close(self) -> None:
+        pass
+
+
 def load_image_rgba(path: Path) -> np.ndarray:
     data = np.fromfile(str(path), dtype=np.uint8)  # fromfile+imdecode: aceita caminhos unicode no Windows
     img = cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
@@ -63,6 +94,8 @@ def get_source(spec: SourceSpec, media_path: Optional[MediaResolver] = None) -> 
         return StaticSource(solid(4, 4, spec.color))
     if kind == "test":
         return StaticSource(make_test_card())
+    if kind == "interactive":
+        return InteractiveSource()
     if media_path is None or not spec.media:
         raise ValueError(f"fonte '{kind}' precisa de mídia")
     path = media_path(spec.media)

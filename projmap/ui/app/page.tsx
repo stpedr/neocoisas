@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { type Mode, type View } from "./components/Editor";
+import InteractPanel from "./components/InteractPanel";
 import SurfacePanel from "./components/SurfacePanel";
 import { api, ApiError } from "./lib/api";
 import { applyH, invert3, mul3, photoToProjector, rectQuad, validateQuad } from "./lib/geometry";
@@ -399,6 +400,8 @@ export default function Page() {
             />
           )}
 
+          <InteractPanel onError={(m) => notify(m, "err")} />
+
           <section className="card">
             <h2>Projetor</h2>
             <div className="row">
@@ -455,5 +458,5 @@ function uniqueId(project: Project, prefix: string) {
 }
 
 function sourceLabel(s: Surface) {
-  return { none: "vazia", video: "vídeo", image: "imagem", gif: "GIF", color: "cor", test: "cartela" }[s.source.kind];
+  return { none: "vazia", video: "vídeo", image: "imagem", gif: "GIF", color: "cor", test: "cartela", interactive: "interativa" }[s.source.kind];
 }

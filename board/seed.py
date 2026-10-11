@@ -488,4 +488,11 @@ SEED_CARDS: list[dict] = [
         'sprint': 'Sprint 11 · Projeção mapeada',
         'labels': ['ia', 'projmap', 'prioridade:baixa'],
     },
+    {
+        'title': 'ProjMap F8 — Camada interativa (IA + sensores + TouchDesigner)',
+        'description': 'Motor de interação: sensores sim/osc(Kinect via TD)/webcam(MediaPipe), olhar como região da parede, comportamentos perseguir/fugir/vagar/seguir olhar/congelar quando olhado (fantasmas tímidos), texto→cena por LLM com validação e fallback, render nativo como fonte de superfície, OSC para o TouchDesigner, card na UI. Falta validar com webcam/Kinect reais e scripts no TD.',
+        'column': 'review',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['backend', 'frontend', 'ia', 'projmap', 'prioridade:alta'],
+    },
 ]

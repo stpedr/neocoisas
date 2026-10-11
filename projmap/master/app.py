@@ -44,7 +44,10 @@ def _validation_detail(exc: ValidationError) -> list[str]:
     return out
 
 
-def create_app(state: ProjectState, ui_dir: Optional[Path] = None) -> FastAPI:
+def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any = None,
+               nlp_client_factory: Any = None) -> FastAPI:
+    """``runtime``: ``InteractionRuntime`` da camada interativa (opcional).
+    ``nlp_client_factory``: devolve o cliente LLM para texto→cena (padrão: o do repo)."""
     app = FastAPI(title="ProjMap — mestre", version=__version__)
     # Dev: UI no `next dev` (outra porta) chamando a API local.
     app.add_middleware(
@@ -159,6 +162,12 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None) -> FastAPI:
         store.export_pmz(tmp)
         safe = "".join(c if c.isalnum() or c in "-_" else "-" for c in project.name).strip("-") or "projeto"
         return FileResponse(tmp, filename=f"{safe}.pmz", media_type="application/zip")
+
+    if runtime is not None:
+        from ..interact.api import create_router
+        from ..interact.nlp import default_client
+
+        app.include_router(create_router(runtime, nlp_client_factory or default_client))
 
     if ui_dir is not None and (ui_dir / "index.html").is_file():
         app.mount("/", StaticFiles(directory=ui_dir, html=True), name="ui")

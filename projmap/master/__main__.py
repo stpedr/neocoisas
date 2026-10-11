@@ -44,6 +44,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--windowed", action="store_true", help="saída em janela (preview) em vez de tela cheia")
     parser.add_argument("--no-output", action="store_true", help="não abre a janela de saída")
     parser.add_argument("--open", action="store_true", help="abre a UI no navegador")
+    parser.add_argument("--sensor", default="sim", choices=["sim", "osc", "webcam"],
+                        help="camada interativa: de onde vêm as pessoas (sim = pessoa virtual)")
+    parser.add_argument("--sensor-port", type=int, default=7001, help="porta OSC do sensor 'osc' (Kinect via TD)")
+    parser.add_argument("--osc-out", default=None, metavar="HOST:PORTA",
+                        help="envia o estado da cena por OSC (ex.: 127.0.0.1:7000 para o TouchDesigner)")
+    parser.add_argument("--no-interact", action="store_true", help="desliga a camada interativa")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
 
@@ -64,7 +70,17 @@ def main(argv: list[str] | None = None) -> None:
 
     from .app import create_app
 
-    app = create_app(state, UI_DIR)
+    runtime = None
+    if not args.no_interact:
+        from ..interact.runtime import build_runtime
+
+        opts = {"port": args.sensor_port} if args.sensor == "osc" else {}
+        runtime = build_runtime(sensor=args.sensor, osc_out=args.osc_out, sensor_options=opts,
+                                scene_file=store.root / "scenes" / "active.json").start()
+        log.info("camada interativa: cena '%s', sensor %s%s", runtime.spec.title, args.sensor,
+                 f", OSC → {args.osc_out}" if args.osc_out else "")
+
+    app = create_app(state, UI_DIR, runtime=runtime)
     if args.host not in ("127.0.0.1", "localhost"):
         log.warning("servidor exposto em %s SEM autenticação (o token de pareamento chega na F2/F6)", args.host)
     url = f"http://{'localhost' if args.host in ('0.0.0.0', '127.0.0.1') else args.host}:{args.port}"
@@ -76,7 +92,11 @@ def main(argv: list[str] | None = None) -> None:
 
     server = uvicorn.Server(uvicorn.Config(app, host=args.host, port=args.port, log_level="warning"))
     if args.no_output:
-        server.run()
+        try:
+            server.run()
+        finally:
+            if runtime:
+                runtime.stop()
         return
 
     thread = threading.Thread(target=server.run, name="uvicorn", daemon=True)
@@ -94,6 +114,8 @@ def main(argv: list[str] | None = None) -> None:
     finally:
         server.should_exit = True
         thread.join(timeout=5)
+        if runtime:
+            runtime.stop()
 
 
 if __name__ == "__main__":

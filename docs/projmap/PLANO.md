@@ -245,6 +245,26 @@ local-first.
 
 ---
 
+### F8 — Camada interativa: IA + sensores + TouchDesigner (pedido extra)
+
+**Entrega (MVP feito):**
+- motor de interação com sensores `sim | osc (Kinect via TD) | webcam`;
+- comportamentos perseguir, fugir, vagar, seguir o olhar e congelar quando
+  olhado;
+- texto → cena por LLM, com validação e fallback;
+- render nativo como fonte de superfície;
+- OSC para o TouchDesigner;
+- card na UI.
+
+O guia está em `projmap/interact/README.md`.
+
+**Próximos:**
+- validar com webcam e Kinect reais e nos scripts do TD;
+- várias pessoas e várias paredes (modelo da sala em 3D);
+- sons nos eventos;
+- sprites gerados por IA (factories de imagem do repo);
+- NDI do TD de volta para o ProjMap (F5).
+
 ## 4. Estratégia de testes (resumo)
 
 | Área | Tipo | Exemplo |

@@ -266,3 +266,35 @@ label.btn { flex-direction: row; color: var(--text); font-size: 13px; }
   .output-controls { width: 100%; }
   .hint { display: none; }
 }
+
+/* ------------------------------------------------------------ interativo */
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  resize: vertical;
+}
+.pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.status-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elev-2);
+}
+.status-box .small { margin: 0; }
+.caught { color: var(--red); font-weight: 700; }
+.card-alert { border-color: var(--red); box-shadow: 0 0 0 2px var(--red-soft); }
+code { font-size: 11px; background: var(--bg-elev-2); padding: 1px 4px; border-radius: 4px; }
+details summary { cursor: pointer; margin-bottom: 6px; }

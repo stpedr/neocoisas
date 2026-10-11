@@ -18,6 +18,7 @@ GIF ou imagem para cada uma, e a parede atualiza ao vivo.
 | F4 Calibração Gray code + edge blending | — |
 | F5 NDI + PJLink | — |
 | F6 Remote no celular + app Android | — |
+| **F8 Camada interativa (IA + sensores + TouchDesigner)** | ✅ MVP — [`interact/README.md`](interact/README.md) |
 
 ---
 
@@ -85,6 +86,14 @@ Dicas que vêm do estudo (BLUEPRINT §3):
 - **Não use o keystone do projetor.** Corrija tudo no mapeamento.
 - Não mexa no tripé entre a foto e o show.
 - Use a resolução nativa do projetor (card "Projetor" na UI).
+
+### Projeção interativa (fantasmas tímidos, vaga-lumes, cardume…)
+
+No card **Interativo** da UI, descreva a cena em texto (ex.: *"5 fantasmas que
+param quando eu olho e me perseguem quando viro de costas"*) e escolha a fonte
+**Cena interativa** numa superfície. Sem sensor, a pessoa é simulada. Para
+webcam, Kinect via TouchDesigner e visuais no TD, siga o
+[guia da camada interativa](interact/README.md).
 
 ### Medir desempenho
 
@@ -156,5 +165,6 @@ projmap/
   node/      renderer moderngl + shaders GLSL, janela pyglet, CLI do nó
   master/    API FastAPI + CLI do mestre
   ui/        editor Next.js (export estático servido pelo mestre)
+  interact/  camada interativa: sensores, comportamentos, NLP texto→cena, OSC p/ TouchDesigner
   tools/     demo (projeto de exemplo), bench (desempenho)
 ```

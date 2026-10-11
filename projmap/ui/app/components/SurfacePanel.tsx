@@ -19,6 +19,7 @@ const KINDS: { id: SourceKind; label: string }[] = [
   { id: "image", label: "Imagem" },
   { id: "color", label: "Cor sólida" },
   { id: "test", label: "Cartela de teste" },
+  { id: "interactive", label: "Cena interativa (IA + sensores)" },
   { id: "none", label: "Nada (preto)" },
 ];
 

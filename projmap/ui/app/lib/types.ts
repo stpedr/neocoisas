@@ -4,7 +4,7 @@ export type Point = [number, number];
 export type Quad = [Point, Point, Point, Point];
 
 export type MediaKind = "video" | "image" | "gif";
-export type SourceKind = "none" | "video" | "image" | "gif" | "color" | "test";
+export type SourceKind = "none" | "video" | "image" | "gif" | "color" | "test" | "interactive";
 export type Pattern = "none" | "white" | "grid" | "edges" | "black";
 export type Fit = "stretch" | "cover" | "contain";
 export type BlendMode = "normal" | "add" | "multiply";
@@ -77,3 +77,36 @@ export const DEFAULT_SOURCE: SourceSpec = {
   speed: 1,
   offset_s: 0,
 };
+
+// ---- camada interativa (projmap/interact)
+export interface InteractEntity {
+  id: number;
+  group: string;
+  x: number;
+  y: number;
+  state: "idle" | "move" | "frozen" | "shy";
+}
+
+export interface InteractPlayer {
+  id: number;
+  x: number;
+  distance: number;
+  yaw_deg: number;
+  tracked: boolean;
+  watching: boolean;
+  gaze: [number, number, number];
+}
+
+export interface InteractState {
+  spec: { title: string; description: string; groups: { name: string; sprite: string; count: number }[] } & Record<string, unknown>;
+  sensor: "sim" | "osc" | "webcam";
+  scripted: boolean;
+  paused: boolean;
+  debug: boolean;
+  tick: number;
+  entities: InteractEntity[];
+  players: InteractPlayer[];
+  events: { name: string; entity_id: number; t: number }[];
+  source?: "llm" | "fallback";
+  notes?: string[];
+}
