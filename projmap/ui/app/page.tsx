@@ -8,12 +8,13 @@ import SurfacePanel from "./components/SurfacePanel";
 import LayersPanel from "./components/LayersPanel";
 import DetectPanel from "./components/DetectPanel";
 import LibraryCard from "./components/LibraryCard";
+import ImageCard from "./components/ImageCard";
 import MediaGallery from "./components/MediaGallery";
 import SuggestAll from "./components/SuggestAll";
 import { api, ApiError } from "./lib/api";
 import { applyH, invert3, mul3, photoToProjector, rectQuad, validateQuad } from "./lib/geometry";
 import type { DetectCandidate, MediaItem, Output, Pattern, Point, Project, Surface } from "./lib/types";
-import { DEFAULT_SOURCE } from "./lib/types";
+import { DEFAULT_COLOR, DEFAULT_SOURCE } from "./lib/types";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -229,6 +230,7 @@ export default function Page() {
       feather: 0,
       blend_mode: "normal",
       layers: [],
+      color: { ...DEFAULT_COLOR },
     };
     commit({ ...project, surfaces: [...project.surfaces, surface] });
     setSelectedId(id);
@@ -267,6 +269,7 @@ export default function Page() {
         feather: 0,
         blend_mode: "normal",
         layers: [],
+        color: { ...DEFAULT_COLOR },
       });
     });
     if (added.length) {
@@ -608,6 +611,8 @@ export default function Page() {
           <RemoteCard />
 
           <InteractPanel onError={(m) => notify(m, "err")} />
+
+          <ImageCard output={out} onPatch={patchOutput} />
 
           <section className="card">
             <h2>Projetor</h2>

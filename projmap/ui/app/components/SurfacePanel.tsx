@@ -4,6 +4,8 @@ import { useState } from "react";
 import { api } from "../lib/api";
 import { validateQuad } from "../lib/geometry";
 import type { MediaItem, Project, SourceKind, Surface } from "../lib/types";
+import { DEFAULT_COLOR } from "../lib/types";
+import ColorControls, { isNeutral } from "./ColorControls";
 
 interface Props {
   surface: Surface;
@@ -186,6 +188,15 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
           <input type="number" step={1} value={s.z} onChange={(e) => onChange((c) => ({ ...c, z: Math.round(Number(e.target.value)) || 0 }))} />
         </label>
       </div>
+
+      <details className="corners">
+        <summary>Cor desta superfície{isNeutral(s.color ?? DEFAULT_COLOR) ? "" : " (ajustada)"}</summary>
+        <p className="dim small">Equilibre uma parede mais escura ou colorida que as outras. Soma-se ao ajuste do projetor.</p>
+        <ColorControls value={s.color ?? DEFAULT_COLOR} onChange={(color) => onChange((c) => ({ ...c, color }))} />
+        {!isNeutral(s.color ?? DEFAULT_COLOR) && (
+          <button className="btn btn-small" onClick={() => onChange((c) => ({ ...c, color: { ...DEFAULT_COLOR } }))}>Zerar cor</button>
+        )}
+      </details>
 
       <details className="corners">
         <summary>Cantos (px do projetor)</summary>

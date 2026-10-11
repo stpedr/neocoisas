@@ -904,6 +904,13 @@ SEED_CARDS: list[dict] = [
         'labels': ['frontend', 'backend', 'projmap', 'prioridade:alta'],
     },
     {
+        'title': 'ProjMap — Ajustes de imagem (brilho, gama, cor) + retroprojeção/teto',
+        'description': 'ColorAdjust no projetor e por superfície (brilho, contraste, saturação, gama, temperatura) aplicado no shader (GPU = oráculo CPU), predefinições (ambiente claro/escuro, parede amarelada/azulada), espelhar (retroprojeção) e inverter (teto). Editor, painel e celular.',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['frontend', 'backend', 'projmap', 'prioridade:alta'],
+    },
+    {
         'title': 'ProjMap F7 — Conteúdo por IA por superfície (opcional)',
         'description': 'Pipeline do ifnull com as factories existentes (stability structure, comfyui ControlNet, Veo): foto da posição → geração estilizada → recorte por superfície → mídia do projeto.',
         'column': 'backlog',

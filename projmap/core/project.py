@@ -64,6 +64,23 @@ class MediaItem(_Model):
         return v
 
 
+class ColorAdjust(_Model):
+    """Ajustes de imagem (todos neutros no padrão). Espelho exato em
+    ``projmap/mapping/color.py`` (CPU) e ``node/shaders/surface.frag`` (GPU).
+
+    Ordem: contraste → brilho → saturação → temperatura → gama.
+    """
+
+    brightness: float = Field(1.0, ge=0.0, le=3.0, description="ganho (1 = original; >1 clareia, pode estourar o branco)")
+    contrast: float = Field(1.0, ge=0.0, le=3.0, description="em torno do cinza médio")
+    saturation: float = Field(1.0, ge=0.0, le=3.0, description="0 = preto e branco")
+    gamma: float = Field(1.0, ge=0.3, le=3.0, description=">1 clareia os tons escuros sem estourar o branco")
+    temperature: float = Field(0.0, ge=-1.0, le=1.0, description="-1 frio (azulado) … +1 quente (amarelado)")
+
+    def is_neutral(self) -> bool:
+        return self == ColorAdjust()
+
+
 class Output(_Model):
     """Saída de um nó (um projetor)."""
 
@@ -74,6 +91,9 @@ class Output(_Model):
     pattern: Pattern = Field("none", description="padrão de teste/alinhamento em tela cheia")
     show_outlines: bool = Field(False, description="desenha contornos e cantos sobre o conteúdo")
     latency_ms: float = Field(0.0, ge=0.0, le=1000.0, description="input lag do projetor (F2/F4)")
+    color: ColorAdjust = Field(default_factory=ColorAdjust, description="ajuste de imagem do projetor inteiro")
+    flip_h: bool = Field(False, description="espelha na horizontal (retroprojeção: projetor atrás da tela)")
+    flip_v: bool = Field(False, description="inverte na vertical (projetor de teto, de cabeça para baixo)")
 
 
 class Node(_Model):
@@ -185,6 +205,7 @@ class Surface(_Model):
     feather: float = Field(0.0, ge=0.0, le=0.5, description="borda suave, em fração do uv")
     blend_mode: Literal["normal", "add", "multiply"] = "normal"
     layers: list[Layer] = Field(default_factory=list, description="mídias extras por cima do fundo (F9)")
+    color: ColorAdjust = Field(default_factory=ColorAdjust, description="ajuste de imagem só desta superfície")
 
     @field_validator("id")
     @classmethod

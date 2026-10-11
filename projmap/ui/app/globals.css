@@ -408,3 +408,9 @@ details summary { cursor: pointer; margin-bottom: 6px; }
 .root-row { align-items: center; }
 .root-path { flex: 1; min-width: 0; font-size: 12px; font-family: ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .root-missing { color: var(--red); text-decoration: line-through; }
+
+/* ------------------------------------------------------------ ajustes de imagem */
+.preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+.color-controls { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.color-row { display: flex; justify-content: space-between; gap: 8px; }
+.orient-row { flex-wrap: wrap; gap: 6px 14px; }

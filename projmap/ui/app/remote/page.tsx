@@ -12,7 +12,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { adoptTokenFromHash, api, ApiError, getToken, setToken } from "../lib/api";
 import MediaGallery from "../components/MediaGallery";
+import ColorControls, { PRESETS } from "../components/ColorControls";
 import type { MediaItem, Pattern, Project, SourceSpec, Surface } from "../lib/types";
+import { DEFAULT_COLOR } from "../lib/types";
 
 type Conn = "ok" | "offline" | "unpaired";
 type Tab = "show" | "surfaces" | "capture";
@@ -161,6 +163,22 @@ export default function RemotePage() {
               <input type="checkbox" checked={out.show_outlines}
                      onChange={(e) => patchOutput({ show_outlines: e.target.checked })} />
               Contornos das superfícies
+            </label>
+          </section>
+
+          <section className="card">
+            <h2>Imagem</h2>
+            <div className="preset-grid">
+              {PRESETS.map((p) => (
+                <button key={p.name} className="btn btn-small" title={p.hint} onClick={() => patchOutput({ color: { ...p.color } })}>
+                  {p.name}
+                </button>
+              ))}
+            </div>
+            <ColorControls compact value={out.color ?? DEFAULT_COLOR} onChange={(c) => patchOutput({ color: c })} />
+            <label className="toggle">
+              <input type="checkbox" checked={out.flip_h} onChange={(e) => patchOutput({ flip_h: e.target.checked })} />
+              Retroprojeção (espelhar)
             </label>
           </section>
 

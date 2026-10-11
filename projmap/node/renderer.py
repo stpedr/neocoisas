@@ -33,7 +33,7 @@ from ..content.base import FrameSource, StaticSource
 from ..content.factory import get_source
 from ..content.patterns import edges_pattern, grid_pattern, solid
 from ..core.geometry import rect_quad
-from ..core.project import Layer, Node, Project, SourceSpec, Surface
+from ..core.project import ColorAdjust, Layer, Node, Project, SourceSpec, Surface
 from ..mapping.warp import UvTransform, fit_transform, hinv_for, layer_uvx
 
 log = logging.getLogger(__name__)
@@ -41,6 +41,8 @@ log = logging.getLogger(__name__)
 SHADER_DIR = Path(__file__).parent / "shaders"
 DESKTOP_HEADER = "#version 330 core\n"
 GLES_HEADER = "#version 300 es\nprecision highp float;\nprecision highp int;\n"
+
+NEUTRAL = ColorAdjust()
 
 MediaResolver = Callable[[str], Path]
 PathResolver = Callable[[Optional[str]], Optional[Path]]
@@ -164,11 +166,17 @@ class Renderer:
         self.surface_prog["u_out_size"].value = size
         self.surface_prog["u_viewport"].value = (float(vw), float(vh))
         self.line_prog["u_out_size"].value = size
+        flip = (-1.0 if out.flip_h else 1.0, -1.0 if out.flip_v else 1.0)
+        self.surface_prog["u_flip"].value = flip
+        self.line_prog["u_flip"].value = flip
         ctx.enable(moderngl.BLEND)
 
         if out.pattern != "none":
+            # Padrões de alinhamento saem "puros": o ajuste de cor só vale para o conteúdo.
+            self._set_adjust("o", NEUTRAL)
             self._draw_pattern(node)
         else:
+            self._set_adjust("o", out.color)
             for item in self._items:
                 self._draw_item(item, t, out.intensity)
 
@@ -192,6 +200,7 @@ class Renderer:
         prog["u_opacity"].value = float(item.opacity * intensity)
         prog["u_feather"].value = float(surf.feather)
         prog["u_multiply"].value = 1 if surf.blend_mode == "multiply" else 0
+        self._set_adjust("s", surf.color)
         if surf.blend_mode == "add":
             self.ctx.blend_func = moderngl.ONE, moderngl.ONE
         elif surf.blend_mode == "multiply":
@@ -201,6 +210,10 @@ class Renderer:
         item.texture.use(location=0)
         prog["u_tex"].value = 0
         item.vao.render(moderngl.TRIANGLES)
+
+    def _set_adjust(self, which: str, c: ColorAdjust) -> None:
+        self.surface_prog[f"u_adj_{which}"].value = (c.brightness, c.contrast, c.saturation, c.gamma)
+        self.surface_prog[f"u_temp_{which}"].value = c.temperature
 
     def _draw_pattern(self, node: Node) -> None:
         out = node.output

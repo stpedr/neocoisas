@@ -17,6 +17,17 @@ export interface MediaItem {
   size_bytes: number;
 }
 
+// Ajuste de imagem (espelho de projmap/core/project.py::ColorAdjust). Neutro = DEFAULT_COLOR.
+export interface ColorAdjust {
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  gamma: number;
+  temperature: number;
+}
+
+export const DEFAULT_COLOR: ColorAdjust = { brightness: 1, contrast: 1, saturation: 1, gamma: 1, temperature: 0 };
+
 export interface Output {
   width: number;
   height: number;
@@ -25,6 +36,9 @@ export interface Output {
   pattern: Pattern;
   show_outlines: boolean;
   latency_ms: number;
+  color: ColorAdjust;
+  flip_h: boolean;
+  flip_v: boolean;
 }
 
 export interface Node {
@@ -68,6 +82,7 @@ export interface Surface {
   feather: number;
   blend_mode: BlendMode;
   layers: Layer[];
+  color: ColorAdjust;
 }
 
 export interface Look {
