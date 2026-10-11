@@ -19,7 +19,7 @@ import { applyH, homography4, invert3, pointInQuad, validateQuad, type Mat3 } fr
 import {
   drawableFor, drawWarpedImage, quadAspect, setMediaReadyCallback, textureRegion, unlockVideos, type UvToScreen,
 } from "../lib/preview";
-import type { Layer, MediaItem, Node, Point, SourceSpec, Surface } from "../lib/types";
+import type { DetectCandidate, Layer, MediaItem, Node, Point, SourceSpec, Surface } from "../lib/types";
 
 export type View = "photo" | "projector";
 export type Mode = "surfaces" | "boundary";
@@ -45,6 +45,9 @@ interface Props {
   showMedia: boolean;
   selectedLayerId: string | null;
   onLayerRect: (surfaceId: string, layerId: string, rect: Layer["rect"]) => void;
+  candidates?: DetectCandidate[];
+  candidateOn?: Set<number>;
+  onToggleCandidate?: (i: number) => void;
 }
 
 const UNIT: Point[] = [[0, 0], [1, 0], [1, 1], [0, 1]];
@@ -109,6 +112,14 @@ export default function Editor(props: Props) {
     },
     [viewToScreen, projToView],
   );
+
+  // Candidato (foto normalizada) → tela, passando pelo projetor: vale nas duas vistas.
+  const candidateScreen = (c: DetectCandidate): Point[] | null => {
+    if (!photo || !photoToProj) return null;
+    return c.quad.map(([x, y]) =>
+      viewToScreen(projToView(applyH(photoToProj, [x * photo.naturalWidth, y * photo.naturalHeight]))),
+    );
+  };
 
   // tela → uv da superfície (para arrastar camadas).
   const screenToUv = (s: Surface, sp: Point): Point | null => {
@@ -238,6 +249,37 @@ export default function Editor(props: Props) {
 
     animatedRef.current = animated;
 
+    // Candidatos da detecção (F3): tracejado; os marcados ficam preenchidos.
+    (props.candidates ?? []).forEach((c, i) => {
+      const pts = candidateScreen(c);
+      if (!pts) return;
+      const on = props.candidateOn?.has(i) ?? false;
+      const col = `rgb(${c.color.join(",")})`;
+      g.save();
+      poly(g, pts);
+      g.fillStyle = on ? "rgba(52,211,153,0.28)" : "rgba(255,255,255,0.06)";
+      g.fill();
+      g.setLineDash(on ? [] : [7, 5]);
+      g.lineWidth = on ? 2.5 : 1.5;
+      g.strokeStyle = on ? "#34d399" : "rgba(255,255,255,0.85)";
+      g.stroke();
+      const ctr = pts.reduce((a, p) => [a[0] + p[0] / 4, a[1] + p[1] / 4], [0, 0]);
+      g.setLineDash([]);
+      g.beginPath();
+      g.arc(ctr[0], ctr[1], 13, 0, Math.PI * 2);
+      g.fillStyle = on ? "#34d399" : "rgba(5,7,11,.8)";
+      g.fill();
+      g.lineWidth = 2;
+      g.strokeStyle = col;
+      g.stroke();
+      g.font = "700 12px Inter, system-ui, sans-serif";
+      g.fillStyle = on ? "#05070b" : "#fff";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      g.fillText(String(i + 1), ctr[0], ctr[1]);
+      g.restore();
+    });
+
     // Camada selecionada: retângulo deformado na superfície + alças.
     const selSurf = surfaces.find((s) => s.id === selectedId);
     const selLayer = selSurf?.layers.find((l) => l.id === props.selectedLayerId);
@@ -280,7 +322,7 @@ export default function Editor(props: Props) {
     }
     }
   }, [size, surfaces, node, view, mode, photo, usePhoto, viewW, viewH, viewToScreen, screenToView, projToView, uvMapper, scale,
-      selectedId, selectedCorner, pointer, props.media, props.showMedia, props.selectedLayerId]);
+      selectedId, selectedCorner, pointer, props.media, props.showMedia, props.selectedLayerId, props.candidates, props.candidateOn, photoToProj]);
 
   // ---- interação
   const eventPoint = (e: React.PointerEvent): Point => {
@@ -293,6 +335,23 @@ export default function Editor(props: Props) {
     canvasRef.current!.setPointerCapture(e.pointerId);
     canvasRef.current!.focus();
     unlockVideos(); // o navegador só dá play depois de um gesto do usuário
+    // Com candidatos da detecção na tela, clicar dentro de um marca/desmarca.
+    if (mode === "surfaces" && props.candidates?.length && props.onToggleCandidate) {
+      // o menor que contém o clique (uma porta dentro de uma parede)
+      let hit = -1;
+      let hitArea = Infinity;
+      props.candidates.forEach((c, i) => {
+        const pts = candidateScreen(c);
+        if (pts && pointInQuad(sp, pts) && c.area < hitArea) {
+          hit = i;
+          hitArea = c.area;
+        }
+      });
+      if (hit >= 0) {
+        props.onToggleCandidate(hit);
+        return;
+      }
+    }
     // Camada selecionada tem prioridade: alças dela, depois arrastar por dentro.
     if (mode === "surfaces" && props.selectedLayerId) {
       const s = surfaces.find((x) => x.id === selectedId);

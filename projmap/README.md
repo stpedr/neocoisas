@@ -14,7 +14,7 @@ GIF ou imagem para cada uma, e a parede atualiza ao vivo.
 | F0 Blueprint + plano | ✅ aprovado |
 | **F1 Um projetor: quads manuais + vídeo/GIF** | ✅ entregue (este README) |
 | F2 Mestre/nós em rede + sincronia | próxima |
-| F3 Detecção de superfícies com IA (SAM 2) | — |
+| **F3a Detecção automática de superfícies (OpenCV)** | ✅ entregue — ver "Detectar superfícies" abaixo · SAM 2 e área projetada automática (F3b) pendentes |
 | F4 Calibração Gray code + edge blending | — |
 | F5 NDI + PJLink | — |
 | **F6a Remote no celular (web/PWA)** | ✅ entregue — ver abaixo |
@@ -104,6 +104,25 @@ python -m projmap.master --project shows/meu-show.projmap --sensor phone --adb
 ```
 A página `/sensor/` abre no celular; toque em **Iniciar sensor**. Passo a
 passo em [interact/README.md](interact/README.md#celular-por-usbadb-phone--recomendado-sem-kinect).
+
+### Detectar superfícies automaticamente
+
+Depois de enviar a foto, use o card **Detectar superfícies**. O mestre analisa
+a foto (OpenCV, em menos de 1 s, sem placa de vídeo) e sugere as regiões
+lisas com arestas retas: paredes, portas, teto, colunas, painéis.
+
+- As sugestões aparecem numeradas sobre a foto. As grandes e retangulares já
+  vêm marcadas. Clique numa região (no editor ou na lista) para marcar ou
+  desmarcar.
+- **Criar N superfícies** cria todas de uma vez, já no lugar certo do projetor.
+  Depois é só ajustar os cantos e escolher a mídia.
+- **Sensibilidade:** à esquerda, poucas regiões grandes; à direita, mais regiões
+  e menores.
+- Algo na frente da superfície (um carrinho diante da porta, uma fita
+  pendurada) não a parte em pedaços: o detector junta os pedaços e estende o
+  quadrilátero por trás do objeto.
+- Funciona melhor com superfícies lisas e boa luz. Textura forte, sombra dura e
+  pouco contraste confundem; para isso virá o modo com IA (SAM 2).
 
 ### Prévia e camadas (ver a mídia enquanto mapeia)
 
