@@ -6,6 +6,7 @@ você desenha as superfícies sobre uma foto, arrasta os cantos, escolhe vídeo,
 GIF ou imagem para cada uma, e a parede atualiza ao vivo.
 
 - **Guia de configuração e uso (comece por aqui): [`GUIA.md`](GUIA.md)**
+- **Atalho no Menu Iniciar:** `python -m projmap.desktop.install` (abre um lançador com janela)
 - Plano e fases: [`docs/projmap/PLANO.md`](../docs/projmap/PLANO.md)
 - Estudo das referências: [`docs/projmap/BLUEPRINT.md`](../docs/projmap/BLUEPRINT.md)
 - Decisões de engenharia: [`ARCHITECTURE.md`](ARCHITECTURE.md)

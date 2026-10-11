@@ -26,3 +26,7 @@ shows/
 # Modelos baixados (MediaPipe etc.): python -m projmap.tools.fetch_models
 models/
 .venv-projmap/
+
+# ícone gerado por python -m projmap.desktop.install
+projmap/desktop/projmap.ico
+projmap/desktop/projmap.png

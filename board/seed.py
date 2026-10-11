@@ -911,6 +911,13 @@ SEED_CARDS: list[dict] = [
         'labels': ['frontend', 'backend', 'projmap', 'prioridade:alta'],
     },
     {
+        'title': 'ProjMap — Lançador com janela + atalho no Menu Iniciar',
+        'description': 'projmap.desktop: lançador tkinter (show, saída projetor/janela/só editor, celular, link com token, log) e projmap.desktop.install (atalho .lnk com ícone no Menu Iniciar/Área de Trabalho; .desktop no Linux).',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['frontend', 'projmap', 'prioridade:média'],
+    },
+    {
         'title': 'ProjMap F7 — Conteúdo por IA por superfície (opcional)',
         'description': 'Pipeline do ifnull com as factories existentes (stability structure, comfyui ControlNet, Veo): foto da posição → geração estilizada → recorte por superfície → mídia do projeto.',
         'column': 'backlog',
