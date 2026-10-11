@@ -502,4 +502,11 @@ SEED_CARDS: list[dict] = [
         'sprint': 'Sprint 11 · Projeção mapeada',
         'labels': ['backend', 'frontend', 'ia', 'projmap', 'prioridade:alta'],
     },
+    {
+        'title': 'Controlador Raspberry Pi (botões/LEDs GPIO)',
+        'description': 'Serviço raspberry_pi.py: aprovar/rejeitar/renderizar/publicar/gerar por botões físicos e LEDs de status, via API HTTP. Backend gpiozero | mock.',
+        'column': 'done',
+        'sprint': 'Sprint 12 · Hardware',
+        'labels': ['backend', 'hardware', 'prioridade:média'],
+    },
 ]

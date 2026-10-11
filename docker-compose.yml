@@ -130,6 +130,26 @@ services:
       - api
     restart: unless-stopped
 
+  # Controlador Raspberry Pi (botões/LEDs no GPIO). Opt-in, roda NO Pi:
+  #   docker compose --profile rpi up -d rpi
+  # Se a API estiver em outra máquina, defina ANE_API_URL no .env do Pi.
+  rpi:
+    build:
+      context: .
+      dockerfile: Dockerfile.rpi
+    container_name: ane-rpi
+    profiles: ["rpi"]
+    environment:
+      PYTHONUNBUFFERED: "1"
+      ANE_API_URL: ${ANE_API_URL:-http://api:8000}
+      ANE_API_KEY: ${ANE_API_KEY:-}
+      RPI_BACKEND: ${RPI_BACKEND:-gpiozero}
+      RPI_POLL_INTERVAL: ${RPI_POLL_INTERVAL:-5}
+      GPIOZERO_PIN_FACTORY: ${GPIOZERO_PIN_FACTORY:-lgpio}
+    devices:
+      - /dev/gpiochip0:/dev/gpiochip0
+    restart: unless-stopped
+
   # Stable Diffusion (AUTOMATIC1111) — geração de imagem local/grátis.
   # Opt-in: `docker compose --profile sd up -d`. Requer GPU NVIDIA no Docker
   # (NVIDIA Container Toolkit) e um checkpoint de modelo (baixado no volume).
