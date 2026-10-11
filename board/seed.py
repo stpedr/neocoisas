@@ -482,11 +482,18 @@ SEED_CARDS: list[dict] = [
         'labels': ['frontend', 'mobile', 'projmap', 'prioridade:média'],
     },
     {
-        'title': 'ProjMap F6b — App Android (Capacitor) + PJLink/status no remote',
-        'description': 'Empacotar o mesmo build como APK (descoberta mDNS, câmera nativa, cleartext só p/ IPs privados). Energia via PJLink (F5) e status dos nós (fps, deriva) no remote (F2).',
-        'column': 'backlog',
+        'title': 'ProjMap F6b — App Android (Capacitor)',
+        'description': 'APK de debug (projmap/android): lançador com QR (jsQR) ou IP+token, lembra o último mestre e reconecta; abre o /remote/ servido pelo mestre. Cleartext só na LAN, câmera via WebView. Validado no emulador; falta celular real.',
+        'column': 'review',
         'sprint': 'Sprint 11 · Projeção mapeada',
         'labels': ['frontend', 'mobile', 'projmap', 'prioridade:média'],
+    },
+    {
+        'title': 'ProjMap — PJLink e status dos nós no remote',
+        'description': 'Energia dos projetores via PJLink (F5) e status dos nós (fps, deriva, temperatura; F2) no remote. Descoberta mDNS do mestre no app quando a F2 anunciar o serviço.',
+        'column': 'backlog',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['backend', 'mobile', 'projmap', 'prioridade:baixa'],
     },
     {
         'title': 'ProjMap F7 — Conteúdo por IA por superfície (opcional)',

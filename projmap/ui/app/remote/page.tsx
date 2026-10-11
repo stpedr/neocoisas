@@ -31,6 +31,9 @@ export default function RemotePage() {
   const [toast, setToast] = useState<{ msg: string; kind: "ok" | "err" } | null>(null);
   const [busy, setBusy] = useState(false);
   const rev = useRef(-1);
+  // Dentro do app Android (Capacitor) o user agent leva "ProjMapApp": mostra
+  // "Trocar mestre", que volta ao lançador do app (origem https://localhost).
+  const [inApp, setInApp] = useState(false);
   // Enquanto o dedo está num slider, a sincronia não sobrescreve o valor local.
   const dragging = useRef(false);
 
@@ -80,6 +83,7 @@ export default function RemotePage() {
 
   useEffect(() => {
     adoptTokenFromHash();
+    setInApp(navigator.userAgent.includes("ProjMapApp"));
     void refresh();
     const id = window.setInterval(refresh, 2000);
     return () => window.clearInterval(id);
@@ -112,6 +116,7 @@ export default function RemotePage() {
             ))}
           </select>
         )}
+        {inApp && <a className="btn btn-small" href="https://localhost/?pick=1">Trocar mestre</a>}
       </header>
 
       <button
@@ -225,6 +230,8 @@ export default function RemotePage() {
 // --------------------------------------------------------------------- partes
 function PairScreen({ onPaired }: { onPaired: () => void }) {
   const [value, setValue] = useState(getToken());
+  const [inApp, setInApp] = useState(false);
+  useEffect(() => setInApp(navigator.userAgent.includes("ProjMapApp")), []);
   return (
     <main className="remote">
       <section className="card">
@@ -237,6 +244,7 @@ function PairScreen({ onPaired }: { onPaired: () => void }) {
         <button className="btn btn-accent" disabled={!value} onClick={() => { setToken(value); onPaired(); }}>
           Conectar
         </button>
+        {inApp && <a className="btn" href="https://localhost/?pick=1">Escolher outro mestre</a>}
       </section>
     </main>
   );

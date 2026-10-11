@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f17">
+<title>ProjMap Remote</title>
+<style>
+  :root { --bg:#0b0f17; --elev:#141a24; --elev2:#1b2330; --border:#263041; --text:#e8eef6; --dim:#94a3b8;
+          --grad:linear-gradient(135deg,#7c5cff,#4f8cff); --red:#f87171; --green:#34d399; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width:480px; margin:0 auto; padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px));
+         display:flex; flex-direction:column; gap:14px; }
+  h1 { font-size:22px; margin:8px 0 0; } h2 { font-size:15px; margin:0; }
+  .dim { color:var(--dim); margin:0; font-size:13px; }
+  .card { background:var(--elev); border:1px solid var(--border); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .btn { font:inherit; font-weight:600; color:var(--text); background:var(--elev2); border:1px solid #33415a; border-radius:10px;
+         min-height:48px; padding:0 14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .btn-accent { background:var(--grad); border-color:transparent; color:#fff; }
+  input { font:inherit; font-size:16px; color:var(--text); background:var(--elev2); border:1px solid var(--border); border-radius:8px; min-height:44px; padding:0 10px; width:100%; }
+  label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--dim); }
+  .row { display:flex; gap:8px; } .row > * { flex:1; } .row > .narrow { flex:.45; }
+  .msg { font-size:13px; min-height:1.4em; margin:0; } .err { color:var(--red); } .ok { color:var(--green); }
+  .recent { display:flex; flex-direction:column; gap:6px; }
+  .recent .btn { justify-content:space-between; font-weight:500; }
+  .recent small { color:var(--dim); }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ProjMap Remote</h1>
+  <p class="dim">Controle a projeção pelo celular. Mestre e celular precisam estar na mesma rede Wi-Fi.</p>
+
+  <section class="card" id="auto" hidden>
+    <h2>Conectando a <span id="auto-host"></span>…</h2>
+    <button class="btn" id="auto-cancel">Cancelar</button>
+  </section>
+
+  <section class="card">
+    <h2>1. Escanear o QR do mestre</h2>
+    <p class="dim">No editor do PC, abra o card <b>Remote no celular</b> → <b>Mostrar QR</b>.</p>
+    <label class="btn btn-accent">📷 Escanear QR
+      <input type="file" accept="image/*" capture="environment" id="qr-file" hidden>
+    </label>
+  </section>
+
+  <section class="card">
+    <h2>2. Ou digite</h2>
+    <div class="row">
+      <label>IP do mestre<input id="host" inputmode="decimal" placeholder="192.168.0.10" autocomplete="off"></label>
+      <label class="narrow">Porta<input id="port" inputmode="numeric" value="8100"></label>
+    </div>
+    <label>Token (aparece no terminal do mestre)<input id="token" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+    <button class="btn" id="connect">Conectar</button>
+  </section>
+
+  <p class="msg" id="msg" role="status"></p>
+
+  <section class="card" id="recent-card" hidden>
+    <h2>Recentes</h2>
+    <div class="recent" id="recent"></div>
+  </section>
+</main>
+
+<script src="vendor/jsQR.js"></script>
+<script src="launcher.js"></script>
+</body>
+</html>
