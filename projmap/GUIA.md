@@ -275,6 +275,41 @@ transparente).
 **3. Ativar:** no editor, card **Interativo** → predefinição **Castelo dos
 Boos**. Depois, numa superfície, escolha a fonte **Cena interativa**.
 
+## 6.3 Efeitos visuais do visual_frames (Luz reativa, LEGO, Ecos em quadrinhos)
+
+Efeitos de **Adriel Vasques** ([visual_frames](https://github.com/adrielvasques/visual_frames),
+usados com permissão). A câmera vê as pessoas (inteligência artificial na placa
+de vídeo) e a música do PC muda as cores:
+
+| Efeito | O que faz |
+|---|---|
+| **Luz reativa** | Pontos neon no contorno das pessoas; cores no ritmo da música. |
+| **LEGO** | A pessoa vira um mosaico de peças LEGO; ao se mexer, as peças caem. |
+| **Ecos em quadrinhos** | A pessoa vira HQ e deixa ecos coloridos; na batida, um "carimbo". |
+
+**Instalar (uma vez):**
+```bash
+pip install -r requirements-projmap-master.txt
+git clone https://github.com/adrielvasques/visual_frames.git ../visual_frames
+python -m projmap.effects.importar ../visual_frames
+```
+O importador copia o shader e os modelos do projeto do autor para
+`%USERPROFILE%\.projmapisual_frames`. Rode de novo para trazer as
+atualizações dele.
+
+**Usar:** no editor, card **Interativo** → **Efeitos visuais** → escolha o
+efeito. Numa superfície, escolha a fonte **Cena interativa**. Há ajustes de
+brilho, sensibilidade ao som, tamanho das peças e quantidade de ecos.
+**Voltar à cena** desliga o efeito e libera a câmera.
+
+- **Câmera:** a mesma escolha do jogo (C920 automática; `--camera`). Quando um
+  efeito liga, ele assume a câmera.
+- **Música:** toque qualquer coisa no PC. O efeito escuta o que sai nos
+  alto-falantes (não precisa de microfone).
+- **Placa de vídeo:** obrigatória (NVIDIA, AMD ou Intel com DirectX 12). Na CPU
+  fica lento demais.
+- Bichinho espelho e Paraquedas virão numa segunda etapa.
+
 ## 7. Salvar, fazer backup e levar para outro PC
 
 - **Salvar:** não há botão. Cada mudança é gravada na hora na pasta do projeto

@@ -14,6 +14,7 @@ from collections import deque
 from pathlib import Path
 from typing import Optional
 
+import cv2
 import numpy as np
 
 from .outputs import OscOutput
@@ -49,6 +50,11 @@ class InteractionRuntime:
         self._render_cache: tuple[int, tuple[int, int], np.ndarray] | None = None
         self.paused = False
         self.debug_overlay = False  # desenha pessoa + região do olhar (calibração)
+        # Efeitos importados do visual_frames (projmap/effects): quando um está
+        # ativo, as superfícies "Cena interativa" mostram o efeito em vez da cena.
+        self.effect: Optional[str] = None
+        self._engine = None
+        self.engine_factory = None  # testes injetam um motor falso
 
     # ------------------------------------------------------------- ciclo de vida
     def start(self) -> "InteractionRuntime":
@@ -62,6 +68,7 @@ class InteractionRuntime:
     def stop(self) -> None:
         global _current
         self._stop.set()
+        self._stop_engine()
         if self._thread:
             self._thread.join(timeout=2)
         self.sensor.close()
@@ -100,6 +107,7 @@ class InteractionRuntime:
             return list(self._events)
 
     def set_scene(self, spec: SceneSpec) -> None:
+        self.set_effect(None)  # voltar a uma cena desliga o efeito (libera câmera e GPU)
         with self._lock:
             self.spec = spec
             self._sim = Simulation(spec)
@@ -120,8 +128,46 @@ class InteractionRuntime:
         with self._lock:
             self._sim.reset(self.sensor.players())
 
+    # ------------------------------------------------------- efeitos visuais
+    def set_effect(self, key: Optional[str]) -> None:
+        """Liga um efeito do visual_frames ("vf-luz", "vf-lego", "vf-ecos") ou volta à cena (None).
+
+        O motor (câmera + YOLO + áudio) só sobe quando o primeiro efeito é
+        escolhido. Se o sensor da cena for a webcam, ele é trocado pela pessoa
+        simulada: a câmera passa a ser do motor (duas aberturas brigariam)."""
+        if key is None:
+            self.effect = None
+            self._stop_engine()
+            return
+        if self._engine is None:
+            if self.sensor.kind == "webcam":
+                self.set_sensor(SimSensor(aspect=self.spec.aspect))
+            factory = self.engine_factory
+            if factory is None:
+                from ..effects.engine import EffectsEngine
+
+                camera = getattr(self, "camera", "auto")
+                factory = lambda: EffectsEngine(camera=camera)  # noqa: E731
+            self._engine = factory().start()
+        self._engine.set_effect(key)
+        self.effect = key
+
+    def _stop_engine(self) -> None:
+        if self._engine is not None:
+            self._engine.stop()
+            self._engine = None
+
+    @property
+    def engine(self):
+        return self._engine
+
     def render(self, size: tuple[int, int] = (1280, 720), debug: Optional[bool] = None) -> tuple[int, np.ndarray]:
         """Frame RGBA do estado atual (cacheado por tick)."""
+        if self.effect is not None and self._engine is not None:
+            seq, img = self._engine.frame()
+            if (img.shape[1], img.shape[0]) != size:
+                img = cv2.resize(img, size, interpolation=cv2.INTER_LINEAR)
+            return -seq - 1, img  # chave negativa: não colide com os ticks da cena
         debug = self.debug_overlay if debug is None else debug
         snap = self.snapshot()
         cache = self._render_cache

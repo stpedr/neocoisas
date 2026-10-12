@@ -95,7 +95,9 @@ def main(argv: list[str] | None = None) -> None:
         if args.sensor == "webcam":
             opts = {"camera": args.camera, "size": args.camera_size}
         runtime = build_runtime(sensor=args.sensor, osc_out=args.osc_out, sensor_options=opts,
-                                scene_file=store.root / "scenes" / "active.json").start()
+                                scene_file=store.root / "scenes" / "active.json")
+        runtime.camera = args.camera  # efeitos do visual_frames usam a mesma câmera escolhida
+        runtime = runtime.start()
         log.info("camada interativa: cena '%s', sensor %s%s", runtime.spec.title, args.sensor,
                  f", OSC → {args.osc_out}" if args.osc_out else "")
 
