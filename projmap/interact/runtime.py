@@ -55,6 +55,7 @@ class InteractionRuntime:
         self.effect: Optional[str] = None
         self._engine = None
         self.engine_factory = None  # testes injetam um motor falso
+        self.publisher = None  # transmissão RTSP opcional (ver interact/stream.py)
 
     # ------------------------------------------------------------- ciclo de vida
     def start(self) -> "InteractionRuntime":
@@ -68,6 +69,9 @@ class InteractionRuntime:
     def stop(self) -> None:
         global _current
         self._stop.set()
+        if self.publisher is not None:
+            self.publisher.stop()
+            self.publisher = None
         self._stop_engine()
         if self._thread:
             self._thread.join(timeout=2)

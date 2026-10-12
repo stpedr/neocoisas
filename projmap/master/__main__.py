@@ -102,6 +102,13 @@ def main(argv: list[str] | None = None) -> None:
         runtime = runtime.start()
         log.info("camada interativa: cena '%s', sensor %s%s", runtime.spec.title, args.sensor,
                  f", OSC → {args.osc_out}" if args.osc_out else "")
+        # Transmissão RTSP da camada interativa (só se PROJMAP_RTSP_URL estiver
+        # no .env). A URL carrega senha, por isso não vem por linha de comando.
+        from ..interact.stream import publisher_from_env
+
+        publisher = publisher_from_env()
+        if publisher is not None:
+            runtime.publisher = publisher.start(runtime.render)
 
     exposed = args.host not in ("127.0.0.1", "localhost")
     token = args.token or (new_token() if exposed else None)
