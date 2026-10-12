@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import type { InteractState } from "../lib/types";
+import EffectsSection from "./EffectsSection";
 
 const EXAMPLES = [
   "5 fantasmas que param e cobrem o rosto quando eu olho, e vêm me buscar quando viro de costas",
@@ -98,6 +99,9 @@ export default function InteractPanel({ onError }: { onError: (msg: string) => v
           </span>
         )}
       </div>
+
+      <EffectsSection st={st} onState={setSt} onError={onError} />
+
 
       <label>
         Descreva a cena

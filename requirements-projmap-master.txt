@@ -14,3 +14,8 @@ pyglet>=2.0
 segno>=1.6              # QR de pareamento do remote no celular (F6)
 python-osc>=1.8          # camada interativa: OSC (TouchDesigner/Kinect)
 # Opcional — sensor webcam: pip install mediapipe  (+ modelo face_landmarker.task)
+# Efeitos do visual_frames (Luz reativa, LEGO, Ecos): YOLO na GPU + música do PC.
+# Depois de instalar, importe o trabalho do autor: python -m projmap.effects.importar
+onnxruntime-directml>=1.18; sys_platform == "win32"   # GPU no Windows (NVIDIA/AMD/Intel)
+onnxruntime>=1.18; sys_platform != "win32"
+soundcard>=0.4                                         # captura o que toca no PC (loopback)
