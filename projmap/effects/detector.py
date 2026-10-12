@@ -37,7 +37,11 @@ def _session(path: Path):
     if "DmlExecutionProvider" in ort.get_available_providers():
         so.enable_mem_pattern = False  # exigido pelo DirectML
         so.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-        providers = ["DmlExecutionProvider", "CPUExecutionProvider"]
+        # Notebook com duas placas (Intel + NVIDIA): sem isso o DirectML pode cair
+        # na integrada (61,9 ms vs 4,6 ms na RTX 4060 medidos). "high_performance"
+        # escolhe a placa dedicada.
+        providers = [("DmlExecutionProvider", {"performance_preference": "high_performance", "device_filter": "gpu"}),
+                     "CPUExecutionProvider"]
     elif "CUDAExecutionProvider" in ort.get_available_providers():
         providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
     s = ort.InferenceSession(str(path), so, providers=providers)

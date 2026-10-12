@@ -89,6 +89,12 @@ def install(desktop: bool = False) -> list[Path]:
     icon = make_icon()
     target = gui_python()
     if sys.platform == "win32":
+        try:  # notebook com 2 placas: projeção e efeitos na dedicada (NVIDIA), não na Intel
+            from ..tools.gpu import python_executables, set_preference
+
+            set_preference(python_executables())
+        except OSError:
+            pass
         out = windows_shortcut_paths(desktop)
         for lnk in out:
             create_windows_shortcut(lnk, target, "-m projmap.desktop", REPO_ROOT, icon)

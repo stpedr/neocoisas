@@ -22,6 +22,15 @@ existe, também caía no notebook (a última tela).
 | `projmap/interact/sensors.py` | Horário estritamente crescente para o MediaPipe; quadro com erro é ignorado em vez de matar a thread |
 | `tests/projmap/test_screens.py` | 4 testes (inclui o arranjo real do usuário) |
 
+## Placa de vídeo dedicada (notebook com Intel + NVIDIA)
+- **YOLO (DirectML):** pedido explícito da placa de alto desempenho. Sem isso,
+  o "dispositivo 0" é a Intel: pose em 61,9 ms, contra 4,6 ms na RTX 4060.
+- **OpenGL (projeção e efeitos):** rodava na Intel UHD.
+  `python -m projmap.tools.gpu` grava a preferência "Alto desempenho" do
+  Windows para o Python do ProjMap, inclusive o caminho via junção do uv, que
+  é o que o Windows compara. O instalador do atalho já faz isso. Resultado:
+  OpenGL na RTX 4060 e efeitos em ~2,6 ms/quadro.
+
 ## Como validar
 ```bash
 python -m projmap.node.screens        # mostra as telas e qual o 'auto' usa
