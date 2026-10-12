@@ -196,6 +196,9 @@ export interface EffectParams {
   distancia_ecos: number;
   tamanho_peca: number;
   lego_cair: boolean;
+  animal: number;          // 0 gato, 1 dinossauro, 2 coelho
+  fundo_colorido: boolean;
+  intervalo_aviao: number;
   brilho: number;
 }
 

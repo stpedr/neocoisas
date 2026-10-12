@@ -8,12 +8,14 @@ Aqui ele roda no Windows dentro do ProjMap, reaproveitando o trabalho dele:
   repositório original (``python -m projmap.effects.importar``) para
   ``~/.projmap/visual_frames``, fora deste git;
 - a visão (detector YOLO seg+pose, rastreador ByteTrack, One Euro, máscara),
-  o áudio (bandas + batida) e a montagem dos ecos são traduções fiéis do C++
-  dele (``vision.py``, ``tracker.py``, ``audio.py``, ``engine.py``);
+  o áudio (bandas + batida), a animação do personagem e a cena do salto são
+  traduções fiéis do C++ dele (``vision.py``, ``tracker.py``, ``audio.py``,
+  ``critter.py``, ``faces.py``, ``parachutes.py``, ``engine.py``);
 - o resultado vira a fonte das superfícies "Cena interativa", escolhido no
   card *Interativo*.
 
-Fase 1: Luz reativa, LEGO e Ecos em quadrinhos. Fase 2: Bichinho e Paraquedas.
+Os cinco efeitos do autor: Luz reativa, LEGO, Ecos em quadrinhos (fase 1),
+Bichinho espelho e Salto de paraquedas (fase 2).
 """
 
 from .catalog import EFFECTS, effect_names

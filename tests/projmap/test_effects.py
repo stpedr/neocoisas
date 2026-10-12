@@ -1,6 +1,7 @@
 """Efeitos importados do visual_frames: importador, visão, áudio, motor e API."""
 
 import math
+import random
 
 import numpy as np
 import pytest
@@ -210,6 +211,144 @@ def test_motor_roda_o_shader_com_a_mascara_na_orientacao_certa(stub_base):
     assert eng.effect == "luz"
 
 
+# ------------------------------------------------- fase 2: bichinho e paraquedas
+def _pose_em_pe(cx=640.0, cy=360.0, altura=430.0):
+    """Pose de uma pessoa em pé, de frente, em uv + confiança (como o shader vê)."""
+    from projmap.effects import tracker as K
+
+    o = altura / 2.0
+    kp = np.zeros((17, 3), np.float32)
+    corpo = {K.NARIZ: (0, -0.78), K.OLHO_E: (-0.055, -0.84), K.OLHO_D: (0.055, -0.84),
+             K.ORELHA_E: (-0.12, -0.82), K.ORELHA_D: (0.12, -0.82),
+             K.OMBRO_E: (-0.22, -0.55), K.OMBRO_D: (0.22, -0.55),
+             K.COTOVELO_E: (-0.30, -0.25), K.COTOVELO_D: (0.30, -0.25),
+             K.PULSO_E: (-0.34, 0.05), K.PULSO_D: (0.34, 0.05),
+             K.QUADRIL_E: (-0.14, 0.08), K.QUADRIL_D: (0.14, 0.08),
+             K.JOELHO_E: (-0.15, 0.50), K.JOELHO_D: (0.15, 0.50),
+             K.TORNOZELO_E: (-0.15, 0.92), K.TORNOZELO_D: (0.15, 0.92)}
+    for k, (dx, dy) in corpo.items():
+        kp[k] = ((cx + dx * o) / C.CAMERA_LARGURA, (cy + dy * o) / C.CAMERA_ALTURA, 0.95)
+    return kp
+
+
+def test_dinamica_de_segunda_ordem_passa_do_ponto_e_acomoda():
+    from projmap.effects.dynamics import SecondOrder
+
+    d = SecondOrder(1.5, 0.25, 0.0)  # pouco amortecida: tem que balançar
+    saida = [d.update(1 / 120, 1.0) for _ in range(600)]
+    assert max(saida) > 1.05  # passou do alvo (uma média exponencial nunca passa)
+    assert abs(saida[-1] - 1.0) < 0.01  # e acomodou
+    critico = SecondOrder(1.5, 1.0, 0.0)
+    assert max(critico.update(1 / 120, 1.0) for _ in range(600)) <= 1.001  # amortecido não passa
+
+
+def test_bichinho_monta_o_rig_e_o_rabo_segue_a_pessoa():
+    from projmap.effects.critter import NUM_ELOS_RABO, Critter
+
+    cr = Critter(1, random.Random(0))
+    pontos = _pose_em_pe()
+    for _ in range(120):  # 2 s a 60 fps
+        cr.update(pontos, 430.0 / C.CAMERA_ALTURA, 1.0, 1 / 60, 0.0, 0)
+    assert cr.rig_valido > 0.9 and cr.rig_u > 0.0
+    assert cr.cabeca_valida > 0.9
+    assert cr.rig_raiz[0] == pytest.approx(0.5, abs=0.02)  # centrado como a pessoa
+    # A corrente do rabo mantém o comprimento de cada elo (restrição de Verlet).
+    elos = [float(np.hypot(*(cr.rabo[k + 1] - cr.rabo[k]))) for k in range(NUM_ELOS_RABO - 1)]
+    assert max(elos) - min(elos) < 1e-3
+    parado = cr.rabo[-1] - cr.rabo[0]
+
+    # Pessoa anda para a direita: a raiz segue, e o rabo balança em vez de ficar
+    # preso rígido ao corpo (a inércia da corrente muda a curva).
+    for i in range(30):
+        cr.update(_pose_em_pe(cx=640.0 + (i + 1) * 9), 430.0 / C.CAMERA_ALTURA, 1.0, 1 / 60, 0.0, 0)
+    assert cr.rig_raiz[0] > 0.55
+    andando = cr.rabo[-1] - cr.rabo[0]
+    assert float(np.hypot(*(andando - parado))) > 5.0
+    elos = [float(np.hypot(*(cr.rabo[k + 1] - cr.rabo[k]))) for k in range(NUM_ELOS_RABO - 1)]
+    assert max(elos) - min(elos) < 1e-3  # e continua sem esticar
+
+
+def test_bichinho_encolhe_ao_agachar():
+    from projmap.effects.critter import Critter
+
+    cr = Critter(1, random.Random(0))
+    alto = _pose_em_pe()
+    for _ in range(120):
+        cr.update(alto, 430.0 / C.CAMERA_ALTURA, 1.0, 1 / 60, 0.0, 0)
+    de_pe = cr.escala
+    for _ in range(120):  # mesma pessoa, caixa bem mais baixa
+        cr.update(alto, 180.0 / C.CAMERA_ALTURA, 1.0, 1 / 60, 0.0, 0)
+    assert de_pe > 0.9 and cr.escala < 0.5
+
+
+def test_recorte_de_rosto_so_aceita_quem_olha_para_a_camera():
+    from projmap.effects.faces import LADO, FaceCropper
+
+    fc = FaceCropper()
+    quadro = np.zeros((C.CAMERA_ALTURA, C.CAMERA_LARGURA, 3), np.uint8)
+    cv2.circle(quadro, (640, 192), 70, (120, 160, 200), -1)
+    pontos = _pose_em_pe()
+    fc.crop(quadro, 0, pontos, np.array([0.5, 0.27]), 0.08, np.array([1.0, 0.0]))
+    assert fc.ready(0)
+    rosto = fc.face(0, 1.0)
+    assert rosto.imagem.shape == (LADO, LADO, 3) and rosto.de_frente
+    guardado = rosto.imagem.copy()
+
+    de_costas = pontos.copy()
+    de_costas[[1, 2, 0], 2] = 0.1  # olhos e nariz somem
+    fc.crop(quadro, 0, de_costas, np.array([0.5, 0.27]), 0.08, np.array([1.0, 0.0]))
+    assert not fc.face(0, 1.0).de_frente
+    assert np.array_equal(fc.face(0, 1.0).imagem, guardado)  # fica o último rosto bom
+
+
+def test_paraquedistas_saltam_descem_e_pousam():
+    from projmap.effects.faces import FaceCrop
+    from projmap.effects.parachutes import CHAO, PES, Fase, Parachutists
+
+    p = Parachutists(random.Random(3))
+    rosto = FaceCrop(0, 1.0, np.full((256, 256, 3), 200, np.uint8), True)
+    assert not p.saltadores
+    for _ in range(240):  # 4 s: o avião entra e larga alguém
+        p.update(1 / 60, [rosto], 10.0)
+    assert p.saltadores, "o avião devia ter soltado pelo menos um paraquedista"
+    s = p.saltadores[0]
+    assert s.rosto == 0  # usa o rosto de quem está na câmera
+    for _ in range(60 * 20):  # 20 s: tempo de descer e pousar
+        p.update(1 / 60, [rosto], 10.0)
+        if any(x.fase is Fase.NO_CHAO for x in p.saltadores):
+            break
+    pousado = next(x for x in p.saltadores if x.fase is Fase.NO_CHAO)
+    assert float(pousado.posicao[1]) + PES == pytest.approx(CHAO, abs=1e-3)
+    assert 0.04 <= float(pousado.posicao[0]) <= 0.96  # nunca sai da tela
+
+
+def test_paraquedas_desenha_ceu_chao_e_rosto_num_rgba():
+    from projmap.effects.faces import FaceCrop
+    from projmap.effects.parachutes import Parachutists
+
+    p = Parachutists(random.Random(3))
+    rosto_cor = np.zeros((256, 256, 3), np.uint8)
+    rosto_cor[:] = (10, 240, 10)  # verde berrante: fácil de achar na cena
+    rosto = FaceCrop(0, 1.0, rosto_cor, True)
+    for _ in range(400):
+        p.update(1 / 60, [rosto], 10.0)
+    img = np.zeros((360, 640, 4), np.uint8)
+    img[..., 3] = 255
+    p.draw(img, [rosto], 1.0)
+    assert (img[..., 3] == 255).all()  # o alfa do quadro não é tocado
+    assert img[10, 320, 2] > img[10, 320, 0]  # céu: mais azul que vermelho em cima
+    assert img[350, 320, 1] > img[350, 320, 2]  # morro: mais verde que azul embaixo
+    verde = (img[..., 1] > 200) & (img[..., 0] < 80) & (img[..., 2] < 80)
+    assert verde.any(), "o rosto recortado devia aparecer na cabeça de alguém"
+
+    # Com o efeito saindo (fade), a cena entra misturada com o que estava atrás.
+    fundo = np.zeros((360, 640, 4), np.uint8)
+    fundo[..., 0] = 255  # vermelho puro
+    fundo[..., 3] = 255
+    p.draw(fundo, [rosto], 0.5)
+    assert 60 < int(fundo[10, 320, 0]) < 200 and fundo[10, 320, 2] > 40
+
+
 def test_api_de_efeitos_com_motor_falso(tmp_path):
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
@@ -242,7 +381,8 @@ def test_api_de_efeitos_com_motor_falso(tmp_path):
     eng = FakeEngine()
     rt.engine_factory = lambda: eng
     c = TestClient(create_app(ProjectState(ProjectStore.create(tmp_path / "s.projmap", "T")), runtime=rt))
-    assert set(c.get("/api/interact/effects").json()["effects"]) == {"vf-luz", "vf-lego", "vf-ecos"}
+    assert set(c.get("/api/interact/effects").json()["effects"]) == {
+        "vf-luz", "vf-lego", "vf-ecos", "vf-bichinho", "vf-paraquedas"}
     assert c.post("/api/interact/effects/nada").status_code == 404
     st = c.post("/api/interact/effects/vf-lego").json()
     assert st["effect"] == "vf-lego" and eng.key == "vf-lego"

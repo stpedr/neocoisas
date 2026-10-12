@@ -24,7 +24,11 @@ import numpy as np
 from . import config as C
 from .audio import AudioAnalyzer, AudioLevels
 from .catalog import EFFECTS
+from .critter import NUM_ELOS_RABO, Critter
+from .dynamics import aproximar, smoothstep
+from .faces import FaceCropper
 from .importar import DEST, is_imported
+from .parachutes import Parachutists
 from .tracker import NUM_KEYPOINTS
 from .vision import VisionProcessor, VisionResult
 
@@ -35,11 +39,6 @@ in vec2 in_pos;
 out vec2 uv;
 void main() { uv = in_pos * 0.5 + 0.5; gl_Position = vec4(in_pos, 0.0, 1.0); }
 """
-NUM_ELOS_RABO = 6  # tamanho de raboPontos por pessoa no shader original (fase 2)
-
-
-def aproximar(atual: float, alvo: float, dt: float, tau: float) -> float:
-    return atual + (alvo - atual) * (1.0 - math.exp(-dt / tau)) if dt > 0 else atual
 
 
 @dataclass
@@ -54,6 +53,9 @@ class EffectParams:
     distancia_ecos: float = 4.0
     tamanho_peca: float = 16.0
     lego_cair: bool = True
+    animal: float = 0.0  # 0 gato, 1 dinossauro, 2 coelho
+    fundo_colorido: bool = True
+    intervalo_aviao: float = 10.0
     brilho: float = 1.0
 
 
@@ -65,6 +67,7 @@ class _Slot:
     energia_d: float = 0.0
     altura: float = 0.0
     pontos: np.ndarray = field(default_factory=lambda: np.zeros((NUM_KEYPOINTS, 3), np.float32))
+    critter: Critter = field(default_factory=Critter)
 
 
 class EffectsEngine:
@@ -88,7 +91,11 @@ class EffectsEngine:
         # estado do ofApp
         self._vres = VisionResult()
         self._slots = [_Slot() for _ in range(C.MAX_PESSOAS)]
-        self._fade = {"luz": 0.0, "ecos": 0.0, "lego": 0.0, "maos": 0.0}
+        self._fade = {"luz": 0.0, "ecos": 0.0, "lego": 0.0, "maos": 0.0,
+                      "bichinho": 0.0, "paraquedas": 0.0, "fundo": 1.0}
+        self._faces = FaceCropper()
+        self._parachutes = Parachutists()
+        self._rostos: list = []
         self._hist: deque[np.ndarray] = deque(maxlen=8 * 8 + 1)
         self._ganho_camera = 1.0
         self._matiz = 0.0
@@ -124,7 +131,7 @@ class EffectsEngine:
                 comp.stop()
 
     def set_effect(self, key: Optional[str]) -> None:
-        """``key``: "vf-luz" | "vf-lego" | "vf-ecos" (ou o id interno) | None."""
+        """``key``: uma chave de ``catalog.EFFECTS`` (ou o id interno) | None."""
         if key is not None:
             key = EFFECTS[key].shader_id if key in EFFECTS else key
         self.effect = key
@@ -191,17 +198,25 @@ class EffectsEngine:
         """Um quadro (público para testes: dá para injetar visão e áudio)."""
         p = self.params
         eff = self.effect
+        visivel = lambda name: eff == name or self._fade[name] > 0.01  # noqa: E731
+        precisa_rostos = visivel("paraquedas")
         if self._vision is not None:
-            self._vision.want_comic = eff == "ecos" or self._fade["ecos"] > 0.01
-            self._vision.want_frame = eff == "lego" or self._fade["lego"] > 0.01
+            self._vision.want_comic = visivel("ecos")
+            # O quadro da câmera serve às cores das peças (LEGO) e aos rostos
+            # dos paraquedistas.
+            self._vision.want_frame = visivel("lego") or precisa_rostos
         new = vision if vision is not None else (self._vision.latest(self._vres.seq) if self._vision else None)
         if new is not None:
             self._on_vision(new)
         self._update_slots(dt)
         self._update_music(dt, audio if audio is not None else (self._audio.get() if self._audio else AudioLevels()))
-        for name in ("luz", "ecos", "lego"):
+        for name in ("luz", "ecos", "lego", "bichinho", "paraquedas"):
             self._fade[name] = aproximar(self._fade[name], 1.0 if eff == name else 0.0, dt, 0.25)
         self._fade["maos"] = aproximar(self._fade["maos"], 1.0 if (eff == "luz" and p.orbes_maos) else 0.0, dt, 0.25)
+        self._fade["fundo"] = aproximar(self._fade["fundo"], 1.0 if p.fundo_colorido else 0.0, dt, 0.25)
+        if new is not None and precisa_rostos and new.frame is not None:
+            self._crop_faces(new.frame)
+        self._update_parachutes(dt)
         self._update_center(dt)
         img = self._draw()
         self._seq += 1
@@ -241,12 +256,14 @@ class EffectsEngine:
 
     def _update_slots(self, dt: float) -> None:
         by_slot = {pp.slot: pp for pp in self._vres.people}
+        animal = int(round(self.params.animal))
         for s, slot in enumerate(self._slots):
             pp = by_slot.get(s)
             alvo = alvo_e = alvo_d = 0.0
             if pp is not None:
-                if slot.id != pp.id:
-                    self._slots[s] = slot = _Slot(id=pp.id)
+                if slot.id != pp.id:  # pessoa nova neste slot: personagem recomeça
+                    self._slots[s] = slot = _Slot(id=pp.id, critter=Critter(pp.id))
+                    self._faces.forget(s)
                 alvo = 1.0 if pp.active else 0.0
                 alvo_e, alvo_d = pp.wrist_speed_l, pp.wrist_speed_r
                 slot.altura = float((pp.box[3] - pp.box[1]) / C.CAMERA_ALTURA)
@@ -255,6 +272,9 @@ class EffectsEngine:
             slot.presenca = aproximar(slot.presenca, alvo, dt, 0.12 if alvo > slot.presenca else 0.45)
             slot.energia_e = aproximar(slot.energia_e, alvo_e, dt, 0.06 if alvo_e > slot.energia_e else 0.5)
             slot.energia_d = aproximar(slot.energia_d, alvo_d, dt, 0.06 if alvo_d > slot.energia_d else 0.5)
+            # O ``flash`` é o da batida anterior, como no original (que atualiza
+            # os slots antes da música).
+            slot.critter.update(slot.pontos, slot.altura, slot.presenca, dt, self._flash, animal)
 
     def _update_music(self, dt: float, lv: AudioLevels) -> None:
         p = self.params
@@ -278,15 +298,38 @@ class EffectsEngine:
             self._matiz = p.matiz_fixo
         self._flash = aproximar(self._flash, 0.0, dt, 0.15)
 
+    def _crop_faces(self, frame: np.ndarray) -> None:
+        for s, slot in enumerate(self._slots):
+            cr = slot.critter
+            if slot.presenca < 0.05 or cr.cabeca_valida < 0.05:
+                self._faces.forget(s)
+                continue
+            self._faces.crop(frame, s, slot.pontos, cr.cabeca_centro, cr.cabeca_raio, cr.cabeca_dir)
+
+    def _update_parachutes(self, dt: float) -> None:
+        if self.effect != "paraquedas" and self._fade["paraquedas"] < 0.01:
+            self._rostos = []
+            self._parachutes.clear()
+            return
+        rostos = []
+        for s, slot in enumerate(self._slots):
+            cr = slot.critter
+            if slot.presenca < 0.05 or cr.cabeca_valida < 0.05 or not self._faces.ready(s):
+                continue
+            rosto = self._faces.face(s, slot.presenca * cr.cabeca_valida)
+            if rosto is not None:
+                rostos.append(rosto)
+        self._rostos = rostos
+        self._parachutes.update(dt, rostos, self.params.intervalo_aviao)
+
     def _update_center(self, dt: float) -> None:
-        """Centro da pessoa principal (raios do fundo dos Ecos). O original usa
-        a cabeça do bichinho; aqui o nariz, que é o mesmo ponto na prática."""
+        """Centro da pessoa principal (raios do fundo dos Ecos)."""
         best = 0.0
         for slot in self._slots:
-            nose = slot.pontos[0]
-            if slot.presenca > best and nose[2] > 0.3:
+            cr = slot.critter
+            if slot.presenca > best and cr.cabeca_valida > 0.3:
                 best = slot.presenca
-                self._centro += (nose[:2] - self._centro) * (1.0 - math.exp(-dt / 0.3))
+                self._centro += (cr.cabeca_centro - self._centro) * (1.0 - math.exp(-dt / 0.3))
 
     def _draw(self) -> np.ndarray:
         w, h = self.size
@@ -294,9 +337,32 @@ class EffectsEngine:
         p = self.params
         pontos = np.zeros((C.MAX_PESSOAS * NUM_KEYPOINTS, 3), np.float32)
         pessoas = np.zeros((C.MAX_PESSOAS, 4), np.float32)
+        cabecas = np.zeros((C.MAX_PESSOAS, 4), np.float32)
+        corpos = np.zeros((C.MAX_PESSOAS, 4), np.float32)
+        extras = np.zeros((C.MAX_PESSOAS, 4), np.float32)
+        rig1 = np.zeros((C.MAX_PESSOAS, 4), np.float32)
+        rig2 = np.zeros((C.MAX_PESSOAS, 4), np.float32)
+        rig3 = np.zeros((C.MAX_PESSOAS, 4), np.float32)
+        bracos = np.zeros((C.MAX_PESSOAS, 4), np.float32)
+        rabo_pontos = np.zeros((C.MAX_PESSOAS * NUM_ELOS_RABO, 2), np.float32)
+        # Personagens bem menores que o maior em cena são detecções falsas
+        # (pôster, reflexo): somem.
+        maior_u = max((sl.critter.rig_u for sl in self._slots if sl.critter.rig_valido > 0.5), default=0.0)
         for s, slot in enumerate(self._slots):
+            cr = slot.critter
             pessoas[s] = (slot.presenca, slot.energia_e, slot.energia_d, slot.altura)
             pontos[s * NUM_KEYPOINTS:(s + 1) * NUM_KEYPOINTS] = slot.pontos
+            cabecas[s] = (cr.cabeca_centro[0], cr.cabeca_centro[1], cr.cabeca_raio, cr.cabeca_valida)
+            corpos[s] = (cr.cabeca_dir[0], cr.cabeca_dir[1], cr.escala, cr.orelha_angulo)
+            extras[s] = (cr.pupila[0], cr.pupila[1], cr.piscar, cr.rabo_angulo)
+            relativo = smoothstep(0.45, 0.60, cr.rig_u / maior_u) if maior_u > 0 else 1.0
+            rig1[s] = (cr.rig_raiz[0], cr.rig_raiz[1], cr.rig_u, cr.rig_valido * relativo)
+            rig2[s] = (cr.rig_corpo_angulo, cr.cabeca_inclinacao,
+                       math.atan2(cr.perna[0][1], cr.perna[0][0]), math.atan2(cr.perna[1][1], cr.perna[1][0]))
+            bracos[s] = (cr.mao[0][0], cr.mao[0][1], cr.mao[1][0], cr.mao[1][1])
+            rig3[s] = (cr.rig_esticar, cr.cabeca_deslocamento[0], cr.cabeca_deslocamento[1], 0.0)
+            for k in range(NUM_ELOS_RABO):
+                rabo_pontos[s * NUM_ELOS_RABO + k] = cr.rabo[k] / (C.CAMERA_LARGURA, C.CAMERA_ALTURA)
         lv = self._lv
 
         def put(name: str, value) -> None:
@@ -317,9 +383,17 @@ class EffectsEngine:
         put("numEcos", float(round(p.quantidade_ecos)))
         put("carimboForca", self._carimbo_forca)
         put("centroCena", (float(self._centro[0]), float(self._centro[1])))
-        put("efeitoBichinho", 0.0)  # fase 2
-        put("efeitoFundo", 0.0)
-        put("animal", 0.0)
+        put("efeitoBichinho", self._fade["bichinho"])
+        put("efeitoFundo", self._fade["fundo"])
+        put("animal", float(round(p.animal)))
+        put("cabeca", cabecas)
+        put("corpo", corpos)
+        put("extra", extras)
+        put("rig1", rig1)
+        put("rig2", rig2)
+        put("rig3", rig3)
+        put("bracos", bracos)
+        put("raboPontos", rabo_pontos)
         put("efeitoLego", self._fade["lego"])
         put("tamanhoPeca", float(p.tamanho_peca))
         put("legoCair", 1.0 if p.lego_cair else 0.0)
@@ -334,4 +408,9 @@ class EffectsEngine:
         self.vao.render(mode=5)  # TRIANGLE_STRIP
         data = self.fbo.read(components=4, alignment=1)
         # Linha 0 do FBO = uv.y 0 = linha 0 da máscara (topo da câmera): já está na orientação da imagem.
-        return np.frombuffer(data, np.uint8).reshape(h, w, 4).copy()
+        img = np.frombuffer(data, np.uint8).reshape(h, w, 4).copy()
+        # Os paraquedistas são desenhados com o OpenCV por cima do shader, como
+        # no original (lá o OF desenha depois do quadTela).
+        if self._fade["paraquedas"] > 0.01:
+            self._parachutes.draw(img, self._rostos, self._fade["paraquedas"])
+        return img
