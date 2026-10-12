@@ -1,6 +1,7 @@
 """Janela de saída do projetor (pyglet + moderngl).
 
-- Tela cheia sem bordas no monitor escolhido (``--display``), com vsync.
+- Tela cheia sem bordas no monitor escolhido (``--display``: ``auto`` = projetor,
+  ``0`` = principal, ``1``… = as outras; ver ``screens.py``), com vsync.
 - A cada frame compara a revisão do projeto (um inteiro) e só reconstrói a lista
   de desenho quando ela muda — arrastar um canto na UI aparece na parede no
   frame seguinte.
@@ -29,7 +30,7 @@ def run_output(
     node_id: str,
     media_path: MediaResolver,
     resolve_path: PathResolver,
-    display: int = 0,
+    display: "int | str" = "auto",
     windowed: bool = False,
     window_size: tuple[int, int] = (960, 540),
     on_frame: Optional[Callable[[], None]] = None,
@@ -37,10 +38,19 @@ def run_output(
     import moderngl
     import pyglet
 
-    screens = pyglet.display.get_display().get_screens()
-    screen = screens[min(max(display, 0), len(screens) - 1)]
-    if display >= len(screens):
-        log.warning("monitor %d não existe (%d disponíveis); usando o último", display, len(screens))
+    from .screens import choose_screen, list_screens
+
+    _guard_dpi_event(pyglet)
+
+    screens = list_screens()
+    chosen = choose_screen(screens, display)
+    if chosen is None:  # número além das telas existentes
+        chosen = choose_screen(screens, "auto")
+        log.warning("tela %s não existe (%d disponíveis); usando %s", display, len(screens), chosen.label)
+    screen = chosen.handle
+    log.info("saída na tela %s em (%d, %d)", chosen.label, chosen.x, chosen.y)
+    if len(screens) == 1 and not windowed:
+        log.warning("só uma tela detectada: o projetor está em modo Duplicar? Use Windows+P -> Estender")
 
     config = pyglet.gl.Config(double_buffer=True, major_version=3, minor_version=3, forward_compatible=True)
     rev, project = snapshot()
@@ -125,3 +135,31 @@ def file_snapshot(project_file: Path, load: Callable[[], Project]) -> Snapshot:
         return state["rev"], state["project"]
 
     return snap
+
+
+def _guard_dpi_event(pyglet) -> None:
+    """Ao abrir a janela num projetor com outra escala (ex.: notebook 150%,
+    projetor 100%), o Windows manda WM_DPICHANGED antes de o contexto GL existir
+    e o pyglet levanta "Canvas has not been attached". Ignorar esse evento
+    inicial é seguro: o tamanho real é lido a cada quadro."""
+    try:
+        from pyglet.window.win32 import Win32Window
+    except ImportError:  # não é Windows
+        return
+    original = getattr(Win32Window, "_event_dpi_change", None)
+    if original is None or getattr(original, "_projmap_guard", False):
+        return
+
+    import functools
+
+    @functools.wraps(original)  # copia o _platform_event_data que o pyglet usa para registrar o evento
+    def guarded(self, msg, wParam, lParam):
+        try:
+            return original(self, msg, wParam, lParam)
+        except RuntimeError as exc:
+            if "not been attached" not in str(exc):
+                raise
+            return 0
+
+    guarded._projmap_guard = True
+    Win32Window._event_dpi_change = guarded
