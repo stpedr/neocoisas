@@ -25,6 +25,7 @@ FG = "#e8eef6"
 DIM = "#94a3b8"
 ACCENT = "#7c5cff"
 NEW = "＋ Novo show…"
+SENSORS = ["Pessoa simulada (sem câmera)", "Webcam (ex.: Logitech C920)", "Celular como sensor (/sensor)"]
 
 
 class Launcher(tk.Tk):
@@ -113,6 +114,22 @@ class Launcher(tk.Tk):
         ttk.Radiobutton(c, text="Só o editor (sem saída)", value="none", variable=self.out_var).pack(anchor="w")
         ttk.Label(c, text="Monitor 0 é a tela principal; o projetor costuma ser o 1.", style="Dim.TLabel").pack(anchor="w")
 
+        # Interação
+        c = self._card("Interação (jogos com fantasmas, estrela…)")
+        r = ttk.Frame(c, style="Card.TFrame")
+        r.pack(fill="x", pady=(6, 0))
+        self.sensor_var = tk.StringVar(value={"sim": SENSORS[0], "webcam": SENSORS[1], "phone": SENSORS[2]}.get(self.s.sensor, SENSORS[0]))
+        ttk.Combobox(r, textvariable=self.sensor_var, values=SENSORS, state="readonly", width=34).pack(side="left")
+        r2 = ttk.Frame(c, style="Card.TFrame")
+        r2.pack(fill="x", pady=(6, 0))
+        ttk.Label(r2, text="Câmera:", style="Card.TLabel").pack(side="left")
+        self.camera_var = tk.StringVar(value=self.s.camera)
+        self.camera_box = ttk.Combobox(r2, textvariable=self.camera_var, state="readonly", width=30)
+        self.camera_box.pack(side="left", padx=(6, 0))
+        ttk.Button(r2, text="↻", width=3, command=self._load_cameras).pack(side="left", padx=(6, 0))
+        ttk.Label(c, text="Webcam: conecte a Logitech C920 antes de abrir; 'auto' a escolhe sozinho.", style="Dim.TLabel").pack(anchor="w")
+        self.after(300, self._load_cameras)
+
         # Celular
         c = self._card("Celular")
         self.lan_var = tk.BooleanVar(value=self.s.lan)
@@ -140,6 +157,31 @@ class Launcher(tk.Tk):
         self.log = tk.Text(log_f, height=7, bg=CARD, fg=DIM, insertbackground=FG, relief="flat", font=("Consolas", 9), wrap="word")
         self.log.pack(fill="both", expand=True)
         self.log.configure(state="disabled")
+
+    # ------------------------------------------------------------ câmeras
+    def _load_cameras(self) -> None:
+        def work():
+            try:
+                from ..interact.cameras import choose_camera, list_cameras
+
+                cams = list_cameras()
+                pick = choose_camera(cams, "auto")
+            except Exception:  # noqa: BLE001 — sem OpenCV/ffmpeg: fica só "auto"
+                cams, pick = [], None
+            self.after(0, lambda: self._set_cameras(cams, pick))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _set_cameras(self, cams, pick) -> None:
+        auto = f"auto ({pick.name})" if pick else "auto"
+        self._cams = {auto: "auto", **{f"{c.index}: {c.name}" + (" (virtual)" if c.virtual else ""): str(c.index) for c in cams}}
+        self.camera_box["values"] = list(self._cams)
+        current = self.s.camera or "auto"
+        label = next((k for k, v in self._cams.items() if v == current), auto)
+        self.camera_var.set(label)
+
+    def _camera_value(self) -> str:
+        return getattr(self, "_cams", {}).get(self.camera_var.get(), self.camera_var.get() or "auto")
 
     # ------------------------------------------------------------ shows
     def _refresh_shows(self, select: str | None = None) -> None:
@@ -178,6 +220,8 @@ class Launcher(tk.Tk):
         s = self.s
         s.last_show, s.output, s.display = show, self.out_var.get(), int(self.disp_var.get() or 0)
         s.lan, s.open_browser = bool(self.lan_var.get()), bool(self.browser_var.get())
+        s.sensor = {SENSORS[0]: "sim", SENSORS[1]: "webcam", SENSORS[2]: "phone"}.get(self.sensor_var.get(), "sim")
+        s.camera = self._camera_value()
         save_settings(s)
         os.makedirs(s.shows_dir, exist_ok=True)
         cmd = master_command(s, show)

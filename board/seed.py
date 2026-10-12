@@ -918,6 +918,27 @@ SEED_CARDS: list[dict] = [
         'labels': ['frontend', 'projmap', 'prioridade:média'],
     },
     {
+        'title': 'ProjMap — Castelo dos Boos (sprites PNG, estrela de poder) + webcam C920',
+        'description': 'Cena com fundo e sprites de imagem (opaco perseguindo, translúcido/vergonha quando olhado), estrela em senoide que dá invencibilidade e derrota os fantasmas; câmeras por nome (auto prefere C920, ignora virtuais), MJPG 720p30, foco fixo; escolha no lançador.',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['backend', 'interativo', 'projmap', 'prioridade:alta'],
+    },
+    {
+        'title': 'ProjMap — Efeitos do visual_frames, fase 1 (Luz reativa, LEGO, Ecos)',
+        'description': 'Importa o shader GLSL e os modelos YOLO26 do visual_frames (Adriel Vasques, com permissão) e traduz a visão (detector seg+pose em DirectML, ByteTrack, One Euro, filtro guiado, XDoG) e o áudio (loopback WASAPI, bandas, batida de Patin). Motor GL fora da tela entrega os quadros às superfícies; menu no card Interativo.',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['backend', 'frontend', 'interativo', 'projmap', 'prioridade:alta'],
+    },
+    {
+        'title': 'ProjMap — Efeitos do visual_frames, fase 2 (Bichinho espelho, Paraquedas)',
+        'description': 'Traduzir atualizarBichinho/atualizarRig (dinâmica de 2ª ordem, IK, Verlet do rabo) e a cena de Paraquedistas.cpp (recorte de rostos com CLAHE).',
+        'column': 'backlog',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['backend', 'interativo', 'projmap', 'prioridade:média'],
+    },
+    {
         'title': 'ProjMap F7 — Conteúdo por IA por superfície (opcional)',
         'description': 'Pipeline do ifnull com as factories existentes (stability structure, comfyui ControlNet, Veo): foto da posição → geração estilizada → recorte por superfície → mídia do projeto.',
         'column': 'backlog',

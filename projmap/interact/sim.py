@@ -30,10 +30,12 @@ class Entity:
     x: float
     y: float
     heading: float = 0.0  # rad, direção do último movimento (para o sprite olhar)
-    state: str = "idle"  # idle | move | frozen | shy
+    state: str = "idle"  # idle | move | frozen | shy | scared | defeated
     vx: float = 0.0
     vy: float = 0.0
     wander_dir: float = 0.0
+    defeated_t: float = -1.0  # instante em que foi derrotado (para o "puf"); < 0 = vivo
+    respawn_t: float = -1.0  # volta neste instante
 
 
 @dataclass
@@ -55,6 +57,15 @@ class Snapshot:
     gazes: list[Gaze]
     events: list[Event] = field(default_factory=list)
     flash: float = 0.0  # 0..1, decai após "caught"
+    star: Optional["StarState"] = None  # estrela visível (ou None)
+    power: float = 0.0  # 0..1: invencibilidade restante (fração da duração)
+
+
+@dataclass
+class StarState:
+    x: float
+    y: float
+    born: float  # instante em que apareceu (para girar/pulsar)
 
 
 class Simulation:
@@ -67,6 +78,11 @@ class Simulation:
         self.flash = 0.0
         self.entities: list[Entity] = []
         self._events: list[Event] = []
+        self.star: Optional[StarState] = None
+        self._star_dir = 1.0
+        self._star_y0 = 0.5
+        self._next_star = spec.star.interval_s * 0.5 if spec.star else math.inf
+        self.power_until = -1.0
         self._spawn_all(players=[])
 
     # ------------------------------------------------------------------ spawn
@@ -99,6 +115,7 @@ class Simulation:
 
     def reset(self, players: Optional[list[Player]] = None) -> None:
         self._spawn_all(players or [])
+        self.power_until = -1.0
 
     # ------------------------------------------------------------------- passo
     def step(self, dt: float, players: list[Player]) -> Snapshot:
@@ -111,8 +128,34 @@ class Simulation:
         tracked = [p for p in players if p.tracked] or players  # sem ninguém: alvo "fantasma" = último conhecido
         caught: list[int] = []
 
+        star_events = self._step_star(dt, [p for p in players if p.tracked])
+        powered = self.t < self.power_until
+        defeated: list[int] = []
+
         for e in self.entities:
             group = self.spec.groups[e.group]
+            if e.respawn_t >= 0:  # derrotado: espera para voltar
+                if self.t >= e.respawn_t:
+                    e.x, e.y = self._spawn_point(group, tracked)
+                    e.respawn_t = e.defeated_t = -1.0
+                    e.state = "idle"
+                else:
+                    continue
+            if powered and any(isinstance(b, ChasePlayer) for b in group.behaviors) and tracked:
+                # Estrela ativa: os perseguidores fogem; quem for tocado é derrotado.
+                p = _nearest(e, tracked)
+                vx, vy = _toward(p.anchor, (e.x, e.y), self.spec.star.flee_speed)
+                sx, sy = self._separation(e, group)
+                e.vx, e.vy = vx + sx, vy + sy
+                e.heading = math.atan2(e.vy, e.vx)
+                e.state = "scared"
+                r = group.size / 2
+                e.x, e.y = self.world.clamp((e.x + e.vx * dt, e.y + e.vy * dt), margin=r * 0.5)
+                really = [q for q in players if q.tracked]
+                if really and math.dist((e.x, e.y), _nearest(e, really).anchor) <= self.spec.star.catch_radius + r * 0.5:
+                    e.state, e.defeated_t, e.respawn_t = "defeated", self.t, self.t + self.spec.star.respawn_s
+                    defeated.append(e.id)
+                continue
             vx = vy = 0.0
             for b in group.behaviors:
                 dx, dy = self._behavior_velocity(b, e, tracked, gazes, dt)
@@ -142,15 +185,50 @@ class Simulation:
                 if math.dist((e.x, e.y), target) <= self.spec.catch_radius + r * 0.5:
                     caught.append(e.id)
 
-        events = [Event("caught", eid, self.t) for eid in caught]
+        events = star_events + [Event("defeated", eid, self.t) for eid in defeated]
+        events += [Event("caught", eid, self.t) for eid in caught]
         if caught:
             if "flash" in self.spec.on_caught:
                 self.flash = 1.0
             if "reset" in self.spec.on_caught:
                 self.reset(tracked)
         self.flash = max(0.0, self.flash - dt / 0.6)
+        power = max(0.0, (self.power_until - self.t) / self.spec.star.duration_s) if self.spec.star else 0.0
+        star = StarState(self.star.x, self.star.y, self.star.born) if self.star else None
         return Snapshot(self.tick, self.t, self.spec, [_copy(e) for e in self.entities], list(players), gazes,
-                        events, self.flash)
+                        events, self.flash, star, power)
+
+    def _step_star(self, dt: float, tracked: list[Player]) -> list[Event]:
+        """Estrela: aparece a cada ``interval_s``, cruza a parede em senoide e some
+        do outro lado; quem a tem à frente quando ela passa a pega."""
+        st = self.spec.star
+        if st is None:
+            return []
+        a = self.spec.aspect
+        r = st.size / 2
+        if self.star is None:
+            if self.t >= self._next_star and self.t >= self.power_until:
+                self._star_dir = self.rng.choice([-1.0, 1.0])
+                self._star_y0 = self.rng.uniform(0.35, 0.65)
+                x = -r if self._star_dir > 0 else a + r
+                self.star = StarState(x, self._star_y0, self.t)
+                return [Event("star_appeared", -1, self.t)]
+            return []
+        s = self.star
+        s.x += self._star_dir * st.speed * dt
+        s.y = self._star_y0 + st.amplitude * math.sin(2 * math.pi * st.frequency * (self.t - s.born))
+        for p in tracked:
+            if abs(p.anchor[0] - s.x) <= st.catch_radius:
+                self.star = None
+                self.power_until = self.t + st.duration_s
+                self._next_star = self.power_until + st.interval_s
+                self.flash = 0.0
+                return [Event("star_caught", p.id, self.t)]
+        if s.x < -r * 2 or s.x > a + r * 2:  # saiu do outro lado: tenta de novo depois
+            self.star = None
+            self._next_star = self.t + st.interval_s
+            return [Event("star_missed", -1, self.t)]
+        return []
 
     def _separation(self, e: Entity, group: EntityGroup) -> tuple[float, float]:
         """Empurrão suave para longe de vizinhos do mesmo grupo que se sobrepõem.
@@ -214,4 +292,4 @@ def _toward(a, b, speed: float, slow_radius: float = 0.0):
 
 
 def _copy(e: Entity) -> Entity:
-    return Entity(e.id, e.group, e.x, e.y, e.heading, e.state, e.vx, e.vy, e.wander_dir)
+    return Entity(e.id, e.group, e.x, e.y, e.heading, e.state, e.vx, e.vy, e.wander_dir, e.defeated_t, e.respawn_t)

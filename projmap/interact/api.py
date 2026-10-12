@@ -66,6 +66,9 @@ def create_router(runtime: InteractionRuntime,
                 for p, g in zip(snap.players, snap.gazes)
             ],
             "events": [{"name": ev.name, "entity_id": ev.entity_id, "t": ev.t} for ev in runtime.recent_events()[-10:]],
+            "effect": runtime.effect,
+            "effect_status": runtime.engine.status if runtime.engine is not None else "",
+            "effect_params": (runtime.engine.params.__dict__ if runtime.engine is not None else None),
         }
 
     @r.get("/state")
@@ -81,6 +84,47 @@ def create_router(runtime: InteractionRuntime,
         if name not in PRESETS:
             raise HTTPException(404, f"preset '{name}' não existe")
         runtime.set_scene(PRESETS[name])
+        return state()
+
+    # ------------------------------------------- efeitos do visual_frames
+    @r.get("/effects")
+    def effects() -> dict:
+        from ..effects.catalog import EFFECTS
+        from ..effects.importar import is_imported
+
+        ok = is_imported()
+        return {
+            "imported": ok,
+            "hint": "" if ok else "rode: python -m projmap.effects.importar <pasta do visual_frames>",
+            "effects": {k: {"title": e.title, "description": e.description, "available": e.available and ok}
+                        for k, e in EFFECTS.items()},
+        }
+
+    @r.post("/effects/{name}")
+    def apply_effect(name: str) -> dict:
+        from ..effects.catalog import EFFECTS
+
+        if name == "off":
+            runtime.set_effect(None)
+            return state()
+        if name not in EFFECTS:
+            raise HTTPException(404, f"efeito '{name}' não existe")
+        try:
+            runtime.set_effect(name)
+        except (RuntimeError, OSError) as exc:
+            raise HTTPException(422, [str(exc)]) from exc
+        return state()
+
+    @r.patch("/effects/params")
+    def effect_params(changes: dict[str, Any]) -> dict:
+        eng = runtime.engine
+        if eng is None:
+            raise HTTPException(409, "nenhum efeito ativo")
+        unknown = set(changes) - set(eng.params.__dict__)
+        if unknown:
+            raise HTTPException(422, [f"ajuste desconhecido: {', '.join(sorted(unknown))}"])
+        for k, v in changes.items():
+            setattr(eng.params, k, type(getattr(eng.params, k))(v))
         return state()
 
     @r.post("/generate")

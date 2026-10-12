@@ -234,6 +234,82 @@ temperatura. Um duplo clique num controle volta ao padrão.
 - **Não use o keystone** (correção de trapézio) do projetor: ele perde
   resolução. O mapeamento do ProjMap já corrige a perspectiva.
 
+## 6.2 Jogo interativo: Castelo dos Boos (webcam C920)
+
+O jogo: os Boos te perseguem quando você vira de costas. Quando você olha,
+eles ficam com vergonha e translúcidos. De tempos em tempos passa uma
+**estrela** em zigue-zague: fique na frente dela quando ela passar para
+**pegá-la**. Por 8 segundos você fica invencível (borda de arco-íris), os
+Boos fogem piscando e quem você encostar é derrotado (volta depois).
+
+**1. Câmera (Logitech C920)**
+- Conecte a C920 **antes** de abrir o show e prenda-a na parede/projetor
+  olhando para o público.
+- Instale uma vez o reconhecimento de rosto:
+  ```bash
+  pip install mediapipe
+  python -m projmap.tools.fetch_models
+  ```
+- Confira se ela aparece: `python -m projmap.interact.cameras`. A marcada com
+  `<-- 'auto' usa esta` é a escolhida. Câmeras virtuais (OBS, DroidCam…) são
+  ignoradas.
+- No **lançador**, em *Interação*, escolha **Webcam (ex.: Logitech C920)**. A
+  câmera "auto" já prefere a C920. Pelo terminal:
+  `python -m projmap.master … --sensor webcam --camera C920`.
+- Ela roda em 1280×720 a 30 fps (MJPG), com o foco automático desligado.
+  Ilumine o rosto das pessoas: no escuro a câmera fica lenta.
+
+**2. Imagens do jogo** (ficam em `%USERPROFILE%\.projmap\scenesoo\`,
+fora do repositório):
+
+| Arquivo | O que é |
+|---|---|
+| `castelo.png` | Fundo |
+| `boo_04.png`, `boo_05.png`, `boo_06.png`, `boo_07.png`, `boo_10.png` | Boos perseguindo (opacos) |
+| `boo_08.png`, `boo_09.png` | Boos com vergonha (quando olhados, translúcidos) |
+| `estrela.png` | A estrela (sem ela, aparece uma estrela pixelada desenhada) |
+
+Pode trocar qualquer arquivo por outro com o mesmo nome (PNG com fundo
+transparente).
+
+**3. Ativar:** no editor, card **Interativo** → predefinição **Castelo dos
+Boos**. Depois, numa superfície, escolha a fonte **Cena interativa**.
+
+## 6.3 Efeitos visuais do visual_frames (Luz reativa, LEGO, Ecos em quadrinhos)
+
+Efeitos de **Adriel Vasques** ([visual_frames](https://github.com/adrielvasques/visual_frames),
+usados com permissão). A câmera vê as pessoas (inteligência artificial na placa
+de vídeo) e a música do PC muda as cores:
+
+| Efeito | O que faz |
+|---|---|
+| **Luz reativa** | Pontos neon no contorno das pessoas; cores no ritmo da música. |
+| **LEGO** | A pessoa vira um mosaico de peças LEGO; ao se mexer, as peças caem. |
+| **Ecos em quadrinhos** | A pessoa vira HQ e deixa ecos coloridos; na batida, um "carimbo". |
+
+**Instalar (uma vez):**
+```bash
+pip install -r requirements-projmap-master.txt
+git clone https://github.com/adrielvasques/visual_frames.git ../visual_frames
+python -m projmap.effects.importar ../visual_frames
+```
+O importador copia o shader e os modelos do projeto do autor para
+`%USERPROFILE%\.projmapisual_frames`. Rode de novo para trazer as
+atualizações dele.
+
+**Usar:** no editor, card **Interativo** → **Efeitos visuais** → escolha o
+efeito. Numa superfície, escolha a fonte **Cena interativa**. Há ajustes de
+brilho, sensibilidade ao som, tamanho das peças e quantidade de ecos.
+**Voltar à cena** desliga o efeito e libera a câmera.
+
+- **Câmera:** a mesma escolha do jogo (C920 automática; `--camera`). Quando um
+  efeito liga, ele assume a câmera.
+- **Música:** toque qualquer coisa no PC. O efeito escuta o que sai nos
+  alto-falantes (não precisa de microfone).
+- **Placa de vídeo:** obrigatória (NVIDIA, AMD ou Intel com DirectX 12). Na CPU
+  fica lento demais.
+- Bichinho espelho e Paraquedas virão numa segunda etapa.
+
 ## 7. Salvar, fazer backup e levar para outro PC
 
 - **Salvar:** não há botão. Cada mudança é gravada na hora na pasta do projeto

@@ -292,11 +292,13 @@ class PhoneSensor:
 class WebcamSensor:
     kind = "webcam"
 
-    def __init__(self, aspect: float = 16 / 9, camera: int = 0, model_path: Optional[str] = None,
-                 mirror: bool = True, distance_scale: float = 0.18):
+    def __init__(self, aspect: float = 16 / 9, camera: "int | str" = "auto", model_path: Optional[str] = None,
+                 mirror: bool = True, distance_scale: float = 0.18, size: str = "1280x720", fps: int = 30):
+        """``camera``: índice, parte do nome (ex.: ``"C920"``) ou ``"auto"`` (prefere
+        Logitech/C920 física, ignora câmeras virtuais). Ver ``interact/cameras.py``."""
         import os
 
-        import cv2
+        from .cameras import choose_camera, list_cameras, open_camera, parse_size
 
         try:
             from mediapipe.tasks.python import BaseOptions
@@ -307,16 +309,21 @@ class WebcamSensor:
         model_path = model_path or os.environ.get("PROJMAP_FACE_MODEL", "models/face_landmarker.task")
         if not os.path.isfile(model_path):
             raise RuntimeError(
-                f"modelo do MediaPipe não encontrado em {model_path}. Baixe 'face_landmarker.task' "
-                "(MediaPipe Face Landmarker) e aponte PROJMAP_FACE_MODEL para ele."
+                f"modelo do MediaPipe não encontrado em {model_path}. Rode: python -m projmap.tools.fetch_models"
             )
         self._mp = mp
         self._landmarker = vision.FaceLandmarker.create_from_options(vision.FaceLandmarkerOptions(
             base_options=BaseOptions(model_asset_path=model_path),
             running_mode=vision.RunningMode.VIDEO, num_faces=1))
-        self._cap = cv2.VideoCapture(camera)
-        if not self._cap.isOpened():
-            raise RuntimeError(f"não abriu a câmera {camera}")
+        cams = list_cameras()
+        cam = choose_camera(cams, camera)
+        if cam is None:
+            names = ", ".join(f"{c.index}: {c.name}" for c in cams) or "nenhuma"
+            raise RuntimeError(f"câmera '{camera}' não encontrada (disponíveis: {names})")
+        w, h = parse_size(size)
+        self._cap, got = open_camera(cam.index, w, h, fps)
+        self.camera_name = cam.name
+        log.info("webcam: %s (índice %d) em %dx%d @ %.0f fps", cam.name, cam.index, *got)
         self.aspect, self.mirror, self.distance_scale = aspect, mirror, distance_scale
         self._player = Player(x=aspect / 2, tracked=False)
         self._lock = threading.Lock()

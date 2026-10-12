@@ -1,7 +1,7 @@
 // Cliente da API do mestre. Em produção a UI é servida pelo próprio mestre
 // (mesma origem, base ""); no `npm run dev` aponte NEXT_PUBLIC_PROJMAP_API
 // para o mestre (ex.: http://localhost:8100).
-import type { DetectCandidate, InteractState, LibraryItem, MediaInfo, MediaItem, Output, Project, SourceSpec, Suggestion } from "./types";
+import type { DetectCandidate, EffectParams, EffectsCatalog, InteractState, LibraryItem, MediaInfo, MediaItem, Output, Project, SourceSpec, Suggestion } from "./types";
 
 export const API_BASE = process.env.NEXT_PUBLIC_PROJMAP_API ?? "";
 
@@ -165,5 +165,13 @@ export const api = {
   interactAuto: () => call<InteractState>("/api/interact/player/auto", { method: "POST" }),
   interactReset: () => call<InteractState>("/api/interact/reset", { method: "POST" }),
   interactPause: (paused: boolean) => call<InteractState>(`/api/interact/pause?paused=${paused}`, { method: "POST" }),
+  effects: () => call<EffectsCatalog>("/api/interact/effects"),
+  setEffect: (name: string) => call<InteractState>(`/api/interact/effects/${encodeURIComponent(name)}`, { method: "POST" }),
+  effectParams: (changes: Partial<EffectParams>) =>
+    call<InteractState>("/api/interact/effects/params", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(changes),
+    }),
   interactDebug: (on: boolean) => call<InteractState>(`/api/interact/debug?on=${on}`, { method: "POST" }),
 };

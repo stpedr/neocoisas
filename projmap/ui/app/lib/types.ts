@@ -181,4 +181,26 @@ export interface InteractState {
   events: { name: string; entity_id: number; t: number }[];
   source?: "llm" | "fallback";
   notes?: string[];
+  effect?: string | null;
+  effect_status?: string;
+  effect_params?: EffectParams | null;
+}
+
+// Efeitos importados do visual_frames (projmap/effects)
+export interface EffectParams {
+  orbes_maos: boolean;
+  cor_segue_musica: boolean;
+  matiz_fixo: number;
+  sensibilidade_som: number;
+  quantidade_ecos: number;
+  distancia_ecos: number;
+  tamanho_peca: number;
+  lego_cair: boolean;
+  brilho: number;
+}
+
+export interface EffectsCatalog {
+  imported: boolean;
+  hint: string;
+  effects: Record<string, { title: string; description: string; available: boolean }>;
 }

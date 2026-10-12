@@ -414,3 +414,7 @@ details summary { cursor: pointer; margin-bottom: 6px; }
 .color-controls { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 .color-row { display: flex; justify-content: space-between; gap: 8px; }
 .orient-row { flex-wrap: wrap; gap: 6px 14px; }
+
+/* ------------------------------------------------------------ efeitos visual_frames */
+.effects-section { display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px; }
+.effects-section h3 { margin: 0; font-size: 13px; }

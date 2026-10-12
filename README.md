@@ -1,5 +1,13 @@
 # Auto Niche Engine
 
+> **Procurando a projeção mapeada (ProjMap)?** Ela fica em [`projmap/`](projmap/)
+> e tem guia próprio: **[`projmap/GUIA.md`](projmap/GUIA.md)**. Em resumo:
+> `pip install -r requirements-projmap-master.txt`, compile a UI
+> (`cd projmap/ui && npm ci && npm run build`) e rode
+> `python -m projmap.desktop.install` para ter o atalho **ProjMap** no Menu
+> Iniciar (ou `python -m projmap.master --project shows/meu-show.projmap --windowed --open`).
+> Este README é do Auto Niche Engine (geração de conteúdo).
+
 Pipeline multi-agente, **100% local**, para produção de conteúdo de nicho com IA.
 Gera ideias e roteiros com [Ollama](https://ollama.com/) na sua máquina, filtra
 por qualidade, deixa você revisar estilo **Tinder** (web ou Telegram), renderiza
