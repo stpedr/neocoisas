@@ -58,6 +58,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--adb", action="store_true",
                         help="celular por USB: adb reverse da porta e abre /sensor no celular")
     parser.add_argument("--sensor-port", type=int, default=7001, help="porta OSC do sensor 'osc' (Kinect via TD)")
+    parser.add_argument("--camera", default="auto",
+                        help="sensor webcam: 'auto' (prefere Logitech/C920, ignora câmeras virtuais), parte do nome "
+                             "(ex.: C920) ou índice. Liste com: python -m projmap.interact.cameras")
+    parser.add_argument("--camera-size", default="1280x720", help="resolução da webcam (C920: 1280x720 a 30 fps)")
     parser.add_argument("--osc-out", default=None, metavar="HOST:PORTA",
                         help="envia o estado da cena por OSC (ex.: 127.0.0.1:7000 para o TouchDesigner)")
     parser.add_argument("--no-interact", action="store_true", help="desliga a camada interativa")
@@ -88,6 +92,8 @@ def main(argv: list[str] | None = None) -> None:
         from ..interact.runtime import build_runtime
 
         opts = {"port": args.sensor_port} if args.sensor == "osc" else {}
+        if args.sensor == "webcam":
+            opts = {"camera": args.camera, "size": args.camera_size}
         runtime = build_runtime(sensor=args.sensor, osc_out=args.osc_out, sensor_options=opts,
                                 scene_file=store.root / "scenes" / "active.json").start()
         log.info("camada interativa: cena '%s', sensor %s%s", runtime.spec.title, args.sensor,

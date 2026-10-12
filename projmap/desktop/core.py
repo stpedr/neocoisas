@@ -28,6 +28,8 @@ class Settings:
     token: str = ""  # vazio = gerado a cada execução
     open_browser: bool = True
     extra_library: list[str] = field(default_factory=list)
+    sensor: str = "sim"  # sim | webcam | phone (camada interativa)
+    camera: str = "auto"  # webcam: auto (prefere C920/Logitech), parte do nome ou índice
 
 
 def load_settings(path: Path = SETTINGS_PATH) -> Settings:
@@ -90,6 +92,10 @@ def master_command(s: Settings, show: str, python: Optional[str] = None) -> list
         cmd += ["--open"]
     for lib in s.extra_library:
         cmd += ["--library", lib]
+    if s.sensor in ("webcam", "phone"):
+        cmd += ["--sensor", s.sensor]
+        if s.sensor == "webcam":
+            cmd += ["--camera", s.camera or "auto"]
     return cmd
 
 

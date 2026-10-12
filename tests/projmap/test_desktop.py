@@ -80,3 +80,11 @@ def test_cria_atalho_windows(tmp_path):
     lnk = tmp_path / "menu" / "ProjMap.lnk"
     create_windows_shortcut(lnk, sys.executable, "-m projmap.desktop", tmp_path, make_icon(tmp_path / "i.ico"))
     assert lnk.is_file() and lnk.stat().st_size > 0
+
+
+def test_comando_com_webcam_e_celular(tmp_path):
+    cmd = master_command(Settings(shows_dir=str(tmp_path), sensor="webcam", camera="C920"), "S", python="python")
+    assert cmd[cmd.index("--sensor") + 1] == "webcam" and cmd[cmd.index("--camera") + 1] == "C920"
+    cmd = master_command(Settings(shows_dir=str(tmp_path), sensor="phone"), "S", python="python")
+    assert cmd[cmd.index("--sensor") + 1] == "phone" and "--camera" not in cmd
+    assert "--sensor" not in master_command(Settings(shows_dir=str(tmp_path)), "S", python="python")

@@ -918,6 +918,13 @@ SEED_CARDS: list[dict] = [
         'labels': ['frontend', 'projmap', 'prioridade:média'],
     },
     {
+        'title': 'ProjMap — Castelo dos Boos (sprites PNG, estrela de poder) + webcam C920',
+        'description': 'Cena com fundo e sprites de imagem (opaco perseguindo, translúcido/vergonha quando olhado), estrela em senoide que dá invencibilidade e derrota os fantasmas; câmeras por nome (auto prefere C920, ignora virtuais), MJPG 720p30, foco fixo; escolha no lançador.',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['backend', 'interativo', 'projmap', 'prioridade:alta'],
+    },
+    {
         'title': 'ProjMap F7 — Conteúdo por IA por superfície (opcional)',
         'description': 'Pipeline do ifnull com as factories existentes (stability structure, comfyui ControlNet, Veo): foto da posição → geração estilizada → recorte por superfície → mídia do projeto.',
         'column': 'backlog',
