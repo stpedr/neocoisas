@@ -15,6 +15,7 @@ SETTINGS_PATH = CONFIG_DIR / "launcher.json"
 DEFAULT_SHOWS_DIR = Path.home() / "Documents" / "ProjMap"
 
 URL_RE = re.compile(r"(http://\S+/remote/\S*)")
+SENSORS = ("phone", "sim", "webcam")
 
 
 @dataclass
@@ -28,7 +29,8 @@ class Settings:
     token: str = ""  # vazio = gerado a cada execução
     open_browser: bool = True
     extra_library: list[str] = field(default_factory=list)
-    sensor: str = "sim"  # sim | webcam | phone (camada interativa)
+    interact: bool = False  # camada interativa (fantasmas etc.) só quando o operador pede
+    sensor: str = "phone"  # phone (celular pelo USB/ADB) | sim | webcam
     camera: str = "auto"  # webcam: auto (prefere C920/Logitech), parte do nome ou índice
 
 
@@ -90,14 +92,19 @@ def master_command(s: Settings, show: str, python: Optional[str] = None) -> list
         cmd += ["--host", "0.0.0.0"]
         if s.token:
             cmd += ["--token", s.token]
+    if s.interact:
+        sensor = s.sensor if s.sensor in SENSORS else "phone"
+        cmd += ["--sensor", sensor]
+        if sensor == "phone":
+            cmd += ["--adb"]  # liga o celular pelo cabo e abre o sensor nele
+        elif sensor == "webcam":
+            cmd += ["--camera", s.camera or "auto"]
+    else:
+        cmd += ["--no-interact"]
     if s.open_browser:
         cmd += ["--open"]
     for lib in s.extra_library:
         cmd += ["--library", lib]
-    if s.sensor in ("webcam", "phone"):
-        cmd += ["--sensor", s.sensor]
-        if s.sensor == "webcam":
-            cmd += ["--camera", s.camera or "auto"]
     return cmd
 
 

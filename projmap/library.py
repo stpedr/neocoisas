@@ -64,9 +64,31 @@ def load_roots(path: Path = CONFIG_PATH) -> list[str]:
         return []
 
 
-def save_roots(roots: Iterable[str], path: Path = CONFIG_PATH) -> None:
+def _load_config(path: Path) -> dict:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _save_config(path: Path, **changes) -> None:
+    data = {**_load_config(path), **changes}  # preserva as outras chaves
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"roots": list(roots)}, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def save_roots(roots: Iterable[str], path: Path = CONFIG_PATH) -> None:
+    _save_config(path, roots=list(roots))
+
+
+def load_gdrive_folder(path: Path = CONFIG_PATH) -> str:
+    """Link/id da pasta do Google Drive colado no editor (ver ``gdrive.py``)."""
+    return str(_load_config(path).get("gdrive_folder", ""))
+
+
+def save_gdrive_folder(folder: str, path: Path = CONFIG_PATH) -> None:
+    _save_config(path, gdrive_folder=folder)
 
 
 def probe(path: Path, kind: str) -> tuple[int, int, float]:

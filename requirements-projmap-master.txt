@@ -19,3 +19,5 @@ python-osc>=1.8          # camada interativa: OSC (TouchDesigner/Kinect)
 onnxruntime-directml>=1.18; sys_platform == "win32"   # GPU no Windows (NVIDIA/AMD/Intel)
 onnxruntime>=1.18; sys_platform != "win32"
 soundcard>=0.4                                         # captura o que toca no PC (loopback)
+httpx>=0.27             # Google Drive na galeria (API oficial v3)
+python-dotenv>=1.0      # lê o .env (chaves do Drive) ao iniciar o mestre

@@ -69,6 +69,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--no-interact", action="store_true", help="desliga a camada interativa")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
+    _load_dotenv()
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -162,6 +163,16 @@ def main(argv: list[str] | None = None) -> None:
         thread.join(timeout=5)
         if runtime:
             runtime.stop()
+
+
+def _load_dotenv() -> None:
+    """Lê o ``.env`` da raiz do repositório (chaves do Google Drive, LLM etc.).
+    Variáveis já definidas no ambiente têm prioridade."""
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
 
 
 if __name__ == "__main__":

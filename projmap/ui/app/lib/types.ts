@@ -207,3 +207,39 @@ export interface EffectsCatalog {
   hint: string;
   effects: Record<string, { title: string; description: string; available: boolean }>;
 }
+
+// ---- presets de imagem do operador (projmap/color_presets.py)
+export interface ColorPreset {
+  id: string;
+  name: string;
+  color: ColorAdjust;
+}
+
+// ---- Google Drive na galeria (projmap/gdrive.py)
+export interface DriveStatus {
+  mode: "off" | "oauth" | "apikey";
+  configured: boolean;
+  connected: boolean;
+  root: string;
+  folder_set: boolean;
+  can_configure: boolean;
+}
+
+export interface DriveEntry {
+  id: string;
+  name: string;
+  kind: "folder" | MediaKind;
+  size_bytes: number;
+  modified: string;
+  width: number;
+  height: number;
+  duration: number;
+  aspect: number;
+  has_thumb: boolean;
+}
+
+export interface DriveListing {
+  folder: { id: string; name: string };
+  folders: DriveEntry[];
+  items: DriveEntry[];
+}
