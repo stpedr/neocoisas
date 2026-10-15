@@ -995,8 +995,8 @@ SEED_CARDS: list[dict] = [
     },
     {
         'title': 'ProjMap UI — infraestrutura de testes (Vitest + Playwright) e TDD',
-        'description': 'vitest + @testing-library/react + jsdom para componentes/unidade; @playwright/test para e2e. Primeiro teste cobrindo função pura de app/lib/geometry.ts antes de qualquer componente visual. A partir daqui, todo componente novo/migrado leva teste escrito antes (TDD).',
-        'column': 'backlog',
+        'description': 'vitest + @testing-library/react + jsdom para componentes/unidade (14 testes em geometry.ts); @playwright/test para e2e (smoke test do shell do editor, GET /api/project mockado). Achado: o editor exige o mestre respondendo pra renderizar (sem fallback) — documentado na entrega. A partir daqui, todo componente novo/migrado leva teste escrito antes (TDD). Entrega: docs/entregas/projmap-ui-infra-testes-tdd.md.',
+        'column': 'done',
         'sprint': 'Sprint 12 · UI moderna + PWA + SQLAlchemy',
         'labels': ['frontend', 'projmap', 'testes', 'prioridade:alta'],
     },

@@ -4,3 +4,8 @@ out/
 *.tsbuildinfo
 # wasm do MediaPipe copiado no build (scripts/copy-mediapipe.mjs)
 public/mediapipe/
+# Playwright (npm run test:e2e)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
