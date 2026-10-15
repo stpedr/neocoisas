@@ -1,7 +1,10 @@
 // Cliente da API do mestre. Em produção a UI é servida pelo próprio mestre
 // (mesma origem, base ""); no `npm run dev` aponte NEXT_PUBLIC_PROJMAP_API
 // para o mestre (ex.: http://localhost:8100).
-import type { DetectCandidate, InteractState, LibraryItem, MediaInfo, MediaItem, Output, Project, SourceSpec, Suggestion } from "./types";
+import type {
+  ColorAdjust, ColorPreset, DetectCandidate, DriveListing, DriveStatus, InteractState, LibraryItem, MediaInfo, MediaItem, Output,
+  Project, SourceSpec, Suggestion,
+} from "./types";
 
 export const API_BASE = process.env.NEXT_PUBLIC_PROJMAP_API ?? "";
 
@@ -129,7 +132,7 @@ export const api = {
   exportUrl: () => withToken(`${API_BASE}/api/project/export`),
 
   // remote no celular (F6)
-  patchSurface: (id: string, changes: { visible?: boolean; opacity?: number; source?: Partial<SourceSpec> }) =>
+  patchSurface: (id: string, changes: { visible?: boolean; opacity?: number; source?: Partial<SourceSpec>; color?: ColorAdjust }) =>
     call<ProjectPayload>(`/api/surfaces/${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -166,4 +169,30 @@ export const api = {
   interactReset: () => call<InteractState>("/api/interact/reset", { method: "POST" }),
   interactPause: (paused: boolean) => call<InteractState>(`/api/interact/pause?paused=${paused}`, { method: "POST" }),
   interactDebug: (on: boolean) => call<InteractState>(`/api/interact/debug?on=${on}`, { method: "POST" }),
+
+  // presets de imagem do operador
+  colorPresets: () => call<{ presets: ColorPreset[] }>("/api/color-presets"),
+  saveColorPreset: (name: string, color: ColorAdjust) =>
+    call<{ preset: ColorPreset; presets: ColorPreset[] }>("/api/color-presets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, color }),
+    }),
+  deleteColorPreset: (id: string) =>
+    call<{ presets: ColorPreset[] }>(`/api/color-presets/${encodeURIComponent(id)}`, { method: "DELETE" }),
+
+  // Google Drive na galeria
+  driveStatus: () => call<DriveStatus>("/api/gdrive/status"),
+  driveSetFolder: (folder: string) =>
+    call<DriveStatus>("/api/gdrive/folder", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folder }),
+    }),
+  driveDisconnect: () => call<DriveStatus>("/api/gdrive/disconnect", { method: "POST" }),
+  driveConnectUrl: () => `${API_BASE}/api/gdrive/connect`,
+  driveList: (folder?: string) => call<DriveListing>(`/api/gdrive/list${folder ? `?folder=${encodeURIComponent(folder)}` : ""}`),
+  driveThumbUrl: (id: string) => withToken(`${API_BASE}/api/gdrive/${encodeURIComponent(id)}/thumb`),
+  driveImport: (id: string) =>
+    call<{ revision: number; item: MediaItem }>(`/api/gdrive/${encodeURIComponent(id)}/import`, { method: "POST" }),
 };

@@ -32,7 +32,8 @@ class Launcher(tk.Tk):
         super().__init__()
         self.title("ProjMap")
         self.configure(bg=BG)
-        self.minsize(460, 0)
+        self.minsize(420, 0)
+        self.geometry("520x760")
         self.s: Settings = load_settings()
         self.proc: subprocess.Popen | None = None
         self.lines: "queue.Queue[str]" = queue.Queue()
@@ -79,13 +80,18 @@ class Launcher(tk.Tk):
             st.map(w, indicatorbackground=[("selected", "#1b2330")], indicatorforeground=[("selected", ACCENT)])
 
     def _card(self, title: str) -> ttk.Frame:
-        f = ttk.Frame(self, style="Card.TFrame", padding=12)
+        f = ttk.Frame(self.body, style="Card.TFrame", padding=12)
         f.pack(fill="x", padx=14, pady=(0, 10))
         ttk.Label(f, text=title, style="Card.TLabel", font=("Segoe UI Semibold", 11)).pack(anchor="w")
         return f
 
     def _build(self) -> None:
-        ttk.Label(self, text="◆ ProjMap", style="Title.TLabel").pack(anchor="w", padx=14, pady=(14, 10))
+        # Rodapé fixo (Abrir, status, registro) e, acima, o corpo com rolagem: em
+        # qualquer tamanho de janela o botão Abrir continua à vista.
+        foot = ttk.Frame(self)
+        foot.pack(side="bottom", fill="x")
+        self.body = _scrollable(self)
+        ttk.Label(self.body, text="◆ ProjMap", style="Title.TLabel").pack(anchor="w", padx=14, pady=(14, 10))
 
         # Show
         c = self._card("Show")
@@ -96,8 +102,7 @@ class Launcher(tk.Tk):
         self.show_box.pack(side="left", fill="x", expand=True)
         self.show_box.bind("<<ComboboxSelected>>", self._on_show)
         ttk.Button(row, text="Pasta…", command=self._pick_dir).pack(side="left", padx=(6, 0))
-        self.dir_lbl = ttk.Label(c, style="Dim.TLabel")
-        self.dir_lbl.pack(anchor="w", pady=(4, 0))
+        self.dir_lbl = self._wrap(ttk.Label(c, style="Dim.TLabel"), pady=(4, 0))
         self._refresh_shows()
 
         # Saída
@@ -111,35 +116,71 @@ class Launcher(tk.Tk):
         ttk.Label(r, text=")", style="Card.TLabel").pack(side="left")
         ttk.Radiobutton(c, text="Janela de teste (sem projetor)", value="window", variable=self.out_var).pack(anchor="w")
         ttk.Radiobutton(c, text="Só o editor (sem saída)", value="none", variable=self.out_var).pack(anchor="w")
-        ttk.Label(c, text="Monitor 0 é a tela principal; o projetor costuma ser o 1.", style="Dim.TLabel").pack(anchor="w")
+        self._wrap(ttk.Label(c, text="Monitor 0 é a tela principal; o projetor costuma ser o 1.", style="Dim.TLabel"))
 
-        # Celular
+        # Interação (opcional): as opções só aparecem quando marcada
+        c = self._card("Interação")
+        self.interact_var = tk.BooleanVar(value=self.s.interact)
+        self.interact_cb = ttk.Checkbutton(c, text="Quero interação (cenas que reagem ao público)",
+                                           variable=self.interact_var, command=self._sync_sections)
+        self.interact_cb.pack(anchor="w", pady=(6, 0))
+        self.interact_box = ttk.Frame(c, style="Card.TFrame", padding=(22, 4, 0, 0))
+        self.sensor_var = tk.StringVar(value=self.s.sensor)
+        for value, text in (("phone", "Celular ligado no cabo USB (ADB): a câmera dele vira o sensor"),
+                            ("webcam", "Webcam deste computador"),
+                            ("sim", "Sem sensor (simulação, para testar)")):
+            ttk.Radiobutton(self.interact_box, text=text, value=value, variable=self.sensor_var).pack(anchor="w")
+        self._wrap(ttk.Label(self.interact_box, style="Dim.TLabel",
+                             text="Celular: ative a Depuração USB e aceite o aviso na tela dele. O ProjMap abre o sensor sozinho."))
+
+        # Celular como controle remoto (opcional)
         c = self._card("Celular")
         self.lan_var = tk.BooleanVar(value=self.s.lan)
-        ttk.Checkbutton(c, text="Permitir controlar pelo celular (mesma rede Wi-Fi)", variable=self.lan_var).pack(anchor="w", pady=(6, 0))
+        self.lan_cb = ttk.Checkbutton(c, text="Controlar o show pelo celular (mesma rede Wi-Fi)", variable=self.lan_var,
+                                      command=self._sync_sections)
+        self.lan_cb.pack(anchor="w", pady=(6, 0))
+        self.lan_box = ttk.Frame(c, style="Card.TFrame", padding=(22, 4, 0, 0))
+        self._wrap(ttk.Label(self.lan_box, style="Dim.TLabel",
+                             text="Depois de abrir, use o botão “Celular” no editor (QR) ou “Copiar link do celular” aqui."))
         self.browser_var = tk.BooleanVar(value=self.s.open_browser)
         ttk.Checkbutton(c, text="Abrir o editor no navegador", variable=self.browser_var).pack(anchor="w")
+        self._sync_sections()
 
-        # Ações
-        self.btn = ttk.Button(self, text="Abrir", style="Accent.TButton", command=self._toggle)
-        self.btn.pack(fill="x", padx=14)
-        r = ttk.Frame(self)
+        # Ações (rodapé)
+        self.btn = ttk.Button(foot, text="Abrir", style="Accent.TButton", command=self._toggle)
+        self.btn.pack(fill="x", padx=14, pady=(10, 0))
+        r = ttk.Frame(foot)
         r.pack(fill="x", padx=14, pady=(8, 0))
         self.edit_btn = ttk.Button(r, text="Abrir editor", command=self._open_editor, state="disabled")
         self.edit_btn.pack(side="left")
         self.phone_btn = ttk.Button(r, text="Copiar link do celular", command=self._copy_remote, state="disabled")
         self.phone_btn.pack(side="left", padx=6)
         self.status = tk.StringVar(value="Parado.")
-        ttk.Label(self, textvariable=self.status, foreground=DIM, wraplength=430, justify="left").pack(anchor="w", padx=14, pady=(8, 4))
+        self._wrap(ttk.Label(foot, textvariable=self.status, foreground=DIM, justify="left"), padx=14, pady=(8, 4))
 
         if not ui_built():
             self.status.set("A interface ainda não foi compilada. Rode uma vez: cd projmap/ui && npm ci && npm run build")
 
-        log_f = ttk.Frame(self, padding=(14, 0, 14, 14))
-        log_f.pack(fill="both", expand=True)
-        self.log = tk.Text(log_f, height=7, bg=CARD, fg=DIM, insertbackground=FG, relief="flat", font=("Consolas", 9), wrap="word")
-        self.log.pack(fill="both", expand=True)
+        log_f = ttk.Frame(foot, padding=(14, 0, 14, 14))
+        log_f.pack(fill="x")
+        self.log = tk.Text(log_f, height=5, bg=CARD, fg=DIM, insertbackground=FG, relief="flat", font=("Consolas", 9), wrap="word")
+        self.log.pack(fill="x")
         self.log.configure(state="disabled")
+
+    def _wrap(self, label: ttk.Label, **pack) -> ttk.Label:
+        """Texto que quebra na largura atual da janela (acompanha o redimensionamento)."""
+        label.pack(anchor="w", fill="x", **pack)
+        label.bind("<Configure>", lambda e: label.configure(wraplength=max(120, e.width - 4)))
+        return label
+
+    def _sync_sections(self) -> None:
+        """Mostra/esconde as opções de cada seção na mesma janela."""
+        for var, box, cb in ((self.interact_var, self.interact_box, self.interact_cb),
+                             (self.lan_var, self.lan_box, self.lan_cb)):
+            if var.get():
+                box.pack(fill="x", anchor="w", after=cb)
+            else:
+                box.pack_forget()
 
     # ------------------------------------------------------------ shows
     def _refresh_shows(self, select: str | None = None) -> None:
@@ -178,6 +219,7 @@ class Launcher(tk.Tk):
         s = self.s
         s.last_show, s.output, s.display = show, self.out_var.get(), int(self.disp_var.get() or 0)
         s.lan, s.open_browser = bool(self.lan_var.get()), bool(self.browser_var.get())
+        s.interact, s.sensor = bool(self.interact_var.get()), self.sensor_var.get()
         save_settings(s)
         os.makedirs(s.shows_dir, exist_ok=True)
         cmd = master_command(s, show)
@@ -250,6 +292,38 @@ class Launcher(tk.Tk):
                 return
             self._stop()
         self.destroy()
+
+
+def _scrollable(parent: tk.Tk) -> ttk.Frame:
+    """Frame com rolagem vertical que acompanha a largura da janela."""
+    outer = ttk.Frame(parent)
+    outer.pack(side="top", fill="both", expand=True)
+    canvas = tk.Canvas(outer, bg=BG, highlightthickness=0, borderwidth=0)
+    bar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
+    inner = ttk.Frame(canvas)
+    win = canvas.create_window((0, 0), window=inner, anchor="nw")
+    canvas.configure(yscrollcommand=bar.set)
+
+    def sync(_e=None) -> None:
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        # barra só quando o conteúdo não cabe
+        if inner.winfo_reqheight() > canvas.winfo_height() + 1:
+            bar.pack(side="right", fill="y")
+        else:
+            bar.pack_forget()
+
+    inner.bind("<Configure>", sync)
+    canvas.bind("<Configure>", lambda e: (canvas.itemconfigure(win, width=e.width), sync()))
+    canvas.pack(side="left", fill="both", expand=True)
+
+    def wheel(e) -> None:
+        if inner.winfo_reqheight() > canvas.winfo_height():
+            canvas.yview_scroll(int(-e.delta / 120) if e.delta else (1 if e.num == 5 else -1), "units")
+
+    canvas.bind_all("<MouseWheel>", wheel)
+    canvas.bind_all("<Button-4>", wheel)
+    canvas.bind_all("<Button-5>", wheel)
+    return inner
 
 
 def _ask(parent: tk.Tk, title: str, prompt: str) -> str:

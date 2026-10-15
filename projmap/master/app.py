@@ -57,12 +57,16 @@ def _validation_detail(exc: ValidationError) -> list[str]:
 def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any = None,
                nlp_client_factory: Any = None, token: Optional[str] = None,
                host: str = "127.0.0.1", port: int = 8100,
-               library_roots: Optional[list[str]] = None, save_library_config: bool = True) -> FastAPI:
+               library_roots: Optional[list[str]] = None, save_library_config: bool = True,
+               config_dir: Optional[Path] = None, drive_config: Any = None, drive_http: Any = None) -> FastAPI:
     """``runtime``: ``InteractionRuntime`` da camada interativa (opcional).
     ``nlp_client_factory``: devolve o cliente LLM para texto→cena (padrão: o do repo).
     ``token``: token de pareamento; exigido de clientes fora desta máquina (F6).
     ``host``/``port``: onde o servidor escuta, para montar a URL do remote.
-    ``library_roots``: pastas da galeria (padrão: ``~/.projmap/library.json``)."""
+    ``library_roots``: pastas da galeria (padrão: ``~/.projmap/library.json``).
+    ``config_dir``: preferências da máquina (padrão ``~/.projmap``): presets de
+    imagem, token e pasta do Google Drive.
+    ``drive_config``: ``gdrive.DriveConfig`` (padrão: lido do ambiente/.env)."""
     app = FastAPI(title="ProjMap — mestre", version=__version__)
     # Dev: UI no `next dev` (outra porta) chamando a API local.
     app.add_middleware(
@@ -206,6 +210,20 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
     app.include_router(create_remote_router(state, host=host, port=port, token=token))
     library = Library(load_roots() if library_roots is None else library_roots, store.root / "cache")
     app.include_router(create_library_router(state, library, save_config=save_library_config))
+
+    from ..color_presets import ColorPresetStore
+    from ..gdrive import drive_config as read_drive_config
+    from ..library import load_gdrive_folder, save_gdrive_folder
+    from .gdrive_api import create_router as create_gdrive_router
+
+    cfg_dir = Path(config_dir) if config_dir else Path.home() / ".projmap"
+    lib_cfg = cfg_dir / "library.json"
+    dcfg = drive_config or read_drive_config(saved_folder=load_gdrive_folder(lib_cfg))
+    app.include_router(create_gdrive_router(
+        state, dcfg, store.root / "cache", ColorPresetStore(cfg_dir / "color-presets.json"),
+        token_path=cfg_dir / "gdrive-token.json",
+        save_folder=(lambda f: save_gdrive_folder(f, lib_cfg)) if save_library_config else None,
+        http=drive_http))
 
     if runtime is not None:
         from ..interact.api import create_router

@@ -918,6 +918,13 @@ SEED_CARDS: list[dict] = [
         'labels': ['frontend', 'projmap', 'prioridade:média'],
     },
     {
+        'title': 'ProjMap — Editor em gavetas, Google Drive direto, presets de imagem, escalar/girar',
+        'description': 'Painel lateral em gavetas (fluido, divisória arrastável, esconder painel), atalhos Mídias/Celular/Criar com IA, retroprojeção/teto na barra de cima; interação e celular opcionais no lançador (mesma janela, com rolagem); Google Drive direto na galeria (API v3, OAuth loopback+PKCE ou chave de API, só leitura); presets de imagem do operador aplicados por superfície (editor e celular); Delete exclui com Desfazer; alças de escalar/girar; borda suave na prévia do editor.',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['frontend', 'backend', 'projmap', 'prioridade:alta'],
+    },
+    {
         'title': 'ProjMap F7 — Conteúdo por IA por superfície (opcional)',
         'description': 'Pipeline do ifnull com as factories existentes (stability structure, comfyui ControlNet, Veo): foto da posição → geração estilizada → recorte por superfície → mídia do projeto.',
         'column': 'backlog',

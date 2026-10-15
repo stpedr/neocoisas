@@ -1,7 +1,7 @@
 "use client";
 
-// Pastas da galeria (só aparece no próprio mestre). Para o Google Drive: instale
-// o "Google Drive para computador" e aponte para a pasta espelhada.
+// Pastas do PC na galeria (só no próprio mestre). Para o Drive sem configurar
+// API: instale o "Google Drive para computador" e aponte para a pasta espelhada.
 
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
@@ -39,14 +39,14 @@ export default function LibraryCard({ onError, onOk }: { onError: (m: string) =>
   };
 
   return (
-    <section className="card">
+    <div className="folder-manager">
       <div className="card-head">
-        <h2>Biblioteca de mídias</h2>
+        <b className="small">Pastas do computador</b>
         <span className="dim small">{count} arquivo(s)</span>
       </div>
       <p className="dim small">
-        Pastas do PC que aparecem na galeria. Para usar o <b>Google Drive</b>, instale o <i>Google Drive para computador</i> e
-        adicione a pasta espelhada, ex.: <code>G:\Meu Drive\Projeção</code>. Só o que você escolher é copiado para o projeto.
+        Aparecem em <b>Minhas pastas</b>. Pode ser a pasta do <i>Google Drive para computador</i> (ex.:{" "}
+        <code>G:\Meu Drive\Projeção</code>). Só o que você escolher é copiado para o projeto.
       </p>
       {roots.map((r) => (
         <div key={r.path} className="row root-row">
@@ -60,6 +60,6 @@ export default function LibraryCard({ onError, onOk }: { onError: (m: string) =>
           Adicionar
         </button>
       </div>
-    </section>
+    </div>
   );
 }

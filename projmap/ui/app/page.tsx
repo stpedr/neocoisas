@@ -3,20 +3,37 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { type Mode, type View } from "./components/Editor";
 import InteractPanel from "./components/InteractPanel";
-import RemoteCard from "./components/RemoteCard";
+import PhoneDialog from "./components/PhoneDialog";
+import AiDialog from "./components/AiDialog";
 import SurfacePanel from "./components/SurfacePanel";
 import LayersPanel from "./components/LayersPanel";
 import DetectPanel from "./components/DetectPanel";
-import LibraryCard from "./components/LibraryCard";
-import ImageCard from "./components/ImageCard";
+import ImageCard, { OrientationToggles } from "./components/ImageCard";
 import MediaGallery from "./components/MediaGallery";
 import SuggestAll from "./components/SuggestAll";
+import Drawer, { openDrawer } from "./components/Drawer";
 import { api, ApiError } from "./lib/api";
+import { useInteract } from "./lib/interact";
 import { applyH, invert3, mul3, photoToProjector, rectQuad, validateQuad } from "./lib/geometry";
 import type { DetectCandidate, MediaItem, Output, Pattern, Point, Project, Surface } from "./lib/types";
 import { DEFAULT_COLOR, DEFAULT_SOURCE } from "./lib/types";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
+type Toast = { msg: string; kind: "ok" | "err"; action?: { label: string; run: () => void } };
+
+const PANEL_KEY = "projmap.panel";
+const PANEL_MIN = 280;
+const PANEL_MAX = 720;
+
+function loadPanel(): { open: boolean; w: number } {
+  try {
+    const v = JSON.parse(localStorage.getItem(PANEL_KEY) ?? "null");
+    if (v && typeof v.w === "number") return { open: v.open !== false, w: Math.min(PANEL_MAX, Math.max(PANEL_MIN, v.w)) };
+  } catch {
+    /* padrão */
+  }
+  return { open: true, w: 0 }; // 0 = largura automática (CSS)
+}
 
 const PATTERNS: { id: Pattern; label: string }[] = [
   { id: "none", label: "Conteúdo" },
@@ -35,7 +52,11 @@ export default function Page() {
   const [selectedCorner, setSelectedCorner] = useState<number | null>(null);
   const [photo, setPhoto] = useState<HTMLImageElement | null>(null);
   const [save, setSave] = useState<SaveState>("idle");
-  const [toast, setToast] = useState<{ msg: string; kind: "ok" | "err" } | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
+  const [panel, setPanel] = useState<{ open: boolean; w: number }>({ open: true, w: 0 });
+  const [phoneOpen, setPhoneOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const interact = useInteract();
   const [loadError, setLoadError] = useState<string | null>(null);
   const [photoVersion, setPhotoVersion] = useState(0);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
@@ -88,11 +109,61 @@ export default function Page() {
   );
 
   const toastTimer = useRef<number | undefined>(undefined);
-  function notify(msg: string, kind: "ok" | "err" = "ok") {
-    setToast({ msg, kind });
+  function notify(msg: string, kind: "ok" | "err" = "ok", action?: Toast["action"]) {
+    setToast({ msg, kind, action });
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 3500);
+    toastTimer.current = window.setTimeout(() => setToast(null), action ? 7000 : 3500);
   }
+
+  // ---- painel lateral: largura arrastável e esconder/mostrar (lembrados)
+  useEffect(() => setPanel(loadPanel()), []);
+  const savePanel = (next: { open: boolean; w: number }) => {
+    setPanel(next);
+    try {
+      localStorage.setItem(PANEL_KEY, JSON.stringify(next));
+    } catch {
+      /* sem armazenamento */
+    }
+  };
+  const startResize = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const el = e.currentTarget as HTMLElement;
+    el.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent) => {
+      const w = Math.min(PANEL_MAX, Math.max(PANEL_MIN, window.innerWidth - ev.clientX));
+      setPanel((p) => ({ ...p, w }));
+    };
+    const up = () => {
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", up);
+      setPanel((p) => {
+        try {
+          localStorage.setItem(PANEL_KEY, JSON.stringify(p));
+        } catch {
+          /* ignore */
+        }
+        return p;
+      });
+    };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+  };
+
+  // Volta do "Conectar Google Drive": abre a galeria na aba do Drive.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("gdrive") === "ok") {
+      history.replaceState(null, "", window.location.pathname);
+      try {
+        localStorage.setItem("projmap.gallery.tab", "drive");
+      } catch {
+        /* ignore */
+      }
+      notify("Google Drive conectado.");
+      window.setTimeout(() => openLibrary(), 300);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ---- carga inicial
   useEffect(() => {
@@ -331,18 +402,91 @@ export default function Page() {
     return item;
   };
 
+  // Excluir com "Desfazer" (o toast guarda a superfície e a posição na lista).
   const deleteSurface = (id: string) => {
-    if (!project) return;
-    commit({ ...project, surfaces: project.surfaces.filter((s) => s.id !== id) });
+    const cur = latest.current;
+    if (!cur) return;
+    const idx = cur.surfaces.findIndex((s) => s.id === id);
+    if (idx < 0) return;
+    const removed = cur.surfaces[idx];
+    const next = { ...cur, surfaces: cur.surfaces.filter((s) => s.id !== id) };
+    latest.current = next;
+    commit(next);
     setSelectedId(null);
+    setSelectedLayerId(null);
+    notify(`"${removed.label || removed.id}" excluída.`, "ok", {
+      label: "Desfazer",
+      run: () => {
+        const now = latest.current;
+        if (!now || now.surfaces.some((s) => s.id === removed.id)) return;
+        const surfaces = [...now.surfaces];
+        surfaces.splice(Math.min(idx, surfaces.length), 0, removed);
+        const back = { ...now, surfaces };
+        latest.current = back;
+        commit(back);
+        setSelectedId(removed.id);
+        setToast(null);
+      },
+    });
   };
+
+  const deleteLayer = (sid: string, lid: string) => {
+    const cur = latest.current;
+    const surf = cur?.surfaces.find((s) => s.id === sid);
+    const idx = surf?.layers.findIndex((l) => l.id === lid) ?? -1;
+    if (!surf || idx < 0) return;
+    const removed = surf.layers[idx];
+    updateSurface(sid, (s) => ({ ...s, layers: s.layers.filter((l) => l.id !== lid) }));
+    setSelectedLayerId(null);
+    notify(`Camada "${removed.label || removed.id}" excluída.`, "ok", {
+      label: "Desfazer",
+      run: () => {
+        updateSurface(sid, (s) => {
+          if (s.layers.some((l) => l.id === removed.id)) return s;
+          const layers = [...s.layers];
+          layers.splice(Math.min(idx, layers.length), 0, removed);
+          return { ...s, layers };
+        });
+        setSelectedLayerId(removed.id);
+        setToast(null);
+      },
+    });
+  };
+
+  // Galeria como widget: com uma superfície selecionada, a mídia escolhida vira
+  // o fundo dela; sem seleção, só entra no projeto.
+  const openLibrary = () => {
+    const sel = latest.current?.surfaces.find((s) => s.id === selectedIdRef.current);
+    setGallery({
+      surfaceId: sel?.id ?? null,
+      title: sel ? `Biblioteca · aplicar em "${sel.label || sel.id}"` : "Biblioteca de mídias",
+      onPick: (m) => {
+        rememberMedia(m);
+        if (sel) {
+          updateSurface(sel.id, (s) => ({ ...s, source: { ...s.source, kind: m.kind, media: m.sha256 } }));
+          notify(`"${m.filename}" aplicada em "${sel.label || sel.id}".`);
+        } else {
+          notify(`"${m.filename}" adicionada ao projeto. Selecione uma superfície para usar.`);
+        }
+      },
+    });
+  };
+  const selectedIdRef = useRef<string | null>(null);
+  selectedIdRef.current = selectedId;
 
   // ---- teclado: ajuste fino de 1 px do projetor (Shift = 10 px)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+      if (e.target instanceof HTMLElement && e.target.isContentEditable) return;
       if (!selected) return;
+      if (e.key === "Delete" || (e.key === "Backspace" && (e.target as HTMLElement)?.tagName === "CANVAS")) {
+        e.preventDefault();
+        if (selectedLayerId) deleteLayer(selected.id, selectedLayerId);
+        else deleteSurface(selected.id);
+        return;
+      }
       if (e.key === "Tab") {
         e.preventDefault();
         setSelectedCorner((c) => (c === null ? 0 : (c + (e.shiftKey ? 3 : 1)) % 4));
@@ -361,7 +505,8 @@ export default function Page() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selected, selectedCorner, onQuad]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, selectedCorner, selectedLayerId, onQuad]);
 
   const uploadPhoto = async (file: File) => {
     if (!node) return;
@@ -380,6 +525,9 @@ export default function Page() {
   if (loadError) return <main className="center-msg">{loadError}</main>;
   if (!project || !node) return <main className="center-msg">Carregando projeto…</main>;
   const out = node.output;
+
+  const panelStyle = panel.w ? ({ "--panel-w": `${panel.w}px` } as React.CSSProperties) : undefined;
+  const interactOn = interact.off === false;
 
   return (
     <main className="app">
@@ -402,6 +550,7 @@ export default function Page() {
               </button>
             ))}
           </div>
+          <OrientationToggles output={out} onPatch={patchOutput} compact />
           <label className="toggle">
             <input type="checkbox" checked={out.show_outlines} onChange={(e) => patchOutput({ show_outlines: e.target.checked })} />
             Contornos
@@ -434,7 +583,7 @@ export default function Page() {
         </div>
       </header>
 
-      <section className="workspace">
+      <section className={`workspace ${panel.open ? "" : "panel-hidden"}`} style={panelStyle}>
         <div className="stage">
           <div className="stage-bar">
             <div className="segmented">
@@ -452,8 +601,27 @@ export default function Page() {
             <span className="hint">
               {mode === "boundary"
                 ? "Arraste os 4 cantos amarelos até onde o quadro BRANCO do projetor aparece na foto."
-                : "Arraste cantos ou a superfície inteira. Setas = 1 px (Shift = 10), Tab troca o canto."}
+                : selected
+                  ? "Cantos ajustam a perspectiva · ↕ escala · ⟳ gira · Del exclui · setas = 1 px"
+                  : "Clique numa superfície para editar. Setas = 1 px (Shift = 10), Tab troca o canto."}
             </span>
+            <div className="dock" role="toolbar" aria-label="Atalhos">
+              <button className="dock-btn" onClick={openLibrary} title="Vídeos, GIFs e imagens: projeto, pastas do PC e Google Drive">
+                <span aria-hidden>🖼</span> Mídias
+              </button>
+              <button className="dock-btn" onClick={() => setPhoneOpen(true)} title="Controle remoto no celular (QR) e celular como sensor">
+                <span aria-hidden>📱</span> Celular
+              </button>
+              {interactOn && (
+                <button className="dock-btn" onClick={() => setAiOpen(true)} title="Descreva uma cena interativa em texto e a IA monta">
+                  <span aria-hidden>✨</span> Criar com IA
+                </button>
+              )}
+              <button className={`dock-btn ${panel.open ? "on" : ""}`} onClick={() => savePanel({ ...panel, open: !panel.open })}
+                      title={panel.open ? "Esconder o painel (editor em tela cheia)" : "Mostrar o painel"} aria-pressed={panel.open}>
+                <span aria-hidden>◧</span> Painel
+              </button>
+            </div>
           </div>
           <Editor
             node={node}
@@ -468,6 +636,7 @@ export default function Page() {
               if (id !== selectedId) setSelectedLayerId(null);
               setSelectedId(id);
               setSelectedCorner(c);
+              if (id) openDrawer("superficies");
             }}
             onQuad={onQuad}
             onBoundary={onBoundary}
@@ -484,10 +653,17 @@ export default function Page() {
           />
         </div>
 
+        {panel.open && (
+          <div className="splitter" role="separator" aria-orientation="vertical" aria-label="Largura do painel"
+               title="Arraste para mudar a largura do painel (duplo clique: automática)"
+               onPointerDown={startResize} onDoubleClick={() => savePanel({ ...panel, w: 0 })} />
+        )}
+
+        {panel.open && (
         <aside className="panel">
-          <section className="card">
-            <h2>1 · Foto da posição do projetor</h2>
-            <p className="dim">Tire a foto com a câmera no lugar do projetor. No celular, o botão abre a câmera.</p>
+          <Drawer id="foto" icon="📷" title="Foto e área projetada" defaultOpen={!node.photo}
+                  badge={node.photo ? "✓" : "comece aqui"}>
+            <p className="dim small">Tire a foto com a câmera no lugar do projetor. No celular, o botão abre a câmera.</p>
             <label className="btn btn-block">
               {node.photo ? "Trocar foto" : "Enviar / tirar foto"}
               <input
@@ -498,33 +674,7 @@ export default function Page() {
                 onChange={(e) => e.target.files?.[0] && uploadPhoto(e.target.files[0])}
               />
             </label>
-          </section>
-
-          <DetectPanel
-            nodeId={node.id}
-            hasPhoto={!!photo}
-            candidates={cands}
-            selected={candOn}
-            onResult={(c) => {
-              setCands(c);
-              // Pré-marca as regiões grandes e razoavelmente retangulares (paredes, portas,
-              // teto); objetos soltos costumam ser pequenos. O operador ajusta a seleção.
-              setCandOn(new Set(c.map((x, i) => (x.area >= 0.04 && x.score >= 0.55 ? i : -1)).filter((i) => i >= 0)));
-              setView("photo");
-              setMode("surfaces");
-            }}
-            onToggle={toggleCand}
-            onCreate={createFromCandidates}
-            onClear={() => {
-              setCands([]);
-              setCandOn(new Set());
-            }}
-            onError={(m) => notify(m, "err")}
-          />
-
-          <section className="card">
-            <h2>2 · Área projetada</h2>
-            <p className="dim">
+            <p className="dim small">
               Projete <b>Branco</b>, veja onde a luz cai na foto e marque os 4 cantos. Depois use <b>Bordas da foto</b> para conferir na parede.
             </p>
             <button
@@ -537,85 +687,113 @@ export default function Page() {
             >
               {mode === "boundary" ? "Concluir marcação" : "Marcar área projetada"}
             </button>
-          </section>
+            <DetectPanel
+              nodeId={node.id}
+              hasPhoto={!!photo}
+              candidates={cands}
+              selected={candOn}
+              onResult={(c) => {
+                setCands(c);
+                // Pré-marca as regiões grandes e razoavelmente retangulares (paredes, portas,
+                // teto); objetos soltos costumam ser pequenos. O operador ajusta a seleção.
+                setCandOn(new Set(c.map((x, i) => (x.area >= 0.04 && x.score >= 0.55 ? i : -1)).filter((i) => i >= 0)));
+                setView("photo");
+                setMode("surfaces");
+              }}
+              onToggle={toggleCand}
+              onCreate={createFromCandidates}
+              onClear={() => {
+                setCands([]);
+                setCandOn(new Set());
+              }}
+              onError={(m) => notify(m, "err")}
+            />
+          </Drawer>
 
-          <section className="card">
-            <div className="card-head">
-              <h2>3 · Superfícies</h2>
-              <div className="row">
-                {surfaces.length > 0 && (
-                  <button className="btn btn-small" title="Sugere uma mídia para cada superfície (formato e resolução)" onClick={() => setSuggestOpen(true)}>
-                    ⭐ Sugerir mídias
-                  </button>
-                )}
-                <button className="btn btn-accent btn-small" onClick={addSurface}>
-                  + Nova
-                </button>
-              </div>
-            </div>
+          <Drawer
+            id="superficies"
+            icon="▦"
+            title="Superfícies"
+            defaultOpen
+            badge={surfaces.length}
+            actions={
+              <button className="btn btn-accent btn-small" onClick={addSurface} title="Nova superfície">
+                + Nova
+              </button>
+            }
+          >
             {surfaces.length === 0 ? (
               <p className="dim">Nenhuma superfície. Crie uma e arraste os cantos sobre a parede/coluna/caixa.</p>
             ) : (
-              <ul className="surface-list">
-                {[...surfaces]
-                  .sort((a, b) => b.z - a.z)
-                  .map((s) => (
-                    <li key={s.id}>
-                      <button
-                        className={s.id === selectedId ? "on" : ""}
-                        onClick={() => {
-                          setSelectedId(s.id);
-                          setSelectedCorner(null);
-                          setMode("surfaces");
-                        }}
-                      >
-                        <span className="dot" data-visible={s.visible} />
-                        {s.label || s.id}
-                        <span className="dim small">{sourceLabel(s)}</span>
-                      </button>
-                    </li>
-                  ))}
-              </ul>
+              <>
+                <ul className="surface-list">
+                  {[...surfaces]
+                    .sort((a, b) => b.z - a.z)
+                    .map((s) => (
+                      <li key={s.id}>
+                        <button
+                          className={s.id === selectedId ? "on" : ""}
+                          onClick={() => {
+                            setSelectedId(s.id);
+                            setSelectedCorner(null);
+                            setSelectedLayerId(null);
+                            setMode("surfaces");
+                          }}
+                        >
+                          <span className="dot" data-visible={s.visible} />
+                          {s.label || s.id}
+                          <span className="dim small">{sourceLabel(s)}</span>
+                        </button>
+                      </li>
+                    ))}
+                </ul>
+                <button className="btn btn-small" title="Sugere uma mídia para cada superfície (formato e resolução)" onClick={() => setSuggestOpen(true)}>
+                  ⭐ Sugerir mídias para todas
+                </button>
+              </>
             )}
-          </section>
 
-          {selected && (
-            <SurfacePanel
-              key={selected.id}
-              surface={selected}
-              project={project}
-              onChange={(fn) => updateSurface(selected.id, fn)}
-              onDelete={() => deleteSurface(selected.id)}
-              onUpload={uploadMedia}
-              onError={(m) => notify(m, "err")}
-              onOpenGallery={openGallery(selected.id, `Mídia de "${selected.label || selected.id}"`)}
-            />
+            {selected && (
+              <SurfacePanel
+                key={selected.id}
+                surface={selected}
+                project={project}
+                onChange={(fn) => updateSurface(selected.id, fn)}
+                onDelete={() => deleteSurface(selected.id)}
+                onUpload={uploadMedia}
+                onError={(m) => notify(m, "err")}
+                onOpenGallery={openGallery(selected.id, `Mídia de "${selected.label || selected.id}"`)}
+              />
+            )}
+
+            {selected && (
+              <LayersPanel
+                key={`layers-${selected.id}`}
+                surface={selected}
+                project={project}
+                selectedLayerId={selectedLayerId}
+                onSelectLayer={setSelectedLayerId}
+                onChange={(fn) => updateSurface(selected.id, fn)}
+                onUpload={uploadMedia}
+                onError={(m) => notify(m, "err")}
+                onOpenGallery={openGallery(selected.id, `Camada em "${selected.label || selected.id}"`)}
+              />
+            )}
+          </Drawer>
+
+          <Drawer id="imagem" icon="🎨" title="Imagem do projetor" badge={out.flip_h || out.flip_v ? "girada" : undefined}>
+            <ImageCard output={out} onPatch={patchOutput} onError={(m) => notify(m, "err")} />
+          </Drawer>
+
+          {interactOn && (
+            <Drawer id="interacao" icon="✨" title="Interação" alert={interact.caught}
+                    badge={interact.st?.spec.title}>
+              <InteractPanel st={interact.st} setSt={interact.setSt} caught={interact.caught}
+                             onError={(m) => notify(m, "err")} onOpenAi={() => setAiOpen(true)} />
+            </Drawer>
           )}
 
-          {selected && (
-            <LayersPanel
-              key={`layers-${selected.id}`}
-              surface={selected}
-              project={project}
-              selectedLayerId={selectedLayerId}
-              onSelectLayer={setSelectedLayerId}
-              onChange={(fn) => updateSurface(selected.id, fn)}
-              onUpload={uploadMedia}
-              onError={(m) => notify(m, "err")}
-              onOpenGallery={openGallery(selected.id, `Camada em "${selected.label || selected.id}"`)}
-            />
-          )}
-
-          <LibraryCard onError={(m) => notify(m, "err")} onOk={(m) => notify(m)} />
-
-          <RemoteCard />
-
-          <InteractPanel onError={(m) => notify(m, "err")} />
-
-          <ImageCard output={out} onPatch={patchOutput} />
-
-          <section className="card">
-            <h2>Projetor</h2>
+          <Drawer id="projetor" icon="⚙" title="Projetor" badge={`${out.width}×${out.height}`}>
             <div className="row">
               <label>
                 Largura
@@ -637,8 +815,9 @@ export default function Page() {
               </label>
             </div>
             <p className="dim small">Use a resolução nativa do projetor (ex.: 1920×1080).</p>
-          </section>
+          </Drawer>
         </aside>
+        )}
       </section>
 
       <MediaGallery
@@ -648,6 +827,7 @@ export default function Page() {
         onPick={(m) => gallery?.onPick(m)}
         onClose={() => setGallery(null)}
         onError={(m) => notify(m, "err")}
+        onOk={(m) => notify(m)}
       />
       <SuggestAll
         open={suggestOpen}
@@ -656,10 +836,26 @@ export default function Page() {
         onClose={() => setSuggestOpen(false)}
         onError={(m) => notify(m, "err")}
       />
+      <PhoneDialog open={phoneOpen} onClose={() => setPhoneOpen(false)} interact={interactOn ? interact.st : null} />
+      <AiDialog
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        onDone={(st, msg) => {
+          interact.setSt(st);
+          notify(msg);
+          openDrawer("interacao");
+        }}
+        onError={(m) => notify(m, "err")}
+      />
 
       {toast && (
         <div className={`toast toast-${toast.kind}`} role="status">
           {toast.msg}
+          {toast.action && (
+            <button className="btn btn-small toast-action" onClick={toast.action.run}>
+              {toast.action.label}
+            </button>
+          )}
         </div>
       )}
     </main>

@@ -13,6 +13,10 @@
 // perspectiva e animadas (vídeo/GIF), como no MadMapper. Com uma camada
 // selecionada, o retângulo dela ganha alças: arrastar um canto redimensiona
 // mantendo a proporção (Shift libera) e arrastar por dentro move.
+//
+// Superfície selecionada ganha duas alças acima da borda de cima (estilo
+// MindManager): a quadrada escala (puxar para fora aumenta, para dentro
+// diminui) e a redonda gira (Shift = passos de 15°), sempre em torno do centro.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { applyH, homography4, invert3, pointInQuad, validateQuad, type Mat3 } from "../lib/geometry";
@@ -57,6 +61,8 @@ const rectCorners = ([x, y, w, h]: Layer["rect"]): Point[] => [[x, y], [x + w, y
 
 type Drag =
   | { kind: "corner"; id: string; corner: number; quadView: Point[] }
+  | { kind: "scale"; id: string; quadView: Point[]; center: Point; dir: Point; start: Point }
+  | { kind: "rotate"; id: string; quadView: Point[]; center: Point; centerScreen: Point; startAngle: number }
   | { kind: "move"; id: string; start: Point; quadView: Point[] }
   | { kind: "boundary"; corner: number }
   | { kind: "layerCorner"; sid: string; lid: string; corner: number; start: Layer["rect"] }
@@ -72,6 +78,7 @@ export default function Editor(props: Props) {
   const lastReject = useRef(0);
   const drawRef = useRef<() => void>(() => {});
   const animatedRef = useRef(false);
+  const liveRef = useRef<string>(""); // "120%" / "15°" durante escala/giro
 
   const usePhoto = view === "photo" && photo !== null && photoToProj !== null;
   const viewW = usePhoto ? photo!.naturalWidth : node.output.width;
@@ -202,6 +209,13 @@ export default function Editor(props: Props) {
       let hasContent = false;
       const map = props.showMedia ? uvMapper(s) : null;
       if (map) {
+        // Borda suave: pinta num canvas auxiliar e multiplica pela máscara
+        // (mesma conta do shader: smoothstep(0, feather, distância à borda em uv)).
+        const feather = s.feather > 0 ? featherLayer(cv.width, cv.height, size.dpr) : null;
+        const gOut = g;
+        const g2 = feather ? feather.g : g;
+        const withCtx = (fn: (g: CanvasRenderingContext2D) => void) => fn(g2);
+        withCtx((g) => {
         g.save();
         poly(g, pts);
         g.clip();
@@ -221,6 +235,14 @@ export default function Editor(props: Props) {
           g.restore();
         }
         g.restore();
+        });
+        if (feather) {
+          applyFeather(feather.g, pts, s.feather);
+          gOut.save();
+          gOut.setTransform(1, 0, 0, 1, 0, 0);
+          gOut.drawImage(feather.canvas, 0, 0);
+          gOut.restore();
+        }
       }
       g.save();
       g.globalAlpha = s.visible ? 1 : 0.35;
@@ -250,6 +272,39 @@ export default function Editor(props: Props) {
       g.restore();
       if (mode === "surfaces" && (sel || surfaces.length <= 6)) {
         pts.forEach((p, i) => handle(g, p, i === 0 ? "#f87171" : color, sel ? String(i + 1) : "", sel && i === selectedCorner));
+      }
+      if (sel && transformHandlesOn()) {
+        const th = transformHandles(pts);
+        g.save();
+        g.strokeStyle = color;
+        g.lineWidth = 1.5;
+        line(g, th.mid, th.rotate);
+        // escala: quadrado com seta dupla
+        g.fillStyle = "rgba(5,7,11,.85)";
+        g.beginPath();
+        g.roundRect(th.scale[0] - 11, th.scale[1] - 11, 22, 22, 5);
+        g.fill();
+        g.lineWidth = 2;
+        g.stroke();
+        // giro: círculo com seta curva
+        g.beginPath();
+        g.arc(th.rotate[0], th.rotate[1], 11, 0, Math.PI * 2);
+        g.fill();
+        g.stroke();
+        g.fillStyle = "#fff";
+        g.font = "700 13px Inter, system-ui, sans-serif";
+        g.textAlign = "center";
+        g.textBaseline = "middle";
+        g.fillText("↕", th.scale[0], th.scale[1] + 1);
+        g.fillText("⟳", th.rotate[0], th.rotate[1] + 1);
+        const d = dragRef.current;
+        if (d && (d.kind === "scale" || d.kind === "rotate") && d.id === s.id && liveRef.current) {
+          g.font = "600 12px Inter, system-ui, sans-serif";
+          g.shadowColor = "rgba(0,0,0,.9)";
+          g.shadowBlur = 4;
+          g.fillText(liveRef.current, th.rotate[0], th.rotate[1] - 22);
+        }
+        g.restore();
       }
     });
 
@@ -389,6 +444,23 @@ export default function Editor(props: Props) {
     }
     const byZ = [...surfaces].sort((a, b) => b.z - a.z);
     const sel = surfaces.find((s) => s.id === selectedId);
+    if (sel && transformHandlesOn()) {
+      const quadView = sel.warp.base.map((p) => projToView(p as Point));
+      const th = transformHandles(quadView.map(viewToScreen));
+      const center = centroid(quadView);
+      if (dist(sp, th.scale) <= 16) {
+        dragRef.current = { kind: "scale", id: sel.id, quadView, center, dir: th.dir, start: sp };
+        liveRef.current = "100%";
+        return;
+      }
+      if (dist(sp, th.rotate) <= 16) {
+        const cs = viewToScreen(center);
+        dragRef.current = { kind: "rotate", id: sel.id, quadView, center, centerScreen: cs,
+                            startAngle: Math.atan2(sp[1] - cs[1], sp[0] - cs[0]) };
+        liveRef.current = "0°";
+        return;
+      }
+    }
     const candidates = sel ? [sel, ...byZ.filter((s) => s !== sel)] : byZ;
     for (const s of candidates) {
       const quadView = s.warp.base.map((p) => projToView(p as Point));
@@ -414,9 +486,39 @@ export default function Editor(props: Props) {
 
   const onPointerMove = (e: React.PointerEvent) => {
     const d = dragRef.current;
-    if (!d) return;
     const sp = eventPoint(e);
+    if (!d) {
+      hoverCursor(sp);
+      return;
+    }
     const vp = screenToView(sp);
+    if (d.kind === "scale" || d.kind === "rotate") {
+      let quadView: Point[];
+      if (d.kind === "scale") {
+        // projeção do arraste na direção "para fora" da borda de cima
+        const along = (sp[0] - d.start[0]) * d.dir[0] + (sp[1] - d.start[1]) * d.dir[1];
+        const f = Math.min(20, Math.max(0.05, Math.exp(along / 160)));
+        liveRef.current = `${Math.round(f * 100)}%`;
+        quadView = d.quadView.map(([x, y]) => [d.center[0] + (x - d.center[0]) * f, d.center[1] + (y - d.center[1]) * f] as Point);
+      } else {
+        let a = Math.atan2(sp[1] - d.centerScreen[1], sp[0] - d.centerScreen[0]) - d.startAngle;
+        a = Math.atan2(Math.sin(a), Math.cos(a));
+        if (e.shiftKey) a = (Math.round((a * 180) / Math.PI / 15) * 15 * Math.PI) / 180;
+        liveRef.current = `${Math.round((a * 180) / Math.PI)}°`;
+        const cos = Math.cos(a);
+        const sin = Math.sin(a);
+        quadView = d.quadView.map(([x, y]) => {
+          const dx = x - d.center[0];
+          const dy = y - d.center[1];
+          return [d.center[0] + dx * cos - dy * sin, d.center[1] + dx * sin + dy * cos] as Point;
+        });
+      }
+      const quad = quadView.map(viewToProj).map(([x, y]) => [round2(x), round2(y)] as Point);
+      const err = validateQuad(quad);
+      if (err) return reject(err);
+      props.onQuad(d.id, quad);
+      return;
+    }
     if (d.kind === "layerCorner" || d.kind === "layerMove") {
       const s = surfaces.find((x) => x.id === d.sid);
       const uv = s ? screenToUv(s, sp) : null;
@@ -448,7 +550,26 @@ export default function Editor(props: Props) {
     props.onQuad(d.id, quad);
   };
 
+  // Cursor certo ao passar sobre as alças (o canvas é um elemento só).
+  const hoverCursor = (sp: Point) => {
+    const cv = canvasRef.current;
+    if (!cv) return;
+    let cursor = "crosshair";
+    const sel = surfaces.find((s) => s.id === selectedId);
+    if (sel && transformHandlesOn()) {
+      const th = transformHandles(sel.warp.base.map((p) => viewToScreen(projToView(p as Point))));
+      if (dist(sp, th.scale) <= 16) cursor = "ns-resize";
+      else if (dist(sp, th.rotate) <= 16) cursor = "grab";
+    }
+    if (cv.style.cursor !== cursor) cv.style.cursor = cursor;
+  };
+
+  function transformHandlesOn() {
+    return mode === "surfaces" && !props.selectedLayerId && !(props.candidates?.length);
+  }
+
   const onPointerUp = (e: React.PointerEvent) => {
+    liveRef.current = "";
     dragRef.current = null;
     setPointer(null);
     canvasRef.current?.releasePointerCapture(e.pointerId);
@@ -571,6 +692,78 @@ function loupe(
   g.lineWidth = 2;
   g.strokeStyle = "#fbbf24";
   g.stroke();
+}
+
+function centroid(pts: Point[]): Point {
+  return pts.reduce((a, p) => [a[0] + p[0] / pts.length, a[1] + p[1] / pts.length], [0, 0] as Point);
+}
+
+function dist(a: Point, b: Point) {
+  return Math.hypot(a[0] - b[0], a[1] - b[1]);
+}
+
+/** Alças acima do meio da borda de cima (TL–TR), na direção "para fora". */
+function transformHandles(pts: Point[]) {
+  const mid: Point = [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2];
+  const c = centroid(pts);
+  let dir: Point = [mid[0] - c[0], mid[1] - c[1]];
+  const len = Math.hypot(dir[0], dir[1]);
+  dir = len > 1e-6 ? [dir[0] / len, dir[1] / len] : [0, -1];
+  const at = (k: number): Point => [mid[0] + dir[0] * k, mid[1] + dir[1] * k];
+  return { mid, dir, scale: at(26), rotate: at(56) };
+}
+
+// ------------------------------------------------------- borda suave (prévia)
+let fLayer: { canvas: HTMLCanvasElement; g: CanvasRenderingContext2D } | null = null;
+function featherLayer(w: number, h: number, dpr: number) {
+  if (!fLayer) {
+    const canvas = document.createElement("canvas");
+    fLayer = { canvas, g: canvas.getContext("2d")! };
+  }
+  const { canvas, g } = fLayer;
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = "source-over";
+  g.filter = "none";
+  g.clearRect(0, 0, w, h);
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return fLayer;
+}
+
+/** Multiplica o que já está no canvas por uma rampa em cada borda do quad
+ * (smoothstep, como o shader). Cada borda é um gradiente linear perpendicular a
+ * ela, com largura = feather × distância até a borda oposta: aproxima a conta em
+ * uv do shader sem emendas de malha. */
+function applyFeather(g: CanvasRenderingContext2D, pts: Point[], f: number) {
+  const c = centroid(pts);
+  g.save();
+  g.globalCompositeOperation = "destination-in";
+  for (let i = 0; i < 4; i++) {
+    const a = pts[i];
+    const b = pts[(i + 1) % 4];
+    const oa = pts[(i + 2) % 4];
+    const ob = pts[(i + 3) % 4];
+    const mid: Point = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    let n: Point = [-(b[1] - a[1]), b[0] - a[0]];
+    const len = Math.hypot(n[0], n[1]) || 1;
+    n = [n[0] / len, n[1] / len];
+    if ((c[0] - mid[0]) * n[0] + (c[1] - mid[1]) * n[1] < 0) n = [-n[0], -n[1]];
+    const opp: Point = [(oa[0] + ob[0]) / 2, (oa[1] + ob[1]) / 2];
+    const w = Math.max(0.5, f * Math.abs((opp[0] - mid[0]) * n[0] + (opp[1] - mid[1]) * n[1]));
+    const grad = g.createLinearGradient(mid[0], mid[1], mid[0] + n[0] * w, mid[1] + n[1] * w);
+    for (let k = 0; k <= 8; k++) {
+      const t = k / 8;
+      grad.addColorStop(t, `rgba(0,0,0,${(t * t * (3 - 2 * t)).toFixed(4)})`);
+    }
+    g.fillStyle = grad;
+    g.beginPath();
+    poly(g, pts);
+    g.fill();
+  }
+  g.restore();
 }
 
 function hexA(hex: string, a: number) {

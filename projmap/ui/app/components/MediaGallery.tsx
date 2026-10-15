@@ -2,16 +2,20 @@
 
 // Galeria de mídias: substitui as listas suspensas, que ficam enormes.
 //
-// Duas origens:
+// Três origens:
 //  - "No projeto": o que já foi enviado/importado;
-//  - "Minhas pastas": a biblioteca do mestre (ex.: a pasta do Google Drive
-//    sincronizada no PC). Escolher daqui importa o arquivo para o projeto.
+//  - "Minhas pastas": pastas do PC do mestre (inclusive o Drive sincronizado);
+//  - "Google Drive": direto do Drive, pela API (ver DriveBrowser).
+// Escolher de uma pasta ou do Drive importa o arquivo para o projeto.
 // Com uma superfície em foco, mostra no topo as "Sugeridas" (formato,
 // resolução, tipo), com o motivo de cada uma.
 
 import { useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "../lib/api";
+import { useEscape } from "../lib/interact";
 import type { LibraryItem, MediaInfo, MediaItem, MediaKind, Suggestion } from "../lib/types";
+import DriveBrowser from "./DriveBrowser";
+import LibraryCard from "./LibraryCard";
 
 interface Props {
   open: boolean;
@@ -20,9 +24,11 @@ interface Props {
   onPick: (item: MediaItem) => void;
   onClose: () => void;
   onError: (msg: string) => void;
+  onOk?: (msg: string) => void;
 }
 
-type Tab = "project" | "library";
+type Tab = "project" | "library" | "drive";
+const TAB_KEY = "projmap.gallery.tab";
 type Card = {
   key: string;
   name: string;
@@ -37,8 +43,17 @@ type Card = {
 
 const KIND_LABEL: Record<MediaKind, string> = { video: "Vídeo", gif: "GIF", image: "Foto" };
 
-export default function MediaGallery({ open, title, surfaceId, onPick, onClose, onError }: Props) {
-  const [tab, setTab] = useState<Tab>("project");
+export default function MediaGallery({ open, title, surfaceId, onPick, onClose, onError, onOk }: Props) {
+  const [tab, setTabState] = useState<Tab>("project");
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    try {
+      localStorage.setItem(TAB_KEY, t);
+    } catch {
+      /* sem armazenamento: só não lembra */
+    }
+  };
+  const [manage, setManage] = useState(false);
   const [project, setProject] = useState<MediaInfo[]>([]);
   const [library, setLibrary] = useState<LibraryItem[]>([]);
   const [folders, setFolders] = useState<string[]>([]);
@@ -49,6 +64,7 @@ export default function MediaGallery({ open, title, surfaceId, onPick, onClose, 
   const [sugg, setSugg] = useState<Suggestion[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  useEscape(open, onClose);
 
   const load = async (rescan = false) => {
     setLoading(true);
@@ -58,7 +74,14 @@ export default function MediaGallery({ open, title, surfaceId, onPick, onClose, 
       setLibrary(l.items);
       setFolders(l.folders);
       setHasRoots(l.roots.length > 0);
-      if (!p.items.length && l.items.length) setTab("library");
+      let saved: string | null = null;
+      try {
+        saved = localStorage.getItem(TAB_KEY);
+      } catch {
+        /* ignore */
+      }
+      if (saved === "project" || saved === "library" || saved === "drive") setTabState(saved);
+      else if (!p.items.length && l.items.length) setTabState("library");
       if (surfaceId) {
         const s = await api.suggest([surfaceId]);
         setSugg(s.suggestions[surfaceId]?.ranking.slice(0, 6) ?? []);
@@ -101,10 +124,11 @@ export default function MediaGallery({ open, title, surfaceId, onPick, onClose, 
       (!q || c.name.toLowerCase().includes(q.toLowerCase())),
   );
 
-  const choose = async (c: Card) => {
-    setBusy(c.key);
+  const choose = (c: Card) => pickWith(c.key, c.pick);
+  const pickWith = async (key: string, pick: () => Promise<MediaItem>) => {
+    setBusy(key);
     try {
-      onPick(await c.pick());
+      onPick(await pick());
       onClose();
     } catch (e) {
       onError(e instanceof ApiError ? e.message : "Falha ao importar");
@@ -145,6 +169,7 @@ export default function MediaGallery({ open, title, surfaceId, onPick, onClose, 
           <div className="segmented">
             <button className={tab === "project" ? "on" : ""} onClick={() => setTab("project")}>No projeto ({project.length})</button>
             <button className={tab === "library" ? "on" : ""} onClick={() => setTab("library")}>Minhas pastas ({library.length})</button>
+            <button className={tab === "drive" ? "on" : ""} onClick={() => setTab("drive")}>☁ Google Drive</button>
           </div>
           <input placeholder="Buscar pelo nome…" value={q} onChange={(e) => setQ(e.target.value)} />
           <div className="segmented">
@@ -163,20 +188,29 @@ export default function MediaGallery({ open, title, surfaceId, onPick, onClose, 
           {tab === "library" && (
             <button className="btn btn-small" onClick={() => load(true)} disabled={loading}>{loading ? "Lendo…" : "Reler pastas"}</button>
           )}
+          {tab === "library" && (
+            <button className={`btn btn-small ${manage ? "btn-accent" : ""}`} onClick={() => setManage(!manage)}>⚙ Pastas</button>
+          )}
         </div>
+
+        {tab === "library" && (manage || !hasRoots) && (
+          <LibraryCard onError={onError} onOk={(m) => { onOk?.(m); void load(); }} />
+        )}
+
+        {tab === "drive" && <DriveBrowser kind={kind} q={q} busy={busy} onPick={pickWith} onError={onError} />}
 
         {tab === "library" && !hasRoots && (
           <p className="dim small gallery-empty">
-            Nenhuma pasta configurada. No editor do PC, card <b>Biblioteca de mídias</b>, adicione a pasta do seu Google Drive
-            (ex.: <code>G:\Meu Drive\Projeção</code>).
+            Nenhuma pasta configurada. Adicione acima uma pasta do PC (ex.: a do Google Drive para computador,{" "}
+            <code>G:\Meu Drive\Projeção</code>) ou use a aba <b>Google Drive</b>.
           </p>
         )}
-        {shown.length === 0 && (tab === "project" || hasRoots) && (
+        {tab !== "drive" && shown.length === 0 && (tab === "project" || hasRoots) && (
           <p className="dim small gallery-empty">{loading ? "Carregando…" : "Nada por aqui com esses filtros."}</p>
         )}
 
-        <div className="gallery-grid">
-          {shown.map((c) => (
+        <div className="gallery-grid" hidden={tab === "drive"}>
+          {tab !== "drive" && shown.map((c) => (
             <button key={c.key} className="gcard" onClick={() => choose(c)} disabled={!!busy} title={c.folder ? `${c.folder}/${c.name}` : c.name}>
               <Thumb card={c} />
               <span className="gname">{busy === c.key ? "Importando…" : c.name}</span>
