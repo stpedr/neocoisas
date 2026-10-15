@@ -42,12 +42,20 @@ pip install -r requirements-projmap-master.txt
 cd projmap/ui && npm ci && npm run build && cd ../..
 
 # 3) Rodar
-python -m projmap.master --project shows/meu-show.projmap --display 1 --open
+python -m projmap.master --project shows/meu-show.projmap --display auto --open
 ```
 
-- `--display 1` abre a saída em tela cheia no 2º monitor, que é o projetor
-  (`0` é o monitor principal).
+- `--display auto` (padrão) abre a saída em tela cheia na primeira tela que
+  não é a principal — normalmente o projetor. A ordem das telas no Windows
+  não é estável, então o número explícito (`--display 1`) pode cair no
+  monitor errado; `0` é sempre a tela principal, depois da esquerda para a
+  direita. `python -m projmap.node.screens` lista as telas e qual o `auto`
+  escolheria.
 - Sem projetor à mão, use `--windowed`: a saída abre numa janela de preview.
+- **Notebook com GPU dedicada (Intel + NVIDIA):** rode uma vez
+  `python -m projmap.tools.gpu` (o instalador do atalho já faz isso) para o
+  OpenGL da projeção/efeitos e o YOLO (DirectML) usarem a placa dedicada —
+  sem isso, o Windows abre ambos na Intel integrada, muito mais lenta.
 - A UI fica em http://localhost:8100. Por padrão o servidor escuta só nesta
   máquina.
 - Na janela de saída: `F` alterna tela cheia e `Ctrl+Q` fecha. `Esc` não fecha
@@ -106,6 +114,10 @@ python -m projmap.master --project shows/meu-show.projmap --sensor phone --adb
 ```
 A página `/sensor/` abre no celular; toque em **Iniciar sensor**. Passo a
 passo em [interact/README.md](interact/README.md#celular-por-usbadb-phone--recomendado-sem-kinect).
+
+**Assistir de outra máquina:** com `PROJMAP_RTSP_URL` no `.env`, o mestre
+publica a camada interativa por RTSP. Ver
+[interact/README.md](interact/README.md#assistir-de-outra-máquina-rtsp).
 
 ### Detectar superfícies automaticamente
 

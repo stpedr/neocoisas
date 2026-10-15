@@ -72,6 +72,20 @@ o processo do nó, e o `ProjectState` local é trocado por mensagens
     `mix(1, cor, a)`.
 - **Upload só quando o frame muda.** Cada fonte devolve uma *chave* de frame,
   e a textura só é reenviada quando a chave muda.
+- **Tela de saída por ordem estável, não por índice do SO.** O Windows não
+  garante uma ordem fixa para as telas (o projetor já apareceu como índice 0
+  numa máquina e como 1 noutra). `node/screens.py` normaliza: `0` é sempre a
+  tela principal, as demais seguem da esquerda para a direita; `--display
+  auto` (padrão) escolhe a primeira não principal. `window.py` também
+  absorve o `WM_DPICHANGED` do pyglet ao abrir numa tela com escala
+  diferente do notebook (ex.: 150% → 100%).
+- **GPU dedicada em notebooks híbridos (Intel + NVIDIA).** O Windows abre
+  OpenGL e DirectML (YOLO dos efeitos) na GPU integrada por padrão —
+  medido em 61,9 ms de pose na Intel contra 4,6 ms na RTX 4060.
+  `tools/gpu.py` grava a preferência "Alto desempenho" do Windows
+  (`HKCU\...\DirectX\UserGpuPreferences`) para os executáveis Python do
+  ambiente (inclusive o caminho via junção, no caso do `uv`), e o instalador
+  do atalho aplica isso sozinho.
 - **Mídia quebrada não derruba o show.** A superfície fica magenta e o erro
   vai para o log.
 - **Oráculo em CPU.** `mapping/warp.py::render_surface_cpu` reproduz o shader
@@ -156,6 +170,14 @@ Guia de uso: [`interact/README.md`](interact/README.md).
 - **Custo.** Simular 5 a 40 entidades custa microssegundos. O render nativo é
   desenhado só na janela em volta de cada sprite: 6–9 ms por frame em 1280×720
   na CPU, cacheado por tick.
+- **Transmissão RTSP opcional.** `interact/stream.py::RtspPublisher` lê o
+  mesmo `runtime.render(size)` numa thread própria e empurra quadros crus
+  (RGBA→BGR24) pelo `stdin` de um `ffmpeg` que codifica H.264 e publica num
+  servidor RTSP (MediaMTX e afins), para assistir de outra máquina sem afetar
+  a thread de projeção. Reconecta sozinho com recuo progressivo se o
+  servidor cair. A URL (com senha) só vem do `.env` — nunca de linha de
+  comando, onde apareceria na lista de processos — e é mascarada em
+  log/status/erro.
 
 ## 9. Segurança
 

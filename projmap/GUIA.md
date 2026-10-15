@@ -275,7 +275,7 @@ transparente).
 **3. Ativar:** no editor, card **Interativo** → predefinição **Castelo dos
 Boos**. Depois, numa superfície, escolha a fonte **Cena interativa**.
 
-## 6.3 Efeitos visuais do visual_frames (Luz reativa, LEGO, Ecos em quadrinhos)
+## 6.3 Efeitos visuais do visual_frames (Luz reativa, LEGO, Ecos, Bichinho espelho, Paraquedas)
 
 Efeitos de **Adriel Vasques** ([visual_frames](https://github.com/adrielvasques/visual_frames),
 usados com permissão). A câmera vê as pessoas (inteligência artificial na placa
@@ -286,6 +286,8 @@ de vídeo) e a música do PC muda as cores:
 | **Luz reativa** | Pontos neon no contorno das pessoas; cores no ritmo da música. |
 | **LEGO** | A pessoa vira um mosaico de peças LEGO; ao se mexer, as peças caem. |
 | **Ecos em quadrinhos** | A pessoa vira HQ e deixa ecos coloridos; na batida, um "carimbo". |
+| **Bichinho espelho** | A pessoa vira um gato, dinossauro ou coelho que imita os seus movimentos (dinâmica de segunda ordem, rabo em corrente). |
+| **Salto de paraquedas** | Um avião solta paraquedistas com o rosto de quem está na frente da câmera. |
 
 **Instalar (uma vez):**
 ```bash
@@ -307,8 +309,10 @@ brilho, sensibilidade ao som, tamanho das peças e quantidade de ecos.
 - **Música:** toque qualquer coisa no PC. O efeito escuta o que sai nos
   alto-falantes (não precisa de microfone).
 - **Placa de vídeo:** obrigatória (NVIDIA, AMD ou Intel com DirectX 12). Na CPU
-  fica lento demais.
-- Bichinho espelho e Paraquedas virão numa segunda etapa.
+  fica lento demais. Em notebook com Intel + NVIDIA, rode uma vez
+  `python -m projmap.tools.gpu` (o instalador do atalho já faz isso) para o
+  OpenGL e o YOLO usarem a placa dedicada — sem isso a projeção e os efeitos
+  caem na Intel integrada, bem mais lenta.
 
 ## 7. Salvar, fazer backup e levar para outro PC
 

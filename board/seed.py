@@ -959,4 +959,94 @@ SEED_CARDS: list[dict] = [
         'sprint': 'Sprint 12 · Hardware',
         'labels': ['backend', 'hardware', 'prioridade:média'],
     },
+    {
+        'title': 'ProjMap — Saída automática pro projetor + GPU dedicada (YOLO/OpenGL) + sensor C920 estável',
+        'description': 'projmap/node/screens.py: ordem estável das telas (0 = principal, depois esquerda→direita) e "auto" (padrão) escolhe a primeira não principal, em vez de depender da ordem instável do Windows; lançador lista as telas com resolução; protege o WM_DPICHANGED do pyglet entre telas com escalas diferentes. projmap/tools/gpu.py: grava a preferência "Alto desempenho" do Windows (DirectX UserGpuPreferences) para o Python do ProjMap, resolvendo YOLO/DirectML e OpenGL caindo na GPU integrada (Intel) em vez da dedicada (ex. RTX 4060) em notebooks com as duas placas; aplicado pelo instalador do atalho. Corrige também o sensor da webcam C920, que parava com "Input timestamp must be monotonically increasing" no MediaPipe.',
+        'column': 'done',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['backend', 'interativo', 'projmap', 'prioridade:alta'],
+    },
+    {
+        'title': 'ProjMap — Transmissão RTSP da camada interativa',
+        'description': 'projmap/interact/stream.py (RtspPublisher): publica num servidor RTSP (MediaMTX e afins) o que a camada interativa está mostrando (cena ou efeito do visual_frames), para assistir de outra máquina. Roda numa thread própria (ffmpeg via stdin, H.264 zerolatency); servidor lento ou fora do ar não trava a projeção e reconecta sozinho com recuo progressivo. URL/credenciais só no .env (PROJMAP_RTSP_*), nunca na linha de comando; senha mascarada em todo log. Pendência: falta credencial de publicação no servidor do usuário (a atual é só leitura) para validar ponta a ponta.',
+        'column': 'review',
+        'sprint': 'Sprint 11 · Projeção mapeada',
+        'labels': ['backend', 'interativo', 'projmap', 'prioridade:média'],
+    },
+    # Sprint 12 · UI moderna + PWA + Prisma (projmap/ui: Tailwind + shadcn/ui +
+    # Framer Motion + Three.js + PWA + Prisma/SQLite, com TDD daqui pra frente).
+    # Plano completo em docs/planejamento/ (design system) e no plano de migração
+    # aprovado na sessão de 2026-10-15. Ordem: spike -> testes -> tokens -> painéis
+    # -> camadas/galeria -> remote -> editor (maior risco, por último) -> PWA ->
+    # Prisma -> Three.js -> limpeza.
+    {
+        'title': 'ProjMap UI — spike de viabilidade Prisma/SQLite',
+        'description': 'prisma-client-py + SQLite, nativo no Windows, sem Docker, dentro do FastAPI atual (sem novo serviço Node). Resultado: funciona (generate + db push + client async testados ponta a ponta); decisão registrada como D9 em docs/projmap/PLANO.md. Entrega: docs/entregas/projmap-ui-spike-prisma.md.',
+        'column': 'done',
+        'sprint': 'Sprint 12 · UI moderna + PWA + Prisma',
+        'labels': ['backend', 'projmap', 'infra', 'prioridade:alta'],
+    },
+    {
+        'title': 'ProjMap UI — infraestrutura de testes (Vitest + Playwright) e TDD',
+        'description': 'vitest + @testing-library/react + jsdom para componentes/unidade; @playwright/test para e2e. Primeiro teste cobrindo função pura de app/lib/geometry.ts antes de qualquer componente visual. A partir daqui, todo componente novo/migrado leva teste escrito antes (TDD).',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · UI moderna + PWA + Prisma',
+        'labels': ['frontend', 'projmap', 'testes', 'prioridade:alta'],
+    },
+    {
+        'title': 'ProjMap UI — Tailwind + shadcn/ui: tokens e primeiro componente',
+        'description': 'tailwind.config.ts consumindo o mapeamento de tokens de docs/planejamento/design-system-projmap-ui.md (sem resetar visual). Migra um componente pequeno (RemoteCard.tsx ou ColorControls.tsx) como prova de conceito, com teste TDD antes.',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · UI moderna + PWA + Prisma',
+        'labels': ['frontend', 'projmap', 'prioridade:média'],
+    },
+    {
+        'title': 'ProjMap UI — migração dos painéis do editor para shadcn',
+        'description': 'SurfacePanel, EffectsSection, InteractPanel, DetectPanel, ColorControls -> Select/Slider/Tabs do shadcn, um por vez. Esses painéis escrevem no projeto a ~20 PUTs/s durante arraste: regressão de comportamento pesa mais que visual.',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · UI moderna + PWA + Prisma',
+        'labels': ['frontend', 'projmap', 'prioridade:média'],
+    },
+    {
+        'title': 'ProjMap UI — camadas e galeria: Framer Motion + Dialog',
+        'description': 'LayersPanel: reorder de camadas com layout do Framer Motion. MediaGallery/ImageCard/LibraryCard/SuggestAll: migra pra Dialog do shadcn + AnimatePresence no backdrop. LayersPanel é peça sensível (F9, prévia ao vivo) — cobrir com teste e2e.',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · UI moderna + PWA + Prisma',
+        'labels': ['frontend', 'projmap', 'prioridade:média'],
+    },
+    {
+        'title': 'ProjMap UI — remote do celular: shadcn + feedback do blackout',
+        'description': 'remote/page.tsx: Button/Slider do shadcn, blackout com feedback de Framer Motion, toasts migram pra Sonner. É a tela usada em show ao vivo — validar num celular real na mesma rede Wi-Fi, não só emulador.',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · UI moderna + PWA + Prisma',
+        'labels': ['frontend', 'mobile', 'projmap', 'prioridade:alta'],
+    },
+    {
+        'title': 'ProjMap UI — editor: shell shadcn sem tocar no canvas',
+        'description': 'Troca .btn/.card/.segmented por shadcn na topbar e controles do editor; o <canvas> e app/lib/geometry.ts/preview.ts não mudam. Maior risco do plano: .editor-wrap/.editor-canvas usa position:absolute;inset:0 de propósito (senão a coluna trava na largura antiga) — menor diff possível.',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · UI moderna + PWA + Prisma',
+        'labels': ['frontend', 'projmap', 'prioridade:alta'],
+    },
+    {
+        'title': 'ProjMap UI — PWA completo (editor + remote; sensor documentado)',
+        'description': 'Manifest estendido (start_url/scope de /remote/ para /), ícones PNG (180/192/512, maskable), service worker via Workbox gerado em build time (next-pwa não serve bem export estático puro). Sensor (getUserMedia) continua sem secure context na LAN — documentado como limitação (D6/D9), não corrigido com HTTPS local.',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · UI moderna + PWA + Prisma',
+        'labels': ['frontend', 'mobile', 'projmap', 'prioridade:média'],
+    },
+    {
+        'title': 'ProjMap — catálogo/biblioteca/presets via Prisma + SQLite',
+        'description': 'projmap/master/db/ (schema.prisma real, client.py via lifespan do FastAPI, routers de catálogo/biblioteca/presets/histórico), seguindo o padrão de create_remote_router/create_library_router. Script de importação idempotente do cache atual da biblioteca. project.json/core/project.py não mudam (fonte de verdade do show continua sendo o arquivo).',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · UI moderna + PWA + Prisma',
+        'labels': ['backend', 'projmap', 'infra', 'prioridade:alta'],
+    },
+    {
+        'title': 'ProjMap UI — prévia 3D opcional (Three.js)',
+        'description': '@react-three/fiber + @react-three/drei: plano+quads a partir dos dados de core/project.py, componente novo e isolado (lazy-loaded), nunca no caminho crítico do editor 2D (que continua Canvas2D puro). Medir impacto no tamanho do export estático.',
+        'column': 'backlog',
+        'sprint': 'Sprint 12 · UI moderna + PWA + Prisma',
+        'labels': ['frontend', 'projmap', 'prioridade:baixa'],
+    },
 ]

@@ -18,6 +18,15 @@
 | **D6** | Celular / Android | **Web mobile responsiva** (remote + captura de foto) **+ app Android via Capacitor** empacotando a mesma UI | PWA instalável / TWA | PWA e câmera exigem HTTPS, e a LAN é HTTP. O TWA exige domínio público. O Capacitor resolve as duas coisas e gera APK. |
 | **D7** | Segmentação com IA | **SAM 2.1 oficial** (Meta, Apache-2.0) como extra opcional `projmap[ai]`, via factory `get_segmenter: manual \| classic \| sam2` | `ultralytics` | O `ultralytics` é **AGPL**. O fallback `classic` (OpenCV) garante que tudo funciona sem PyTorch. |
 | **D8** | Mídia no Pi 5 | Transcodificar no mestre para o **perfil do nó** (H.264 1080p30 decodificado por software, ou HEVC). **Modo baked** (1 vídeo por nó) como opção de robustez | HAP | O Pi 5 não tem decoder H.264 por hardware nem compressão BC (sem HAP). O baked é o "mpv em loop" do ifnull, só que sincronizado. |
+| **D9** | ORM/banco pro catálogo (Fase 0 da migração do frontend) | **`prisma-client-py` + SQLite**, dentro do FastAPI atual (`master/app.py`) | SQLAlchemy 2.0 async + `aiosqlite` + Alembic | Spike em 2026-10-15: `prisma generate`/`db push` funcionam nativos no Windows, sem Docker (criam `~/.cache/prisma-python/binaries/` uma vez, reusado depois); client async escreveu/leu um registro real. Único ajuste: o CLI (Node) do Prisma precisa do `Scripts/` do venv no `PATH` pra achar o `prisma-client-py.exe` — documentar isso, não é um bloqueio. `enum` não é suportado no provider `sqlite` (campos tipo `status` ficam `String` + validação Pydantic). `project.json` continua a fonte de verdade do show; o banco é só para catálogo/biblioteca/presets (ver plano em `docs/planejamento/`). |
+
+**Nota sobre D6 (revisão parcial, 2026-10-15):** a limitação de D6 (PWA +
+câmera exige HTTPS) só se aplica à tela do **sensor** (`sensor/page.tsx`,
+que usa `getUserMedia` para vídeo em tempo real). O editor e o remote usam
+`<input type="file" capture="environment">` para a foto da posição do
+projetor — um seletor nativo do sistema, sem exigência de secure context —
+então **podem** virar PWA instalável normalmente. D6 continua valendo para
+o sensor (Capacitor/app Android).
 
 ---
 

@@ -243,6 +243,37 @@ próprio mapeamento.
 > Os scripts do TD **não foram executados dentro do TouchDesigner** nesta
 > entrega. O protocolo OSC foi testado de ponta a ponta em Python.
 
+## Assistir de outra máquina (RTSP)
+
+Com `PROJMAP_RTSP_URL` definida no `.env`, o mestre publica o que a camada
+interativa está mostrando (a cena ou o efeito do visual_frames) num servidor
+RTSP (MediaMTX e afins):
+
+```ini
+PROJMAP_RTSP_URL=rtsp://usuario:senha@servidor:8554/cam
+PROJMAP_RTSP_SIZE=1280x720   # opcional
+PROJMAP_RTSP_FPS=30          # opcional
+PROJMAP_RTSP_BITRATE=4M      # opcional
+PROJMAP_RTSP_TRANSPORT=tcp   # opcional
+```
+
+De outra máquina na mesma rede do servidor:
+
+```bash
+ffplay -rtsp_transport tcp -fflags nobuffer -flags low_delay "rtsp://.../cam"
+```
+
+- Roda numa thread própria (`interact/stream.py::RtspPublisher`, ffmpeg via
+  `stdin` → H.264 `zerolatency`): servidor lento ou fora do ar **não trava a
+  projeção**, e a transmissão reconecta sozinha com recuo progressivo (1 s →
+  15 s).
+- A URL tem senha — por isso só vem do `.env` (nunca de `--flag`, onde
+  apareceria na lista de processos), e é mascarada em todo log/status/erro.
+- Sem `PROJMAP_RTSP_URL`, nada sobe e o ProjMap funciona como antes.
+- A credencial precisa de permissão de **publicação** (`ANNOUNCE`) no
+  servidor — uma credencial só de leitura recebe `401`. Detalhes em
+  [`docs/entregas/projmap-transmissao-rtsp.md`](../../docs/entregas/projmap-transmissao-rtsp.md).
+
 ## API (`/api/interact/...`)
 
 | Método | Rota | Para quê |
