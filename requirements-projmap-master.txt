@@ -14,3 +14,5 @@ pyglet>=2.0
 segno>=1.6              # QR de pareamento do remote no celular (F6)
 python-osc>=1.8          # camada interativa: OSC (TouchDesigner/Kinect)
 # Opcional — sensor webcam: pip install mediapipe  (+ modelo face_landmarker.task)
+httpx>=0.27             # Google Drive na galeria (API oficial v3)
+python-dotenv>=1.0      # lê o .env (chaves do Drive) ao iniciar o mestre

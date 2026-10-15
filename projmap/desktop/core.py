@@ -15,6 +15,7 @@ SETTINGS_PATH = CONFIG_DIR / "launcher.json"
 DEFAULT_SHOWS_DIR = Path.home() / "Documents" / "ProjMap"
 
 URL_RE = re.compile(r"(http://\S+/remote/\S*)")
+SENSORS = ("phone", "sim", "webcam")
 
 
 @dataclass
@@ -28,6 +29,8 @@ class Settings:
     token: str = ""  # vazio = gerado a cada execução
     open_browser: bool = True
     extra_library: list[str] = field(default_factory=list)
+    interact: bool = False  # camada interativa (fantasmas etc.) só quando o operador pede
+    sensor: str = "phone"  # phone (celular pelo USB/ADB) | sim | webcam
 
 
 def load_settings(path: Path = SETTINGS_PATH) -> Settings:
@@ -86,6 +89,13 @@ def master_command(s: Settings, show: str, python: Optional[str] = None) -> list
         cmd += ["--host", "0.0.0.0"]
         if s.token:
             cmd += ["--token", s.token]
+    if s.interact:
+        sensor = s.sensor if s.sensor in SENSORS else "phone"
+        cmd += ["--sensor", sensor]
+        if sensor == "phone":
+            cmd += ["--adb"]  # liga o celular pelo cabo e abre o sensor nele
+    else:
+        cmd += ["--no-interact"]
     if s.open_browser:
         cmd += ["--open"]
     for lib in s.extra_library:

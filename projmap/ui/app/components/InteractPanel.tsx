@@ -1,56 +1,25 @@
 "use client";
 
-// Card "Interativo": descreva a cena em texto (NLP), escolha presets, simule a
-// pessoa (sem sensor) e acompanhe o estado ao vivo. O visual aparece em qualquer
-// superfície com a fonte "Cena interativa" (ou no TouchDesigner, via OSC).
+// Gaveta "Interação": presets de cena, pessoa simulada e estado ao vivo.
+// Descrever a cena com IA (LLM) fica num botão à parte (AiDialog): só usa a IA
+// quem pedir. O visual aparece em superfícies com a fonte "Cena interativa"
+// (ou no TouchDesigner, via OSC).
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import type { InteractState } from "../lib/types";
 
-const EXAMPLES = [
-  "5 fantasmas que param e cobrem o rosto quando eu olho, e vêm me buscar quando viro de costas",
-  "vaga-lumes amarelos que vão para onde eu olho",
-  "cardume de 20 peixes azuis que fogem de mim",
-];
-
-export default function InteractPanel({ onError }: { onError: (msg: string) => void }) {
-  const [st, setSt] = useState<InteractState | null>(null);
-  const [off, setOff] = useState(false);
-  const [text, setText] = useState("");
-  const [useLlm, setUseLlm] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [origin, setOrigin] = useState<{ source: string; notes: string[] } | null>(null);
+export default function InteractPanel({ st, setSt, caught, onError, onOpenAi }: {
+  st: InteractState | null;
+  setSt: (s: InteractState) => void;
+  caught: boolean;
+  onError: (msg: string) => void;
+  onOpenAi: () => void;
+}) {
   const [presets, setPresets] = useState<Record<string, { title: string; description: string }>>({});
-  const lastCaught = useRef(0);
-  const [caughtFlash, setCaughtFlash] = useState(false);
 
-  // Estado ao vivo (2×/s). 404 = mestre rodando com --no-interact.
   useEffect(() => {
-    let alive = true;
-    const poll = async () => {
-      try {
-        const s = await api.interactState();
-        if (!alive) return;
-        setSt(s);
-        setOff(false);
-        const caught = s.events.filter((e) => e.name === "caught").at(-1);
-        if (caught && caught.t !== lastCaught.current) {
-          lastCaught.current = caught.t;
-          setCaughtFlash(true);
-          window.setTimeout(() => setCaughtFlash(false), 1200);
-        }
-      } catch (e) {
-        if (alive && e instanceof ApiError && e.status === 404) setOff(true);
-      }
-    };
-    void poll();
     api.interactPresets().then(setPresets).catch(() => {});
-    const id = window.setInterval(poll, 500);
-    return () => {
-      alive = false;
-      window.clearInterval(id);
-    };
   }, []);
 
   const run = async (fn: () => Promise<InteractState>) => {
@@ -61,84 +30,26 @@ export default function InteractPanel({ onError }: { onError: (msg: string) => v
     }
   };
 
-  const generate = async () => {
-    if (!text.trim()) return;
-    setBusy(true);
-    try {
-      const res = await api.interactGenerate(text, useLlm);
-      setSt(res);
-      setOrigin({ source: res.source ?? "?", notes: res.notes ?? [] });
-    } catch (e) {
-      onError(e instanceof ApiError ? e.message : "Falha ao gerar a cena");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (off) {
-    return (
-      <section className="card">
-        <h2>Interativo</h2>
-        <p className="dim small">Camada interativa desligada (mestre iniciado com --no-interact).</p>
-      </section>
-    );
-  }
-
   const player = st?.players[0];
   const counts = (st?.entities ?? []).reduce<Record<string, number>>((acc, e) => ({ ...acc, [e.state]: (acc[e.state] ?? 0) + 1 }), {});
   const sim = st?.sensor === "sim";
 
   return (
-    <section className={`card ${caughtFlash ? "card-alert" : ""}`}>
-      <div className="card-head">
-        <h2>Interativo · IA + sensores</h2>
+    <>
+      <div className="row">
         {st && (
           <span className="pill">
-            {{ sim: "pessoa simulada", osc: "OSC / Kinect", webcam: "webcam", phone: "celular" }[st.sensor]}
+            Sensor: {{ sim: "pessoa simulada", osc: "OSC / Kinect", webcam: "webcam", phone: "celular" }[st.sensor]}
           </span>
         )}
+        <button className="btn btn-small" onClick={onOpenAi} title="Descreva a cena em texto e a IA monta">✨ Criar cena com IA</button>
       </div>
 
-      <label>
-        Descreva a cena
-        <textarea
-          rows={3}
-          value={text}
-          placeholder={EXAMPLES[0]}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void generate();
-          }}
-        />
-      </label>
-      <div className="row">
-        <label className="toggle">
-          <input type="checkbox" checked={useLlm} onChange={(e) => setUseLlm(e.target.checked)} />
-          Usar IA (LLM)
-        </label>
-        <button className="btn btn-accent" disabled={busy || !text.trim()} onClick={generate}>
-          {busy ? "Gerando…" : "Gerar cena"}
-        </button>
-      </div>
-      {origin && (
-        <p className="dim small">
-          {origin.source === "llm" ? "✓ Interpretado pela IA." : "⚠ Montado por palavras-chave, sem IA."}
-          {origin.notes.filter((n) => !n.includes("palavras-chave")).map((n) => (
-            <span key={n}> {n}.</span>
-          ))}
-        </p>
-      )}
-      <div className="upload-row">
-        {EXAMPLES.slice(1).map((ex) => (
-          <button key={ex} className="btn btn-small" onClick={() => setText(ex)} title="usar este exemplo">
-            {ex.split(" ").slice(0, 3).join(" ")}…
-          </button>
-        ))}
-      </div>
-
-      <div className="upload-row" aria-label="Presets">
+      <span className="dim small">Cenas prontas</span>
+      <div className="upload-row" aria-label="Cenas prontas">
         {Object.entries(presets).map(([k, p]) => (
-          <button key={k} className="btn btn-small" title={p.description} onClick={() => run(() => api.interactPreset(k))}>
+          <button key={k} className={`btn btn-small ${st?.spec.title === p.title ? "btn-accent" : ""}`} title={p.description}
+                  onClick={() => run(() => api.interactPreset(k))}>
             {p.title}
           </button>
         ))}
@@ -157,23 +68,13 @@ export default function InteractPanel({ onError }: { onError: (msg: string) => v
               Pessoa: {!player.tracked ? "não detectada" : player.watching ? "olhando a parede" : "de costas"}
             </span>
           )}
-          {caughtFlash && <span className="caught">Pegou! 👻</span>}
+          {st.sensor === "phone" && (
+            <span className="dim small">
+              Celular-sensor: {st.phone?.connected ? `conectado (${Math.round(st.phone.fps)} fps)` : "desconectado — veja o botão Celular"}
+            </span>
+          )}
+          {caught && <span className="caught">Pegou! 👻</span>}
         </div>
-      )}
-
-      {st?.sensor === "phone" ? (
-        <p className="dim small">
-          Celular-sensor: {st.phone?.connected ? `conectado (${Math.round(st.phone.fps)} fps)` : "desconectado"}.
-        </p>
-      ) : (
-        <details>
-          <summary className="dim small">Usar o celular como sensor (USB/ADB)</summary>
-          <p className="dim small">
-            Ligue a Depuração USB, conecte o cabo e rode o mestre com <code>--sensor phone --adb</code> (ou{" "}
-            <code>python -m projmap.tools.adb</code>). A página <code>/sensor/</code> abre no celular; toque em
-            &quot;Iniciar sensor&quot;.
-          </p>
-        </details>
       )}
 
       {sim && player && (
@@ -219,6 +120,6 @@ export default function InteractPanel({ onError }: { onError: (msg: string) => v
         Para ver na parede, escolha a fonte <b>Cena interativa</b> numa superfície. Para o TouchDesigner, rode o mestre com{" "}
         <code>--osc-out 127.0.0.1:7000</code>.
       </p>
-    </section>
+    </>
   );
 }

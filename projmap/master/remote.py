@@ -20,7 +20,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, ValidationError
 
-from ..core.project import Look, Project, SourceSpec, SurfaceLook, new_id
+from ..core.project import ColorAdjust, Look, Project, SourceSpec, SurfaceLook, new_id
 from ..core.state import ProjectState
 from .auth import is_loopback
 
@@ -29,6 +29,7 @@ class SurfacePatch(BaseModel):
     visible: Optional[bool] = None
     opacity: Optional[float] = Field(None, ge=0.0, le=1.0)
     source: Optional[dict[str, Any]] = None
+    color: Optional[ColorAdjust] = None  # preset de imagem aplicado na superfície
 
 
 class LookCreate(BaseModel):
@@ -117,6 +118,8 @@ def create_router(state: ProjectState, host: str = "127.0.0.1", port: int = 8100
                 surf.opacity = body.opacity
             if body.source is not None:
                 surf.source = SourceSpec.model_validate({**surf.source.model_dump(), **body.source})
+            if body.color is not None:
+                surf.color = body.color
             return p
 
         try:

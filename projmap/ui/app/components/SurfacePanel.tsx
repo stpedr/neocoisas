@@ -6,6 +6,7 @@ import { validateQuad } from "../lib/geometry";
 import type { MediaItem, Project, SourceKind, Surface } from "../lib/types";
 import { DEFAULT_COLOR } from "../lib/types";
 import ColorControls, { isNeutral } from "./ColorControls";
+import ColorPresets from "./ColorPresets";
 
 interface Props {
   surface: Surface;
@@ -65,9 +66,9 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
   };
 
   return (
-    <section className="card">
+    <div className="surface-detail">
       <div className="card-head">
-        <h2>Superfície</h2>
+        <h2>{s.label || s.id}</h2>
         <label className="toggle">
           <input type="checkbox" checked={s.visible} onChange={(e) => onChange((c) => ({ ...c, visible: e.target.checked }))} />
           Visível
@@ -170,8 +171,8 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
         Opacidade <span className="dim">{Math.round(s.opacity * 100)}%</span>
         <input type="range" min={0} max={1} step={0.01} value={s.opacity} onChange={(e) => onChange((c) => ({ ...c, opacity: Number(e.target.value) }))} />
       </label>
-      <label className="slider">
-        Borda suave <span className="dim">{Math.round(s.feather * 100)}%</span>
+      <label className="slider" title="Esmaece as bordas da superfície até o preto: some com a 'moldura' dura e funde com a parede">
+        Borda suave <span className="dim">{s.feather > 0 ? `${Math.round(s.feather * 100)}%` : "desligada"}</span>
         <input type="range" min={0} max={0.5} step={0.005} value={s.feather} onChange={(e) => onChange((c) => ({ ...c, feather: Number(e.target.value) }))} />
       </label>
       <div className="row">
@@ -189,12 +190,14 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
         </label>
       </div>
 
-      <details className="corners">
-        <summary>Cor desta superfície{isNeutral(s.color ?? DEFAULT_COLOR) ? "" : " (ajustada)"}</summary>
+      <details className="corners" open={!isNeutral(s.color ?? DEFAULT_COLOR)}>
+        <summary>Imagem desta superfície (brilho, contraste, presets){isNeutral(s.color ?? DEFAULT_COLOR) ? "" : " · ajustada"}</summary>
         <p className="dim small">Equilibre uma parede mais escura ou colorida que as outras. Soma-se ao ajuste do projetor.</p>
+        <ColorPresets value={s.color ?? DEFAULT_COLOR} target="esta superfície" onError={onError}
+                      onApply={(color) => onChange((c) => ({ ...c, color }))} />
         <ColorControls value={s.color ?? DEFAULT_COLOR} onChange={(color) => onChange((c) => ({ ...c, color }))} />
         {!isNeutral(s.color ?? DEFAULT_COLOR) && (
-          <button className="btn btn-small" onClick={() => onChange((c) => ({ ...c, color: { ...DEFAULT_COLOR } }))}>Zerar cor</button>
+          <button className="btn btn-small" onClick={() => onChange((c) => ({ ...c, color: { ...DEFAULT_COLOR } }))}>Zerar ajustes</button>
         )}
       </details>
 
@@ -224,10 +227,10 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
         ))}
       </details>
 
-      <button className="btn btn-danger btn-block" onClick={() => confirm(`Excluir "${s.label || s.id}"?`) && onDelete()}>
-        Excluir superfície
+      <button className="btn btn-danger btn-block" title="Atalho: tecla Delete com a superfície selecionada" onClick={onDelete}>
+        Excluir superfície <span className="kbd">Del</span>
       </button>
-    </section>
+    </div>
   );
 }
 

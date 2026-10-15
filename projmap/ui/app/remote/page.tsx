@@ -12,8 +12,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { adoptTokenFromHash, api, ApiError, getToken, setToken } from "../lib/api";
 import MediaGallery from "../components/MediaGallery";
-import ColorControls, { PRESETS } from "../components/ColorControls";
-import type { MediaItem, Pattern, Project, SourceSpec, Surface } from "../lib/types";
+import ColorControls from "../components/ColorControls";
+import ColorPresets from "../components/ColorPresets";
+import type { ColorAdjust, MediaItem, Pattern, Project, SourceSpec, Surface } from "../lib/types";
 import { DEFAULT_COLOR } from "../lib/types";
 
 type Conn = "ok" | "offline" | "unpaired";
@@ -168,17 +169,16 @@ export default function RemotePage() {
 
           <section className="card">
             <h2>Imagem</h2>
-            <div className="preset-grid">
-              {PRESETS.map((p) => (
-                <button key={p.name} className="btn btn-small" title={p.hint} onClick={() => patchOutput({ color: { ...p.color } })}>
-                  {p.name}
-                </button>
-              ))}
-            </div>
+            <ColorPresets value={out.color ?? DEFAULT_COLOR} target="o projetor" onError={(m) => notify(m, "err")}
+                          onApply={(c) => patchOutput({ color: c })} />
             <ColorControls compact value={out.color ?? DEFAULT_COLOR} onChange={(c) => patchOutput({ color: c })} />
             <label className="toggle">
               <input type="checkbox" checked={out.flip_h} onChange={(e) => patchOutput({ flip_h: e.target.checked })} />
               Retroprojeção (espelhar)
+            </label>
+            <label className="toggle">
+              <input type="checkbox" checked={out.flip_v} onChange={(e) => patchOutput({ flip_v: e.target.checked })} />
+              Projetor no teto (inverter)
             </label>
           </section>
 
@@ -192,6 +192,7 @@ export default function RemotePage() {
           {surfaces.length === 0 && <p className="dim">Nenhuma superfície neste projetor. Crie no editor.</p>}
           {surfaces.map((s) => (
             <SurfaceCard key={s.id} surface={s} media={project.media}
+                         onError={(m) => notify(m, "err")}
                          onDrag={(v) => (dragging.current = v)}
                          onGallery={() => setGallerySurface(s)}
                          onPatch={(changes) => run(() => api.patchSurface(s.id, changes))} />
@@ -315,10 +316,11 @@ function Slider({ value, onCommit, onDrag }: {
 }
 
 
-function SurfaceCard({ surface, media, onPatch, onDrag, onGallery }: {
+function SurfaceCard({ surface, media, onPatch, onDrag, onGallery, onError }: {
   surface: Surface;
   media: Record<string, MediaItem>;
-  onPatch: (c: { visible?: boolean; opacity?: number; source?: Partial<SourceSpec> }) => void;
+  onPatch: (c: { visible?: boolean; opacity?: number; source?: Partial<SourceSpec>; color?: ColorAdjust }) => void;
+  onError: (m: string) => void;
   onDrag: (dragging: boolean) => void;
   onGallery: () => void;
 }) {
@@ -356,6 +358,11 @@ function SurfaceCard({ surface, media, onPatch, onDrag, onGallery }: {
       )}
       <label>Opacidade</label>
       <Slider value={surface.opacity} onDrag={onDrag} onCommit={(v) => onPatch({ opacity: v })} />
+      <details>
+        <summary className="dim small">Imagem desta superfície (presets)</summary>
+        <ColorPresets value={surface.color ?? DEFAULT_COLOR} target="esta superfície" onError={onError}
+                      onApply={(color) => onPatch({ color })} />
+      </details>
     </section>
   );
 }

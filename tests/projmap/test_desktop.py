@@ -80,3 +80,18 @@ def test_cria_atalho_windows(tmp_path):
     lnk = tmp_path / "menu" / "ProjMap.lnk"
     create_windows_shortcut(lnk, sys.executable, "-m projmap.desktop", tmp_path, make_icon(tmp_path / "i.ico"))
     assert lnk.is_file() and lnk.stat().st_size > 0
+
+
+def test_interacao_so_quando_pedida(tmp_path):
+    off = master_command(Settings(shows_dir=str(tmp_path)), "S", python="python")
+    assert "--no-interact" in off and "--sensor" not in off  # padrão: show sem interação
+
+    on = master_command(Settings(shows_dir=str(tmp_path), interact=True, sensor="phone"), "S", python="python")
+    assert "--no-interact" not in on
+    assert on[on.index("--sensor") + 1] == "phone" and "--adb" in on  # celular pelo cabo
+
+    sim = master_command(Settings(shows_dir=str(tmp_path), interact=True, sensor="sim"), "S", python="python")
+    assert sim[sim.index("--sensor") + 1] == "sim" and "--adb" not in sim
+
+    weird = master_command(Settings(shows_dir=str(tmp_path), interact=True, sensor="kinect9000"), "S", python="python")
+    assert weird[weird.index("--sensor") + 1] == "phone"  # valor estranho no json não quebra o mestre
