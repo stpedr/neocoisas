@@ -1009,8 +1009,8 @@ SEED_CARDS: list[dict] = [
     },
     {
         'title': 'ProjMap UI — migração dos painéis do editor para shadcn',
-        'description': 'SurfacePanel, EffectsSection, InteractPanel, DetectPanel, ColorControls -> Select/Slider/Tabs do shadcn, um por vez. Esses painéis escrevem no projeto a ~20 PUTs/s durante arraste: regressão de comportamento pesa mais que visual.',
-        'column': 'backlog',
+        'description': 'SurfacePanel, EffectsSection, InteractPanel, DetectPanel -> Select/Slider/Tabs do shadcn, um por vez, TDD antes de cada troca. Esses painéis escrevem no projeto a ~20 PUTs/s durante arraste: regressão de comportamento pesa mais que visual. Progresso: DetectPanel pronto (Button/Card/Checkbox/Slider, 7 testes) — docs/entregas/projmap-ui-detectpanel-shadcn.md. Faltam SurfacePanel, EffectsSection, InteractPanel (precisam de Select/Tabs, ainda não portados).',
+        'column': 'review',
         'sprint': 'Sprint 12 · UI moderna + PWA + SQLAlchemy',
         'labels': ['frontend', 'projmap', 'prioridade:média'],
     },
