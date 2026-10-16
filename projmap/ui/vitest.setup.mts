@@ -26,3 +26,7 @@ globalThis.ResizeObserver ??= ResizeObserverPolyfill;
 Element.prototype.hasPointerCapture ??= () => false;
 Element.prototype.setPointerCapture ??= () => {};
 Element.prototype.releasePointerCapture ??= () => {};
+
+// jsdom também não implementa scrollIntoView — Radix Select chama isso ao
+// abrir, pra rolar até o item selecionado.
+Element.prototype.scrollIntoView ??= () => {};

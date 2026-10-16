@@ -1009,8 +1009,8 @@ SEED_CARDS: list[dict] = [
     },
     {
         'title': 'ProjMap UI — migração dos painéis do editor para shadcn',
-        'description': 'SurfacePanel, EffectsSection, InteractPanel, DetectPanel -> Select/Slider/Tabs do shadcn, um por vez, TDD antes de cada troca. Esses painéis escrevem no projeto a ~20 PUTs/s durante arraste: regressão de comportamento pesa mais que visual. Progresso: DetectPanel pronto (Button/Card/Checkbox/Slider, 7 testes) — docs/entregas/projmap-ui-detectpanel-shadcn.md. Faltam SurfacePanel, EffectsSection, InteractPanel (precisam de Select/Tabs, ainda não portados).',
-        'column': 'review',
+        'description': 'DetectPanel, EffectsSection, InteractPanel, SurfacePanel -> Button/Card/Checkbox/Slider/Select do shadcn, um por vez, TDD antes de cada troca (26+7 = 33 testes no total). Primitivos completos: Button, Card, Checkbox, Slider, Badge, Input, Select. Achado real: <input type=range> nativo não responde a ArrowRight no jsdom (o Slider do Radix corrige isso de verdade, não só visual). Entregas: docs/entregas/projmap-ui-detectpanel-shadcn.md e projmap-ui-paineis-shadcn-fase3.md.',
+        'column': 'done',
         'sprint': 'Sprint 12 · UI moderna + PWA + SQLAlchemy',
         'labels': ['frontend', 'projmap', 'prioridade:média'],
     },

@@ -8,6 +8,41 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import type { EffectParams, EffectsCatalog, InteractState } from "../lib/types";
+import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
+import { Slider } from "./ui/slider";
+
+function Field({ label, display, value, onValueChange, ...range }: {
+  label: string;
+  display?: string;
+  value: number;
+  onValueChange: (v: number) => void;
+  min: number;
+  max: number;
+  step: number;
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+      <span className="flex justify-between gap-2">
+        {label} {display && <span>{display}</span>}
+      </span>
+      <Slider {...range} value={[value]} onValueChange={([v]) => onValueChange(v)} aria-label={label} />
+    </label>
+  );
+}
+
+function Toggle({ label, checked, onCheckedChange }: {
+  label: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm text-foreground">
+      <Checkbox checked={checked} onCheckedChange={(v) => onCheckedChange(v === true)} aria-label={label} />
+      {label}
+    </label>
+  );
+}
 
 export default function EffectsSection({ st, onState, onError }: {
   st: InteractState | null;
@@ -43,95 +78,92 @@ export default function EffectsSection({ st, onState, onError }: {
   const p = st?.effect_params;
 
   return (
-    <div className="effects-section">
-      <div className="card-head">
-        <h3>Efeitos visuais <span className="dim small">(visual_frames)</span></h3>
-        {active && <button className="btn btn-small" onClick={() => pick("off")}>Voltar à cena</button>}
+    <div className="flex flex-col gap-2 rounded-radius-sm border border-border p-2">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="m-0 text-[13px] font-semibold">Efeitos visuais <span className="font-normal text-muted-foreground">(visual_frames)</span></h3>
+        {active && (
+          <Button variant="default" size="sm" onClick={() => pick("off")}>
+            Voltar à cena
+          </Button>
+        )}
       </div>
       {!cat.imported && (
-        <p className="dim small">
+        <p className="m-0 text-xs text-muted-foreground">
           Ainda não importados. No terminal do ProjMap: <code>python -m projmap.effects.importar</code> (aponte para a pasta do
           visual_frames clonado).
         </p>
       )}
-      <div className="preset-grid">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-1.5">
         {Object.entries(cat.effects).map(([key, e]) => (
-          <button key={key} className={`btn btn-small ${active === key ? "btn-accent" : ""}`} title={e.description}
-                  disabled={!e.available || busy !== null} onClick={() => pick(key)}>
+          <Button
+            key={key}
+            variant={active === key ? "primary" : "default"}
+            size="sm"
+            title={e.description}
+            disabled={!e.available || busy !== null}
+            onClick={() => pick(key)}
+          >
             {busy === key ? "Ligando…" : e.title}
-          </button>
+          </Button>
         ))}
       </div>
       {active && (
         <>
-          <p className="dim small">
+          <p className="m-0 text-xs text-muted-foreground">
             {st?.effect_status ? `⚠ ${st.effect_status}` : "Câmera e música ativas. Use a fonte “Cena interativa” numa superfície."}
           </p>
           {p && (
-            <div className="color-controls">
-              <label className="slider">
-                <span className="color-row">Brilho <span className="dim">{Math.round(p.brilho * 100)}%</span></span>
-                <input type="range" min={0.3} max={1.6} step={0.05} value={p.brilho} onChange={(e) => tune({ brilho: Number(e.target.value) })} />
-              </label>
-              <label className="slider">
-                <span className="color-row">Sensibilidade ao som <span className="dim">{p.sensibilidade_som.toFixed(1)}×</span></span>
-                <input type="range" min={0.2} max={3} step={0.1} value={p.sensibilidade_som} onChange={(e) => tune({ sensibilidade_som: Number(e.target.value) })} />
-              </label>
+            <div className="flex flex-col gap-1.5">
+              <Field label="Brilho" display={`${Math.round(p.brilho * 100)}%`} min={0.3} max={1.6} step={0.05}
+                     value={p.brilho} onValueChange={(v) => tune({ brilho: v })} />
+              <Field label="Sensibilidade ao som" display={`${p.sensibilidade_som.toFixed(1)}×`} min={0.2} max={3} step={0.1}
+                     value={p.sensibilidade_som} onValueChange={(v) => tune({ sensibilidade_som: v })} />
               {active === "vf-luz" && (
                 <>
-                  <label className="toggle"><input type="checkbox" checked={p.orbes_maos} onChange={(e) => tune({ orbes_maos: e.target.checked })} /> Orbes nas mãos</label>
-                  <label className="toggle"><input type="checkbox" checked={p.cor_segue_musica} onChange={(e) => tune({ cor_segue_musica: e.target.checked })} /> Cor segue a música</label>
+                  <Toggle label="Orbes nas mãos" checked={p.orbes_maos} onCheckedChange={(v) => tune({ orbes_maos: v })} />
+                  <Toggle label="Cor segue a música" checked={p.cor_segue_musica} onCheckedChange={(v) => tune({ cor_segue_musica: v })} />
                   {!p.cor_segue_musica && (
-                    <label className="slider">
-                      <span className="color-row">Cor fixa</span>
-                      <input type="range" min={0} max={1} step={0.01} value={p.matiz_fixo} onChange={(e) => tune({ matiz_fixo: Number(e.target.value) })} />
-                    </label>
+                    <Field label="Cor fixa" min={0} max={1} step={0.01} value={p.matiz_fixo} onValueChange={(v) => tune({ matiz_fixo: v })} />
                   )}
                 </>
               )}
               {active === "vf-lego" && (
                 <>
-                  <label className="slider">
-                    <span className="color-row">Tamanho da peça <span className="dim">{Math.round(p.tamanho_peca)}</span></span>
-                    <input type="range" min={10} max={28} step={1} value={p.tamanho_peca} onChange={(e) => tune({ tamanho_peca: Number(e.target.value) })} />
-                  </label>
-                  <label className="toggle"><input type="checkbox" checked={p.lego_cair} onChange={(e) => tune({ lego_cair: e.target.checked })} /> Peças caem quando a pessoa se mexe</label>
+                  <Field label="Tamanho da peça" display={`${Math.round(p.tamanho_peca)}`} min={10} max={28} step={1}
+                         value={p.tamanho_peca} onValueChange={(v) => tune({ tamanho_peca: v })} />
+                  <Toggle label="Peças caem quando a pessoa se mexe" checked={p.lego_cair} onCheckedChange={(v) => tune({ lego_cair: v })} />
                 </>
               )}
               {active === "vf-ecos" && (
                 <>
-                  <label className="slider">
-                    <span className="color-row">Quantidade de ecos <span className="dim">{Math.round(p.quantidade_ecos)}</span></span>
-                    <input type="range" min={1} max={8} step={1} value={p.quantidade_ecos} onChange={(e) => tune({ quantidade_ecos: Number(e.target.value) })} />
-                  </label>
-                  <label className="slider">
-                    <span className="color-row">Distância entre ecos <span className="dim">{Math.round(p.distancia_ecos)}</span></span>
-                    <input type="range" min={1} max={8} step={1} value={p.distancia_ecos} onChange={(e) => tune({ distancia_ecos: Number(e.target.value) })} />
-                  </label>
+                  <Field label="Quantidade de ecos" display={`${Math.round(p.quantidade_ecos)}`} min={1} max={8} step={1}
+                         value={p.quantidade_ecos} onValueChange={(v) => tune({ quantidade_ecos: v })} />
+                  <Field label="Distância entre ecos" display={`${Math.round(p.distancia_ecos)}`} min={1} max={8} step={1}
+                         value={p.distancia_ecos} onValueChange={(v) => tune({ distancia_ecos: v })} />
                 </>
               )}
               {active === "vf-bichinho" && (
                 <>
-                  <div className="preset-grid">
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-1.5">
                     {["Gato", "Dinossauro", "Coelho"].map((nome, i) => (
-                      <button key={nome} className={`btn btn-small ${Math.round(p.animal) === i ? "btn-accent" : ""}`}
-                              onClick={() => tune({ animal: i })}>{nome}</button>
+                      <Button key={nome} variant={Math.round(p.animal) === i ? "primary" : "default"} size="sm"
+                              onClick={() => tune({ animal: i })}>
+                        {nome}
+                      </Button>
                     ))}
                   </div>
-                  <label className="toggle"><input type="checkbox" checked={p.fundo_colorido} onChange={(e) => tune({ fundo_colorido: e.target.checked })} /> Fundo colorido</label>
+                  <Toggle label="Fundo colorido" checked={p.fundo_colorido} onCheckedChange={(v) => tune({ fundo_colorido: v })} />
                 </>
               )}
               {active === "vf-paraquedas" && (
-                <label className="slider">
-                  <span className="color-row">Intervalo do avião <span className="dim">{Math.round(p.intervalo_aviao)}s</span></span>
-                  <input type="range" min={3} max={20} step={1} value={p.intervalo_aviao} onChange={(e) => tune({ intervalo_aviao: Number(e.target.value) })} />
-                </label>
+                <Field label="Intervalo do avião" display={`${Math.round(p.intervalo_aviao)}s`} min={3} max={20} step={1}
+                       value={p.intervalo_aviao} onValueChange={(v) => tune({ intervalo_aviao: v })} />
               )}
             </div>
           )}
         </>
       )}
-      <p className="dim small">Efeitos de Adriel Vasques (visual_frames), usados com permissão.</p>
+      <p className="m-0 text-xs text-muted-foreground">Efeitos de Adriel Vasques (visual_frames), usados com permissão.</p>
     </div>
   );
 }

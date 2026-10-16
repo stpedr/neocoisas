@@ -7,6 +7,11 @@ import type { MediaItem, Project, SourceKind, Surface } from "../lib/types";
 import { DEFAULT_COLOR } from "../lib/types";
 import ColorControls, { isNeutral } from "./ColorControls";
 import ColorPresets from "./ColorPresets";
+import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
+import { Input } from "./ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Slider } from "./ui/slider";
 
 interface Props {
   surface: Surface;
@@ -66,28 +71,37 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
   };
 
   return (
-    <div className="surface-detail">
-      <div className="card-head">
-        <h2>{s.label || s.id}</h2>
-        <label className="toggle">
-          <input type="checkbox" checked={s.visible} onChange={(e) => onChange((c) => ({ ...c, visible: e.target.checked }))} />
+    <div className="flex flex-col gap-2 border-t border-border pt-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="m-0 text-[15px] font-semibold text-foreground">{s.label || s.id}</h2>
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <Checkbox
+            checked={s.visible}
+            onCheckedChange={(v) => onChange((c) => ({ ...c, visible: v === true }))}
+            aria-label="Visível"
+          />
           Visível
         </label>
       </div>
-      <label>
+      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
         Nome
-        <input value={s.label} onChange={(e) => onChange((c) => ({ ...c, label: e.target.value }))} />
+        <Input value={s.label} onChange={(e) => onChange((c) => ({ ...c, label: e.target.value }))} />
       </label>
 
-      <label>
+      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
         Fonte
-        <select value={shownKind} onChange={(e) => setKind(e.target.value as SourceKind)}>
-          {KINDS.map((k) => (
-            <option key={k.id} value={k.id}>
-              {k.label}
-            </option>
-          ))}
-        </select>
+        <Select value={shownKind} onValueChange={(v) => setKind(v as SourceKind)}>
+          <SelectTrigger aria-label="Fonte">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {KINDS.map((k) => (
+              <SelectItem key={k.id} value={k.id}>
+                {k.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </label>
 
       {/* Galeria (miniaturas, pastas do Drive, sugestões) no lugar da lista suspensa */}
@@ -95,7 +109,7 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
         const cur = s.source.media ? project.media[s.source.media] : undefined;
         return (
           <button
-            className="media-pick"
+            className="flex w-full items-center gap-2.5 rounded-radius-sm border border-dashed border-border-strong bg-secondary p-1.5 text-left hover:border-primary"
             onClick={() =>
               onOpenGallery((item) => {
                 setWantKind(null);
@@ -103,21 +117,28 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
               })
             }
           >
-            {cur ? <img src={api.mediaThumbUrl(cur.sha256)} alt="" /> : <span className="media-pick-empty">🖼</span>}
-            <span>
-              <b>{cur ? cur.filename : "Escolher na galeria"}</b>
-              <span className="dim small">{cur ? "trocar mídia" : "vídeos e fotos do projeto e das suas pastas"}</span>
+            {cur ? (
+              <img src={api.mediaThumbUrl(cur.sha256)} alt="" className="h-10 w-16 shrink-0 rounded bg-black object-cover" />
+            ) : (
+              <span className="grid h-10 w-16 shrink-0 place-items-center rounded bg-black">🖼</span>
+            )}
+            <span className="flex min-w-0 flex-col text-foreground">
+              <b className="truncate text-sm">{cur ? cur.filename : "Escolher na galeria"}</b>
+              <span className="text-xs text-muted-foreground">{cur ? "trocar mídia" : "vídeos e fotos do projeto e das suas pastas"}</span>
             </span>
           </button>
         );
       })()}
       {needsMedia && media.length === 0 && !s.source.media && (
-        <p className="dim small">Nenhum arquivo deste tipo no projeto ainda: escolha na galeria ou envie abaixo.</p>
+        <p className="m-0 text-xs text-muted-foreground">Nenhum arquivo deste tipo no projeto ainda: escolha na galeria ou envie abaixo.</p>
       )}
 
-      <div className="upload-row">
+      <div className="flex flex-wrap gap-1.5">
         {(["video", "gif", "image"] as const).map((k) => (
-          <label key={k} className="btn btn-small">
+          <label
+            key={k}
+            className="inline-flex h-[30px] cursor-pointer items-center rounded-radius-sm border border-border-strong bg-secondary px-2.5 text-xs font-semibold text-foreground hover:border-primary"
+          >
             + {k === "video" ? "Vídeo" : k === "gif" ? "GIF" : "Imagem"}
             <input type="file" accept={ACCEPT[k]} hidden onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
           </label>
@@ -125,10 +146,11 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
       </div>
 
       {s.source.kind === "color" && (
-        <label>
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
           Cor
           <input
             type="color"
+            className="h-9 w-full rounded-md border border-border bg-secondary p-0.5"
             value={rgbToHex(s.source.color)}
             onChange={(e) => onChange((c) => ({ ...c, source: { ...c.source, color: hexToRgb(e.target.value) } }))}
           />
@@ -136,26 +158,32 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
       )}
 
       {needsMedia && s.source.kind === shownKind && (
-        <div className="row">
-          <label>
+        <div className="flex items-end gap-2">
+          <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-muted-foreground">
             Ajuste
-            <select
+            <Select
               value={s.source.fit}
-              onChange={(e) => onChange((c) => ({ ...c, source: { ...c.source, fit: e.target.value as Surface["source"]["fit"] } }))}
+              onValueChange={(v) => onChange((c) => ({ ...c, source: { ...c.source, fit: v as Surface["source"]["fit"] } }))}
             >
-              <option value="stretch">Esticar</option>
-              <option value="cover">Preencher (corta)</option>
-              <option value="contain">Caber (tarjas)</option>
-            </select>
+              <SelectTrigger aria-label="Ajuste">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="stretch">Esticar</SelectItem>
+                <SelectItem value="cover">Preencher (corta)</SelectItem>
+                <SelectItem value="contain">Caber (tarjas)</SelectItem>
+              </SelectContent>
+            </Select>
           </label>
           {shownKind !== "image" && (
-            <label>
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">
               Velocidade
-              <input
+              <Input
                 type="number"
                 min={0.1}
                 max={16}
                 step={0.1}
+                className="w-20"
                 value={s.source.speed}
                 onChange={(e) => {
                   const v = Number(e.target.value);
@@ -167,50 +195,75 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
         </div>
       )}
 
-      <label className="slider">
-        Opacidade <span className="dim">{Math.round(s.opacity * 100)}%</span>
-        <input type="range" min={0} max={1} step={0.01} value={s.opacity} onChange={(e) => onChange((c) => ({ ...c, opacity: Number(e.target.value) }))} />
+      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+        <span className="flex justify-between gap-2">
+          Opacidade <span>{Math.round(s.opacity * 100)}%</span>
+        </span>
+        <Slider min={0} max={1} step={0.01} value={[s.opacity]} aria-label="Opacidade"
+          onValueChange={([v]) => onChange((c) => ({ ...c, opacity: v }))} />
       </label>
-      <label className="slider" title="Esmaece as bordas da superfície até o preto: some com a 'moldura' dura e funde com a parede">
-        Borda suave <span className="dim">{s.feather > 0 ? `${Math.round(s.feather * 100)}%` : "desligada"}</span>
-        <input type="range" min={0} max={0.5} step={0.005} value={s.feather} onChange={(e) => onChange((c) => ({ ...c, feather: Number(e.target.value) }))} />
+      <label
+        className="flex flex-col gap-1 text-xs text-muted-foreground"
+        title="Esmaece as bordas da superfície até o preto: some com a 'moldura' dura e funde com a parede"
+      >
+        <span className="flex justify-between gap-2">
+          Borda suave <span>{s.feather > 0 ? `${Math.round(s.feather * 100)}%` : "desligada"}</span>
+        </span>
+        <Slider min={0} max={0.5} step={0.005} value={[s.feather]} aria-label="Borda suave"
+          onValueChange={([v]) => onChange((c) => ({ ...c, feather: v }))} />
       </label>
-      <div className="row">
-        <label>
+      <div className="flex items-end gap-2">
+        <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-muted-foreground">
           Mistura
-          <select value={s.blend_mode} onChange={(e) => onChange((c) => ({ ...c, blend_mode: e.target.value as Surface["blend_mode"] }))}>
-            <option value="normal">Normal</option>
-            <option value="add">Somar (luz)</option>
-            <option value="multiply">Multiplicar</option>
-          </select>
+          <Select value={s.blend_mode} onValueChange={(v) => onChange((c) => ({ ...c, blend_mode: v as Surface["blend_mode"] }))}>
+            <SelectTrigger aria-label="Mistura">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="add">Somar (luz)</SelectItem>
+              <SelectItem value="multiply">Multiplicar</SelectItem>
+            </SelectContent>
+          </Select>
         </label>
-        <label>
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
           Camada (z)
-          <input type="number" step={1} value={s.z} onChange={(e) => onChange((c) => ({ ...c, z: Math.round(Number(e.target.value)) || 0 }))} />
+          <Input
+            type="number"
+            step={1}
+            className="w-20"
+            value={s.z}
+            onChange={(e) => onChange((c) => ({ ...c, z: Math.round(Number(e.target.value)) || 0 }))}
+          />
         </label>
       </div>
 
-      <details className="corners" open={!isNeutral(s.color ?? DEFAULT_COLOR)}>
-        <summary>Imagem desta superfície (brilho, contraste, presets){isNeutral(s.color ?? DEFAULT_COLOR) ? "" : " · ajustada"}</summary>
-        <p className="dim small">Equilibre uma parede mais escura ou colorida que as outras. Soma-se ao ajuste do projetor.</p>
+      <details className="flex flex-col gap-2" open={!isNeutral(s.color ?? DEFAULT_COLOR)}>
+        <summary className="cursor-pointer text-xs text-muted-foreground">
+          Imagem desta superfície (brilho, contraste, presets){isNeutral(s.color ?? DEFAULT_COLOR) ? "" : " · ajustada"}
+        </summary>
+        <p className="m-0 text-xs text-muted-foreground">Equilibre uma parede mais escura ou colorida que as outras. Soma-se ao ajuste do projetor.</p>
         <ColorPresets value={s.color ?? DEFAULT_COLOR} target="esta superfície" onError={onError}
                       onApply={(color) => onChange((c) => ({ ...c, color }))} />
         <ColorControls value={s.color ?? DEFAULT_COLOR} onChange={(color) => onChange((c) => ({ ...c, color }))} />
         {!isNeutral(s.color ?? DEFAULT_COLOR) && (
-          <button className="btn btn-small" onClick={() => onChange((c) => ({ ...c, color: { ...DEFAULT_COLOR } }))}>Zerar ajustes</button>
+          <Button variant="default" size="sm" onClick={() => onChange((c) => ({ ...c, color: { ...DEFAULT_COLOR } }))}>
+            Zerar ajustes
+          </Button>
         )}
       </details>
 
-      <details className="corners">
-        <summary>Cantos (px do projetor)</summary>
+      <details className="flex flex-col gap-1.5">
+        <summary className="cursor-pointer text-xs text-muted-foreground">Cantos (px do projetor)</summary>
         {s.warp.base.map((p, i) => (
-          <div className="row" key={i}>
-            <span className="corner-tag">{["TL", "TR", "BR", "BL"][i]}</span>
+          <div className="flex items-center gap-2" key={i}>
+            <span className="w-6 text-[11px] font-bold text-muted-foreground">{["TL", "TR", "BR", "BL"][i]}</span>
             {[0, 1].map((axis) => (
-              <input
+              <Input
                 key={axis}
                 type="number"
                 step={0.5}
+                className="w-full"
                 value={Math.round(p[axis] * 100) / 100}
                 aria-label={`${["TL", "TR", "BR", "BL"][i]} ${axis ? "y" : "x"}`}
                 onChange={(e) => {
@@ -227,9 +280,14 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
         ))}
       </details>
 
-      <button className="btn btn-danger btn-block" title="Atalho: tecla Delete com a superfície selecionada" onClick={onDelete}>
-        Excluir superfície <span className="kbd">Del</span>
-      </button>
+      <Button
+        variant="destructive"
+        size="block"
+        title="Atalho: tecla Delete com a superfície selecionada"
+        onClick={onDelete}
+      >
+        Excluir superfície <span className="rounded border border-current px-1 text-[10px] font-bold opacity-80">Del</span>
+      </Button>
     </div>
   );
 }
