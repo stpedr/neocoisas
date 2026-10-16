@@ -5,6 +5,7 @@
 
 import type { ColorAdjust } from "../lib/types";
 import { DEFAULT_COLOR } from "../lib/types";
+import { Slider } from "./ui/slider";
 
 export const PRESETS: { name: string; hint: string; color: ColorAdjust }[] = [
   { name: "Original", hint: "sem ajuste", color: DEFAULT_COLOR },
@@ -50,15 +51,21 @@ export default function ColorControls({ value, onChange, compact = false }: {
 }) {
   const fields = compact ? FIELDS.filter((f) => f.key !== "temperature" && f.key !== "contrast") : FIELDS;
   return (
-    <div className="color-controls">
+    <div className="flex flex-col gap-1.5">
       {fields.map((f) => (
-        <label key={f.key} className="slider" title={f.tip}>
-          <span className="color-row">
-            {f.label} <span className="dim">{f.fmt(value[f.key])}</span>
+        <label key={f.key} className="flex flex-col gap-1 text-xs text-muted-foreground" title={f.tip}>
+          <span className="flex justify-between gap-2">
+            {f.label} <span className="text-foreground/70">{f.fmt(value[f.key])}</span>
           </span>
-          <input type="range" min={f.min} max={f.max} step={f.step} value={value[f.key]}
-                 onChange={(e) => onChange({ ...value, [f.key]: Number(e.target.value) })}
-                 onDoubleClick={() => onChange({ ...value, [f.key]: DEFAULT_COLOR[f.key] })} />
+          <Slider
+            min={f.min}
+            max={f.max}
+            step={f.step}
+            value={[value[f.key]]}
+            onValueChange={([v]) => onChange({ ...value, [f.key]: v })}
+            onDoubleClick={() => onChange({ ...value, [f.key]: DEFAULT_COLOR[f.key] })}
+            aria-label={f.label}
+          />
         </label>
       ))}
     </div>

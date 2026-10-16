@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 /* Tokens do design system do repo (web/app/globals.css) + layout do editor. */
 :root {
   color-scheme: dark;
@@ -20,6 +22,29 @@
   --shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   --focus: 0 0 0 3px rgba(124, 92, 255, 0.45);
   --canvas-bg: #05070b;
+
+  /* ---- tokens shadcn/ui (Fase 2 da migração) — aliases dos valores acima,
+     nunca duplica cor crua. Ver docs/planejamento/design-system-projmap-ui.md. */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--bg-elev);
+  --card-foreground: var(--text);
+  --popover: var(--bg-elev);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: #ffffff;
+  --secondary: var(--bg-elev-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--bg-elev-2);
+  --muted-foreground: var(--text-dim);
+  --accent-ui: var(--bg-elev-2); /* "accent" do shadcn = hover/destaque sutil, distinto do --accent de marca acima */
+  --accent-ui-foreground: var(--text);
+  --destructive: var(--red);
+  --destructive-foreground: #ffffff;
+  --input: var(--border);
+  --ring: var(--accent);
+  --success: var(--green);
+  --warning: var(--amber);
 }
 
 @media (prefers-color-scheme: light) {
@@ -34,7 +59,38 @@
     --text-dim: #64748b;
     --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
     --canvas-bg: #1e293b;
+    --primary-foreground: #ffffff;
+    --destructive-foreground: #ffffff;
   }
+}
+
+/* v4: expõe os tokens acima como utilitários Tailwind (bg-background,
+   text-foreground, rounded-radius...). "inline" resolve em tempo de uso,
+   então continua reagindo ao @media de tema claro acima. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-ui: var(--accent-ui);
+  --color-accent-ui-foreground: var(--accent-ui-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --radius-radius: var(--radius);
+  --radius-radius-sm: var(--radius-sm);
 }
 
 * { box-sizing: border-box; }

@@ -1002,8 +1002,8 @@ SEED_CARDS: list[dict] = [
     },
     {
         'title': 'ProjMap UI — Tailwind + shadcn/ui: tokens e primeiro componente',
-        'description': 'tailwind.config.ts consumindo o mapeamento de tokens de docs/planejamento/design-system-projmap-ui.md (sem resetar visual). Migra um componente pequeno (RemoteCard.tsx ou ColorControls.tsx) como prova de conceito, com teste TDD antes.',
-        'column': 'backlog',
+        'description': 'Tailwind v4 (@theme inline) consumindo os tokens de docs/planejamento/design-system-projmap-ui.md como aliases dos valores atuais (sem resetar visual nem duplicar cor). Componente piloto: ColorControls.tsx migrado de <input type=range> pro Slider (Radix), com 9 testes TDD escritos antes do refactor. Dois polyfills de jsdom descobertos no caminho (ResizeObserver, Pointer Capture). Entrega: docs/entregas/projmap-ui-tailwind-shadcn-piloto.md.',
+        'column': 'done',
         'sprint': 'Sprint 12 · UI moderna + PWA + SQLAlchemy',
         'labels': ['frontend', 'projmap', 'prioridade:média'],
     },
