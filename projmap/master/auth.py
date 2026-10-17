@@ -101,3 +101,48 @@ class PairingTokenMiddleware:
         await send({"type": "http.response.start", "status": 401,
                     "headers": [(b"content-type", b"application/json")]})
         await send({"type": "http.response.body", "body": body})
+
+
+WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+DEV_UI_PORT = 3100  # `npm run dev` do editor (projmap/ui/package.json)
+
+
+def origin_allowed(scope) -> bool:
+    """Requisição sem ``Origin`` (curl, apps) ou da mesma origem do mestre / do editor em dev.
+
+    Bloqueia o que o CORS sozinho não bloqueia: POST "simples" (formulário,
+    multipart) vindo de qualquer site aberto no navegador — ou do iframe sandbox
+    de um motion, cuja origem é ``null``."""
+    origin = _header(scope, b"origin")
+    if origin is None:
+        return True
+    host = (_header(scope, b"host") or "").lower()
+    parsed = urlparse(origin)
+    if parsed.netloc.lower() == host and host:
+        return True
+    return parsed.scheme == "http" and _host_only(parsed.netloc) in LOOPBACK_HOSTS and \
+        parsed.port == DEV_UI_PORT
+
+
+class SameOriginWriteMiddleware:
+    """Escritas em ``/api``/``/media`` e WebSockets só da própria origem (ou sem ``Origin``)."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        kind = scope["type"]
+        guarded = (kind == "websocket") or (
+            kind == "http" and scope.get("method", "GET").upper() in WRITE_METHODS
+            and scope.get("path", "").startswith(PROTECTED_PREFIXES))
+        if not guarded or origin_allowed(scope):
+            await self.app(scope, receive, send)
+            return
+        if kind == "websocket":
+            await receive()
+            await send({"type": "websocket.close", "code": 4403})
+            return
+        body = json.dumps({"detail": ["origem não permitida"]}).encode()
+        await send({"type": "http.response.start", "status": 403,
+                    "headers": [(b"content-type", b"application/json")]})
+        await send({"type": "http.response.body", "body": body})

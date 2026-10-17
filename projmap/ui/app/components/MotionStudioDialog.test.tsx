@@ -121,6 +121,41 @@ describe("Motion Module v1 — Validação, Biblioteca, Execução, Presets, Áu
     expect(libList).toHaveTextContent("neon-pulse-grid@2.0.0");
   });
 
+  it("PROJETAR: envia o .html do motion da biblioteca para a superfície escolhida", async () => {
+    const onProjectMotion = vi.fn().mockResolvedValue(undefined);
+    render(
+      <MotionStudioDialog
+        open={true}
+        onClose={() => {}}
+        surfaces={[
+          { id: "s1", label: "Parede" },
+          { id: "s2", label: "Coluna" },
+        ]}
+        onProjectMotion={onProjectMotion}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /\+ Carregar Exemplo v1/i }));
+    // a suíte usa timers falsos: nada de findBy/waitFor aqui
+    const pick = screen.getByLabelText(/Superfície para neon-pulse-grid@1\.0\.0/);
+    fireEvent.change(pick, { target: { value: "s2" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Projetar neon-pulse-grid@1\.0\.0/ }));
+    });
+
+    expect(onProjectMotion).toHaveBeenCalledTimes(1);
+    const [file, surfaceId] = onProjectMotion.mock.calls[0] as [File, string];
+    expect(surfaceId).toBe("s2");
+    expect(file.name).toBe("neon-pulse-grid-1.0.0.html");
+    expect(file.type).toBe("text/html");
+    expect(file.size).toBeGreaterThan(500);
+  });
+
+  it("PROJETAR: sem superfícies no projeto, o botão não aparece", () => {
+    render(<MotionStudioDialog open={true} onClose={() => {}} surfaces={[]} onProjectMotion={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /\+ Carregar Exemplo v1/i }));
+    expect(screen.queryByRole("button", { name: /Projetar/ })).not.toBeInTheDocument();
+  });
+
   it("3 & 8. EXECUÇÃO + CICLO DE VIDA: sandbox='allow-scripts' sem allow-same-origin, motion:init -> timeout 5s ou motion:ready, filtro de event.source e motion:destroy + revokeObjectURL", () => {
     render(<MotionStudioDialog open={true} onClose={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: /\+ Carregar Exemplo v1/i }));

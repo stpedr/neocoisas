@@ -54,7 +54,23 @@ def test_lista_as_ferramentas(env):
             return {t.name for t in (await c.list_tools()).tools}
 
     assert {"status", "list_inputs", "audio_levels", "set_audio_input", "create_surface", "map_fullscreen",
-            "set_surface_source", "set_surface_fx", "set_output", "snapshot_output"} <= asyncio.run(go())
+            "set_surface_source", "set_surface_fx", "set_output", "snapshot_output", "add_media",
+            "motion_status"} <= asyncio.run(go())
+
+
+def test_motion_pelo_mcp_add_media_e_fonte_motion(env, tmp_path):
+    from pathlib import Path
+
+    server, state, _ = env
+    fixture = Path(__file__).parent / "fixtures" / "motion_test_av.html"
+    item = _data(_call(server, "add_media", {"path": str(fixture)}))
+    assert item["kind"] == "motion"
+    sid = _data(_call(server, "create_surface", {"label": "Motion"}))["surface_id"]
+    src = _data(_call(server, "set_surface_source", {"surface_id": sid, "kind": "motion", "media": item["sha256"],
+                                                     "device": "auto", "params": {"flash": 0.5}}))
+    assert src["source"]["kind"] == "motion" and src["source"]["params"] == {"flash": 0.5}
+    assert _call(server, "add_media", {"path": str(tmp_path / "nao-existe.html")}).is_error
+    assert "sessions" in _data(_call(server, "motion_status"))
 
 
 def test_fluxo_video_ao_vivo_com_efeito_de_audio_em_tela_cheia(env):

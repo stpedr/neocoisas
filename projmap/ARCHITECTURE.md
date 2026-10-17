@@ -214,3 +214,23 @@ Entrega: [`docs/entregas/projmap-entradas-av-efeitos-mcp.md`](../docs/entregas/p
 - **MCP como cliente da API.** `projmap/mcp_server` não abre câmera nem janela:
   só chama a API do mestre, então toda validação continua no pydantic do
   mestre e o MCP pode ser ligado/desligado sem mexer no show.
+
+## 11. Motions (HTML) nas superfícies
+
+Entrega: [`docs/entregas/projmap-motion-html-superficie.md`](../docs/entregas/projmap-motion-html-superficie.md).
+
+- **HTML vira quadros por um navegador dedicado.** O renderer é OpenGL nativo; um
+  motion é HTML + WebGL. Um Chromium headless só nosso (na GPU dedicada, perfil
+  próprio, sem trabalho de fundo) abre `/motion-host/`, que roda cada motion num
+  iframe sandbox e devolve JPEGs pelo `WS /ws/motion-host`. Para o renderer é só a
+  fonte `motion`: warp, efeitos, cor e mistura funcionam igual a vídeo.
+- **Medido antes de decidir.** Screencast do DevTools: 5–30 fps instável. Pixels crus
+  pelo WebSocket: ~29 fps no limite e disputando o GIL. Leitura do canvas na GPU
+  integrada: 40–60 ms/quadro; na dedicada, ~11 ms. Ficou: JPEG codificado no próprio
+  iframe (`toBlob`), um quadro em voo, rAF cadenciado pelo shim (o agendador do
+  headless oscila de ~1 a 30/s).
+- **Isolamento.** O motion roda com `sandbox="allow-scripts"` (origem opaca) e o
+  `SameOriginWriteMiddleware` recusa escrita vinda de outra origem — inclusive `null`.
+- **Ciclo de vida.** O hub liga o navegador quando há sessão, religa se a página não
+  conectar em 20 s e desliga após 10 s sem motion; um Job Object (Windows) /
+  `PDEATHSIG` (Linux) mata o navegador junto com o mestre.

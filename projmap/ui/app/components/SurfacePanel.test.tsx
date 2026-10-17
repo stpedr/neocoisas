@@ -187,6 +187,44 @@ describe("SurfacePanel", () => {
     expect(next.fx).toEqual([{ type: "pulse", band: "bass", amount: 0.5, enabled: true }]);
   });
 
+  it("'+ Motion' envia o .html e a superfície passa a mostrar o motion", async () => {
+    const MOTION: MediaItem = { sha256: "mo1", filename: "neon.html", ext: ".html", kind: "motion", size_bytes: 900 };
+    const onUpload = vi.fn().mockResolvedValue(MOTION);
+    const props = setup({ onUpload });
+    const input = screen.getByLabelText("+ Motion") as HTMLInputElement;
+    expect(input.accept).toContain(".html");
+
+    await userEvent.upload(input, new File(["<html></html>"], "neon.html", { type: "text/html" }));
+
+    expect(onUpload).toHaveBeenCalled();
+    const next = props.onChange.mock.calls.at(-1)![0](surface());
+    expect(next.source).toMatchObject({ kind: "motion", media: "mo1" });
+  });
+
+  it("trocar a Fonte para Motion usa o motion que já está no projeto", async () => {
+    const MOTION: MediaItem = { sha256: "mo1", filename: "neon.html", ext: ".html", kind: "motion", size_bytes: 900 };
+    const props = setup({ project: project({ media: { v1: VIDEO, mo1: MOTION } }) });
+
+    await userEvent.click(screen.getByLabelText("Fonte"));
+    await userEvent.click(await screen.findByRole("option", { name: "Motion (HTML)" }));
+
+    const next = props.onChange.mock.calls.at(-1)![0](surface());
+    expect(next.source).toMatchObject({ kind: "motion", media: "mo1" });
+  });
+
+  it("com Motion, a entrada de vídeo do motion é opcional e editável", async () => {
+    const MOTION: MediaItem = { sha256: "mo1", filename: "neon.html", ext: ".html", kind: "motion", size_bytes: 900 };
+    const src = { kind: "motion" as const, media: "mo1", device: null, color: [255, 255, 255] as [number, number, number],
+                  fit: "stretch" as const, loop: true, speed: 1, offset_s: 0 };
+    const props = setup({ surface: surface({ source: src }), project: project({ media: { mo1: MOTION } }) });
+    expect(screen.queryByLabelText("Velocidade")).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("Entrada de vídeo do motion"), "a");
+
+    const next = props.onChange.mock.calls.at(-1)![0](surface({ source: src }));
+    expect(next.source.device).toBe("a");
+  });
+
   it("mover a Opacidade pelo teclado chama onChange", async () => {
     const props = setup();
     const op = screen.getByRole("slider", { name: /Opacidade/ });

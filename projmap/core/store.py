@@ -37,6 +37,7 @@ CAPTURES_DIR = "captures"
 VIDEO_EXTS = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi"}
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
 GIF_EXTS = {".gif"}
+MOTION_EXTS = {".html", ".htm"}
 PHOTO_EXTS = IMAGE_EXTS
 
 PathLike = Union[str, Path]
@@ -50,6 +51,8 @@ def media_kind_for(filename: str) -> MediaKind:
         return "gif"
     if ext in IMAGE_EXTS:
         return "image"
+    if ext in MOTION_EXTS:
+        return "motion"
     raise ValueError(f"formato não suportado: '{ext or filename}'")
 
 
@@ -139,6 +142,13 @@ class ProjectStore:
                         fh.close()
             if size == 0:
                 raise ValueError("arquivo vazio")
+            if kind == "motion":  # só entra se for um Motion Module v1 válido
+                from ..motion.manifest import MAX_MOTION_BYTES, parse_motion_html
+
+                if size > MAX_MOTION_BYTES:
+                    raise ValueError(f"motion maior que {MAX_MOTION_BYTES // (1024 * 1024)} MB")
+                parse_motion_html(Path(tmp).read_bytes())
+                ext = ".html"
             item = MediaItem(
                 sha256=digest.hexdigest(), filename=Path(filename).name, ext=ext, kind=kind, size_bytes=size
             )

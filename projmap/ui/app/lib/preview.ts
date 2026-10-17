@@ -158,6 +158,10 @@ export function drawableFor(spec: SourceSpec, media: Record<string, MediaItem>):
   }
   if (spec.kind === "interactive") return { kind: "label", text: "cena interativa" };
   if (spec.kind === "capture") return { kind: "label", text: `entrada de vídeo · ${spec.device || "auto"}` };
+  if (spec.kind === "motion") {
+    const m = spec.media ? media[spec.media] : undefined;
+    return { kind: "label", text: `motion · ${m ? m.filename.replace(/\.html?$/i, "") : "?"}` };
+  }
   const item = spec.media ? media[spec.media] : undefined;
   if (!item) return null;
   const el = mediaElement(item);

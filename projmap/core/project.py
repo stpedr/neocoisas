@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import re
 import uuid
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StringConstraints, field_validator, model_validator
 
 from .geometry import rect_quad, validate_quad
 
@@ -26,8 +26,13 @@ Point = tuple[float, float]
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,62}$")
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 
-MediaKind = Literal["video", "image", "gif"]
-SourceKind = Literal["none", "video", "image", "gif", "color", "test", "interactive", "capture"]
+MediaKind = Literal["video", "image", "gif", "motion"]
+SourceKind = Literal["none", "video", "image", "gif", "color", "test", "interactive", "capture", "motion"]
+MEDIA_KINDS = ("video", "image", "gif", "motion")
+# Params de um motion (Motion Module v1) na superfície: só escalares, chaves e textos curtos.
+MotionParamKey = Annotated[str, StringConstraints(pattern=r"^[A-Za-z][A-Za-z0-9_]{0,63}$")]
+MotionParamValue = Union[StrictBool, int, Annotated[float, Field(allow_inf_nan=False)],
+                         Annotated[str, StringConstraints(max_length=64)]]
 FxType = Literal["pulse", "hue", "zoom", "rgb_split", "strobe", "shake", "invert"]
 AudioBand = Literal["bass", "mid", "high", "level", "beat"]
 Pattern = Literal["none", "white", "grid", "edges", "black"]
@@ -136,11 +141,15 @@ class SourceSpec(_Model):
     speed: float = Field(1.0, gt=0.0, le=16.0)
     offset_s: float = Field(0.0, description="deslocamento de tempo da fonte")
     device: Optional[str] = Field(None, max_length=128,
-                                  description="entrada de vídeo ('capture'): 'auto', índice ou parte do nome")
+                                  description="entrada de vídeo ('capture'; no 'motion', a câmera entregue ao motion): "
+                                              "'auto', índice ou parte do nome")
+    params: dict[MotionParamKey, MotionParamValue] = Field(default_factory=dict, max_length=64,
+                                                           description="params do motion (Motion Module v1)")
+    mode: Optional[str] = Field(None, max_length=64, description="modo do motion")
 
     @model_validator(mode="after")
     def _media_required(self) -> "SourceSpec":
-        if self.kind in ("video", "image", "gif") and not self.media:
+        if self.kind in MEDIA_KINDS and not self.media:
             raise ValueError(f"fonte '{self.kind}' exige 'media'")
         return self
 

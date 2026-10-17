@@ -80,7 +80,20 @@ class ProjMapClient:
             raise ProjMapError("o projeto não tem nenhum projetor (nó)")
         return nodes[0]["id"]
 
+    def motion_host(self) -> dict[str, Any]:
+        return self._json("GET", "/api/motions/host")
+
     # ------------------------------------------------------------------ escrita
+    def upload_media(self, path: str) -> dict[str, Any]:
+        """Envia um arquivo local (vídeo, GIF, imagem ou motion .html) para o projeto."""
+        from pathlib import Path
+
+        f = Path(path).expanduser()
+        if not f.is_file():
+            raise ProjMapError(f"arquivo não encontrado: {f}")
+        with f.open("rb") as fh:
+            return self._json("POST", "/api/media", files={"file": (f.name, fh)})["item"]
+
     def set_audio(self, device: Optional[str] = None, gain: Optional[float] = None) -> dict[str, Any]:
         body = {k: v for k, v in {"device": device, "gain": gain}.items() if v is not None}
         return self._json("PATCH", "/api/audio", json=body)["project"]["audio"]

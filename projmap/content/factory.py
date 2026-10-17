@@ -100,6 +100,10 @@ def get_source(spec: SourceSpec, media_path: Optional[MediaResolver] = None) -> 
         from ..inputs.video import open_capture  # import tardio: só abre câmera se alguma superfície pedir
 
         return open_capture(spec.device)
+    if kind == "motion":
+        from ..motion.source import open_motion  # o navegador busca o .html em /media/<sha>
+
+        return open_motion(spec)
     if media_path is None or not spec.media:
         raise ValueError(f"fonte '{kind}' precisa de mídia")
     path = media_path(spec.media)

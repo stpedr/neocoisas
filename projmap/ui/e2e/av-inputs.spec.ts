@@ -82,16 +82,20 @@ function trackPuts(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
+  // Mestre falso coerente: guarda o último projeto recebido e informa a revisão certa no
+  // /api/health (senão o polling do editor "recarrega do mestre" e desfaz as edições).
   let revision = 1;
+  let current: unknown = PROJECT_PAYLOAD.project;
   await page.route("**/api/project", async (route) => {
     if (route.request().method() === "PUT") {
       revision += 1;
+      current = (route.request().postDataJSON() as { project: unknown }).project;
       await route.fulfill({ json: { revision } });
     } else {
-      await route.fulfill({ json: PROJECT_PAYLOAD });
+      await route.fulfill({ json: { revision, project: current } });
     }
   });
-  await page.route("**/api/health", (route) => route.fulfill({ json: { status: "ok", revision: 1 } }));
+  await page.route("**/api/health", (route) => route.fulfill({ json: { status: "ok", revision } }));
   await page.route("**/api/color-presets", (route) => route.fulfill({ json: { presets: [] } }));
   await page.route("**/api/media/info", (route) => route.fulfill({ json: { items: [] } }));
   await page.route("**/api/library*", (route) =>

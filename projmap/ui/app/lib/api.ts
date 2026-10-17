@@ -138,6 +138,15 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(changes),
     }),
+  /** Nova superfície no projetor (``fullscreen`` = saída inteira; senão, no centro para ajustar os cantos). */
+  createSurface: (nodeId: string, fullscreen: boolean, label = "") =>
+    call<ProjectPayload & { surface_id: string }>("/api/surfaces", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ node_id: nodeId, fullscreen, label }),
+    }),
+  fullscreenSurface: (id: string) =>
+    call<ProjectPayload>(`/api/surfaces/${encodeURIComponent(id)}/fullscreen`, { method: "POST" }),
   saveLook: (name: string) =>
     call<ProjectPayload>("/api/looks", {
       method: "POST",

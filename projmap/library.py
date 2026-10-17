@@ -94,6 +94,8 @@ def save_gdrive_folder(folder: str, path: Path = CONFIG_PATH) -> None:
 
 def probe(path: Path, kind: str) -> tuple[int, int, float]:
     """(largura, altura, duração em s). Falhas viram zeros: a galeria ainda lista o arquivo."""
+    if kind == "motion":  # HTML: o navegador dos motions renderiza em 1280x720
+        return 1280, 720, 0.0
     try:
         if kind == "video":
             import av
@@ -116,13 +118,37 @@ def probe(path: Path, kind: str) -> tuple[int, int, float]:
         return 0, 0, 0.0
 
 
+def _motion_card(path: Path):  # noqa: ANN202 — PIL.Image
+    """Miniatura de um motion (HTML não tem quadro para extrair): cartão com o nome do manifesto."""
+    from PIL import Image, ImageDraw
+
+    from .motion.manifest import parse_motion_html
+
+    try:
+        info = parse_motion_html(path.read_bytes())
+        title, sub = info.name, f"v{info.version}" + (" · vídeo" if info.video_input else "")
+    except (OSError, ValueError):
+        title, sub = path.stem, ""
+    im = Image.new("RGB", (320, 180))
+    g = ImageDraw.Draw(im)
+    for x in range(320):  # degradê roxo do ProjMap
+        g.line([(x, 0), (x, 179)], fill=(40 + x // 8, 30, 90 + x // 5))
+    g.text((14, 14), "MOTION", fill=(255, 255, 255))
+    g.text((14, 120), title[:40], fill=(255, 255, 255))
+    if sub:
+        g.text((14, 140), sub, fill=(220, 210, 255))
+    return im
+
+
 def make_thumbnail(path: Path, kind: str, size: int = THUMB_SIZE) -> bytes:
     """Miniatura JPEG (lado maior = ``size``). Vídeo: quadro a ~10% da duração."""
     from io import BytesIO
 
     from PIL import Image
 
-    if kind == "video":
+    if kind == "motion":
+        im = _motion_card(path)
+    elif kind == "video":
         import av
 
         with av.open(str(path)) as c:

@@ -1070,4 +1070,11 @@ SEED_CARDS: list[dict] = [
         'sprint': 'Sprint 13 · Entradas ao vivo + MCP',
         'labels': ['infra', 'projmap', 'prioridade:média'],
     },
+    {
+        'title': 'ProjMap — motion (HTML) como mídia do projeto, projetado nas superfícies',
+        'description': '+ Motion no painel da superfície e "Projetar" no Motion Studio; Chromium headless dedicado roda o motion em iframe sandbox e manda JPEG ao renderer (fonte "motion"), com o áudio do show e entrada de vídeo (motion:video). Guarda de origem na API, navegador morre com o mestre, remote do celular cria superfícies. E2E no projetor pela UI real (docs/entregas/projmap-motion-html-superficie.md).',
+        'column': 'done',
+        'sprint': 'Sprint 13 · Entradas ao vivo + MCP',
+        'labels': ['backend', 'frontend', 'projmap', 'prioridade:alta'],
+    },
 ]

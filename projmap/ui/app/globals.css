@@ -424,6 +424,8 @@ details summary { cursor: pointer; margin-bottom: 6px; }
 .remote-slider input[type="range"] { flex: 1; height: 36px; }
 .remote-value { font-variant-numeric: tabular-nums; min-width: 44px; text-align: right; color: var(--text-dim); }
 .remote-list { display: flex; flex-direction: column; gap: 12px; }
+.remote-row { display: flex; gap: 8px; }
+.remote-row > .btn { flex: 1; }
 .card-muted { opacity: 0.6; }
 .looks { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
 .look-btn { min-height: 56px; }

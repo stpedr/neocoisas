@@ -118,6 +118,17 @@ def test_extract_motion_response_valido_e_sem_layer_preset():
 
 def test_api_motions_ai_config_nunca_expoe_chave_e_faz_streaming_sse(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    # Keyring falso em memória: o teste não pode depender (nem mexer) da chave real salva nesta máquina.
+    import sys
+    import types
+
+    vault: dict[tuple[str, str], str] = {}
+    fake_keyring = types.SimpleNamespace(
+        get_password=lambda svc, user: vault.get((svc, user)),
+        set_password=lambda svc, user, pw: vault.__setitem__((svc, user), pw),
+        delete_password=lambda svc, user: vault.pop((svc, user), None),
+    )
+    monkeypatch.setitem(sys.modules, "keyring", fake_keyring)
     fake_client = _FakeAnthropicClient([VALID_CLAUDE_RESPONSE])
     store = ProjectStore.open_or_create(tmp_path / "show.projmap", "Show")
     app = create_app(

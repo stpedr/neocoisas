@@ -189,12 +189,23 @@ export default function RemotePage() {
 
       {tab === "surfaces" && (
         <section className="remote-list">
-          {surfaces.length === 0 && <p className="dim">Nenhuma superfície neste projetor. Crie no editor.</p>}
+          <div className="remote-row">
+            <button className="btn btn-accent" disabled={busy}
+                    onClick={() => run(() => api.createSurface(node.id, false), "Superfície criada no centro: ajuste os cantos no editor")}>
+              + Nova superfície
+            </button>
+            <button className="btn" disabled={busy}
+                    onClick={() => run(() => api.createSurface(node.id, true), "Superfície em tela cheia criada")}>
+              + Tela cheia
+            </button>
+          </div>
+          {surfaces.length === 0 && <p className="dim">Nenhuma superfície neste projetor ainda.</p>}
           {surfaces.map((s) => (
             <SurfaceCard key={s.id} surface={s} media={project.media}
                          onError={(m) => notify(m, "err")}
                          onDrag={(v) => (dragging.current = v)}
                          onGallery={() => setGallerySurface(s)}
+                         onFullscreen={() => run(() => api.fullscreenSurface(s.id), "Mapeada em tela cheia")}
                          onPatch={(changes) => run(() => api.patchSurface(s.id, changes))} />
           ))}
         </section>
@@ -316,8 +327,9 @@ function Slider({ value, onCommit, onDrag }: {
 }
 
 
-function SurfaceCard({ surface, media, onPatch, onDrag, onGallery, onError }: {
+function SurfaceCard({ surface, media, onPatch, onDrag, onGallery, onFullscreen, onError }: {
   surface: Surface;
+  onFullscreen: () => void;
   media: Record<string, MediaItem>;
   onPatch: (c: { visible?: boolean; opacity?: number; source?: Partial<SourceSpec>; color?: ColorAdjust }) => void;
   onError: (m: string) => void;
@@ -329,6 +341,9 @@ function SurfaceCard({ surface, media, onPatch, onDrag, onGallery, onError }: {
     <section className={`card ${surface.visible ? "" : "card-muted"}`}>
       <div className="card-head">
         <h2>{surface.label || surface.id}</h2>
+        <button className="btn btn-small" onClick={onFullscreen} aria-label={`Tela cheia: ${surface.label || surface.id}`}>
+          ⛶ Tela cheia
+        </button>
         <label className="toggle">
           <input type="checkbox" checked={surface.visible} onChange={(e) => onPatch({ visible: e.target.checked })} />
           Visível
@@ -338,7 +353,7 @@ function SurfaceCard({ surface, media, onPatch, onDrag, onGallery, onError }: {
       <button className="media-pick" onClick={onGallery}>
         {cur ? <img src={api.mediaThumbUrl(cur.sha256)} alt="" /> : <span className="media-pick-empty">🖼</span>}
         <span>
-          <b>{cur ? cur.filename : { none: "Nada (preto)", test: "Cartela de teste", color: "Cor sólida", interactive: "Cena interativa", video: "Vídeo", gif: "GIF", image: "Imagem", capture: "Entrada de vídeo" }[surface.source.kind]}</b>
+          <b>{cur ? cur.filename : { none: "Nada (preto)", test: "Cartela de teste", color: "Cor sólida", interactive: "Cena interativa", video: "Vídeo", gif: "GIF", image: "Imagem", capture: "Entrada de vídeo", motion: "Motion" }[surface.source.kind]}</b>
           <span className="dim small">toque para escolher na galeria</span>
         </span>
       </button>

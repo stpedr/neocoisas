@@ -22,6 +22,7 @@ No <head>, um <script type="application/json" id="motion-manifest"> com:
   "modes": [{ "id": "...", "label": "..." }],
   "defaultMode": "...",
   "audio": { "internal": ["demo", "file", "mic"], "external": true },
+  "video": { "input": true },
   "params": [...],
   "triggers": [{ "id": "...", "label": "..." }],
   "events": ["beat", ...],
@@ -29,6 +30,7 @@ No <head>, um <script type="application/json" id="motion-manifest"> com:
 }
 
 - "phases" é opcional (use se o motion tiver uma máquina de estados).
+- "video" é opcional: { "input": true } quando o motion usa a entrada de vídeo do show (seção 6.1).
 - Tipos de param permitidos: float, int, bool, color (hex #rrggbb), select (com options {value,label}), vec3 (default {x,y,z} com min e max).
 - Rótulos, grupos e descrições em português.
 - Todo default deve estar dentro de [min, max]; todo default de select deve existir em options.
@@ -97,6 +99,17 @@ No modo interno (sem host), o motion calcula ele mesmo bass, mid, high, level, e
 
 Se motion:audio parar de chegar por mais de 0,5 s, volte suavemente ao movimento de repouso. Sem áudio, o objeto nunca fica parado: mantenha um movimento de repouso sutil.
 
+## 6.1 Entrada de vídeo (opcional)
+
+No projetor, o operador pode entregar ao motion uma câmera ou placa de captura. O host envia a cada quadro novo
+(~30 por segundo) a mensagem motion:video com {frame: ImageBitmap, width, height, device}; o ImageBitmap é
+transferido, então feche (frame.close()) o quadro anterior ao receber o próximo.
+
+- Use o quadro como textura (THREE.Texture/CanvasTexture a partir do ImageBitmap, needsUpdate = true) ou com
+  drawImage num canvas 2D.
+- Sem motion:video (nenhuma câmera ligada, ou mais de 1 s sem quadro), o motion continua funcionando sem o vídeo.
+- Declare "video": { "input": true } no manifesto quando o motion usar a entrada de vídeo.
+
 # 7. REAÇÃO AO ÁUDIO (matriz de roteamento)
 
 O DJ precisa escolher ao vivo a que o motion reage. Para isso, todo motion separa FONTES (os sinais da seção 6) de ALVOS (o que se move no visual) e liga os dois por params.
@@ -154,6 +167,7 @@ Host → motion:
 - motion:trigger   {id}
 - motion:play / motion:pause
 - motion:audio     (payload da seção 6)
+- motion:video     {frame: ImageBitmap, width, height, device}  (seção 6.1; opcional)
 - motion:destroy
 
 Motion → host:
@@ -166,6 +180,15 @@ Regras:
 - Embutido, só aceite mensagens cujo event.source seja window.parent. Ignore types desconhecidos.
 - Exponha window.MotionModule com: spec, getManifest, getState, init, setParams, setMode, trigger, play, pause, feedAudio, destroy.
 - Encaminhe para o host, como motion:error, todo window.onerror, unhandledrejection e console.error (inclusive erros de compilação de shader do Three.js), com a mensagem completa. O host usa isso para pedir correções automaticamente.
+
+# 8.1 PROJEÇÃO
+
+No projetor o motion roda num navegador dedicado, embutido (motion:init {embed:true}), e o host captura o maior
+<canvas> da página logo depois de cada requestAnimationFrame. Portanto:
+- Desenhe tudo o que deve aparecer na projeção num único canvas que cubra a viewport (nada de DOM por cima).
+- Anime com requestAnimationFrame (ou renderer.setAnimationLoop do Three.js).
+- Fundo "transparent" compõe como preto no projetor (preto = sem luz); use o modo de mistura "Somar" da superfície
+  para sobrepor a outras camadas.
 
 # 9. VÁRIAS INSTÂNCIAS
 

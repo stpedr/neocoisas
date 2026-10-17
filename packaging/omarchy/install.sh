@@ -37,7 +37,8 @@ if [ "$USE_PACMAN" = 1 ] && command -v pacman >/dev/null 2>&1; then
   # uv: venv com Python gerenciado (já inclui tkinter p/ o lançador)
   # mesa/libglvnd/libx*: OpenGL + XWayland p/ moderngl+pyglet · portaudio/libpulse: captura de áudio (PipeWire)
   # xdg-utils: abrir o editor no navegador · android-tools: sensor do celular via ADB (opcional)
-  sudo pacman -S --needed --noconfirm uv mesa libglvnd libx11 libxext libxrandr libxinerama libxi portaudio libpulse xdg-utils android-tools
+  # chromium: navegador dedicado dos motions (HTML) projetados nas superfícies
+  sudo pacman -S --needed --noconfirm uv mesa libglvnd libx11 libxext libxrandr libxinerama libxi portaudio libpulse xdg-utils android-tools chromium
 elif ! command -v uv >/dev/null 2>&1; then
   echo "Instale o 'uv' (sudo pacman -S uv) ou rode sem --no-pacman." >&2
   exit 1

@@ -19,7 +19,7 @@ Uso (stdio)::
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, Literal, Optional, TypeVar
+from typing import Any, Callable, Literal, Optional, TypeVar, Union
 
 from pydantic import BaseModel, Field
 
@@ -29,7 +29,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from .. import __version__
 from .client import ProjMapClient, ProjMapError
 
-SourceKindArg = Literal["capture", "video", "image", "gif", "color", "test", "interactive", "none"]
+SourceKindArg = Literal["capture", "motion", "video", "image", "gif", "color", "test", "interactive", "none"]
 FxTypeArg = Literal["pulse", "hue", "zoom", "rgb_split", "strobe", "shake", "invert"]
 BandArg = Literal["bass", "mid", "high", "level", "beat"]
 PatternArg = Literal["none", "white", "grid", "edges", "black"]
@@ -41,6 +41,8 @@ ProjMap = projeção mapeada. Um projeto tem nós (projetores, com resolução d
 device=...) → set_surface_fx([...]) → audio_levels / snapshot_output para conferir.
 Efeitos: pulse (brilho), hue (gira as cores), zoom, rgb_split, strobe (flash; use band="beat"),
 shake (tremor), invert. Bandas: bass, mid, high, level, beat (envelope de batida).
+Motions (Motion Module v1, .html audio-reativo): add_media(caminho do .html) → set_surface_source(kind="motion",
+media=sha256, device="auto" para entregar a webcam ao motion, params={...}) → motion_status para ver o fps.
 """
 
 
@@ -126,6 +128,18 @@ def build_server(client: ProjMapClient) -> MCPServer:
         sid = client.create_surface(node, label=label, fullscreen=fullscreen, source=source)
         return {"surface_id": sid, "node_id": node}
 
+    @server.tool(description="Envia um arquivo local para o projeto: vídeo, GIF, imagem ou motion (.html Motion Module "
+                             "v1). Devolve o item (sha256, kind) para usar em set_surface_source.")
+    @_guard
+    def add_media(path: str) -> dict[str, Any]:
+        return client.upload_media(path)
+
+    @server.tool(description="Estado dos motions projetados: navegador dedicado, página host conectada, fps e "
+                             "quadros por motion.")
+    @_guard
+    def motion_status() -> dict[str, Any]:
+        return client.motion_host()
+
     @server.tool(description="Mapeia a superfície na saída inteira do projetor dela (tela cheia).")
     @_guard
     def map_fullscreen(surface_id: str) -> dict[str, Any]:
@@ -133,13 +147,20 @@ def build_server(client: ProjMapClient) -> MCPServer:
         return {"surface_id": surface_id, "quad": surf["warp"]["base"]}
 
     @server.tool(description="Troca a fonte da superfície. kind='capture' + device para vídeo ao vivo; "
-                             "video/image/gif exigem media (sha256 de list em status); color usa rgb.")
+                             "video/image/gif/motion exigem media (sha256, ver status/add_media); no 'motion', device "
+                             "é a câmera entregue ao motion e params/mode configuram o motion; color usa rgb.")
     @_guard
     def set_surface_source(surface_id: str, kind: SourceKindArg, device: Optional[str] = None,
                            media: Optional[str] = None, rgb: Optional[list[int]] = None,
                            fit: Optional[Literal["stretch", "cover", "contain"]] = None,
-                           visible: Optional[bool] = None) -> dict[str, Any]:
+                           visible: Optional[bool] = None,
+                           params: Optional[dict[str, Union[bool, int, float, str]]] = None,
+                           mode: Optional[str] = None) -> dict[str, Any]:
         source: dict[str, Any] = {"kind": kind, "device": device, "media": media}
+        if params is not None:
+            source["params"] = params
+        if mode is not None:
+            source["mode"] = mode
         if rgb is not None:
             source["color"] = rgb
         if fit is not None:

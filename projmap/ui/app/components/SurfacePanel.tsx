@@ -28,6 +28,7 @@ interface Props {
 const KINDS: { id: SourceKind; label: string }[] = [
   { id: "video", label: "Vídeo" },
   { id: "capture", label: "Entrada de vídeo (câmera/captura)" },
+  { id: "motion", label: "Motion (HTML)" },
   { id: "gif", label: "GIF animado" },
   { id: "image", label: "Imagem" },
   { id: "color", label: "Cor sólida" },
@@ -40,7 +41,17 @@ const ACCEPT: Record<string, string> = {
   video: "video/*,.mp4,.mov,.mkv,.webm,.m4v,.avi",
   gif: "image/gif",
   image: "image/png,image/jpeg,image/webp,image/bmp",
+  motion: ".html,.htm,text/html",
 };
+
+const UPLOAD_LABEL: Record<"video" | "gif" | "image" | "motion", string> = {
+  video: "Vídeo",
+  gif: "GIF",
+  image: "Imagem",
+  motion: "Motion",
+};
+
+const isMediaKind = (k: SourceKind) => k === "video" || k === "gif" || k === "image" || k === "motion";
 
 export default function SurfacePanel({ surface: s, project, onChange, onDelete, onUpload, onError, onOpenGallery }: Props) {
   // Tipo escolhido que ainda não tem arquivo no projeto: a superfície continua
@@ -48,10 +59,10 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
   const [wantKind, setWantKind] = useState<SourceKind | null>(null);
   const shownKind = wantKind ?? s.source.kind;
   const media = Object.values(project.media).filter((m) => m.kind === shownKind);
-  const needsMedia = shownKind === "video" || shownKind === "gif" || shownKind === "image";
+  const needsMedia = isMediaKind(shownKind);
 
   const setKind = (kind: SourceKind) => {
-    const isMedia = kind === "video" || kind === "gif" || kind === "image";
+    const isMedia = isMediaKind(kind);
     const keep = s.source.media && project.media[s.source.media]?.kind === kind ? s.source.media : null;
     const sha = keep ?? Object.values(project.media).find((m) => m.kind === kind)?.sha256 ?? null;
     if (isMedia && !sha) {
@@ -146,12 +157,13 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
       )}
 
       <div className="flex flex-wrap gap-1.5">
-        {(["video", "gif", "image"] as const).map((k) => (
+        {(["video", "gif", "image", "motion"] as const).map((k) => (
           <label
             key={k}
             className="inline-flex h-[30px] cursor-pointer items-center rounded-radius-sm border border-border-strong bg-secondary px-2.5 text-xs font-semibold text-foreground hover:border-primary"
+            title={k === "motion" ? "Motion Module v1 (.html): visual audio-reativo do Motion Studio ou gerado com Claude" : undefined}
           >
-            + {k === "video" ? "Vídeo" : k === "gif" ? "GIF" : "Imagem"}
+            + {UPLOAD_LABEL[k]}
             <input type="file" accept={ACCEPT[k]} hidden onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
           </label>
         ))}
@@ -165,6 +177,24 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
             className="h-9 w-full rounded-md border border-border bg-secondary p-0.5"
             value={rgbToHex(s.source.color)}
             onChange={(e) => onChange((c) => ({ ...c, source: { ...c.source, color: hexToRgb(e.target.value) } }))}
+          />
+        </label>
+      )}
+
+      {s.source.kind === "motion" && (
+        <label
+          className="flex flex-col gap-1 text-xs text-muted-foreground"
+          title="Câmera ou placa de captura entregue ao motion (motion:video). Vazio = o motion não recebe vídeo."
+        >
+          Entrada de vídeo do motion
+          <Input
+            value={s.source.device ?? ""}
+            placeholder="nenhuma · auto · índice ou parte do nome"
+            maxLength={128}
+            onChange={(e) => {
+              const device = e.target.value;
+              onChange((c) => ({ ...c, source: { ...c.source, device: device || null } }));
+            }}
           />
         </label>
       )}
@@ -202,7 +232,7 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
               </SelectContent>
             </Select>
           </label>
-          {shownKind !== "image" && (
+          {shownKind !== "image" && shownKind !== "motion" && (
             <label className="flex flex-col gap-1 text-xs text-muted-foreground">
               Velocidade
               <Input

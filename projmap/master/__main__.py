@@ -140,7 +140,12 @@ def main(argv: list[str] | None = None) -> None:
 
         threading.Timer(1.5, _adb).start()
 
-    server = uvicorn.Server(uvicorn.Config(app, host=args.host, port=args.port, log_level="warning"))
+    from ..motion.hub import hub as motion_hub
+
+    motion_hub().configure(f"http://127.0.0.1:{args.port}")  # o navegador dos motions roda nesta máquina
+    # Sem deflate no WebSocket: os motions mandam ~3,7 MB de pixels por quadro (comprimir custa mais que enviar).
+    server = uvicorn.Server(uvicorn.Config(app, host=args.host, port=args.port, log_level="warning",
+                                           ws_per_message_deflate=False))
     if args.no_output:
         try:
             server.run()
@@ -169,6 +174,7 @@ def main(argv: list[str] | None = None) -> None:
         from ..inputs.audio import bus
 
         bus().stop()
+        motion_hub().shutdown()
 
 
 def _load_dotenv() -> None:

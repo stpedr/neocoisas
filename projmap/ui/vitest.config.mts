@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.mts"],
-    exclude: ["node_modules", ".next", "e2e"],
+    exclude: ["node_modules", ".next", "e2e", "e2e-live"],
   },
   resolve: {
     alias: { "@": path.resolve(import.meta.dirname, ".") },

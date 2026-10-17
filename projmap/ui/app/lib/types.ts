@@ -3,8 +3,8 @@
 export type Point = [number, number];
 export type Quad = [Point, Point, Point, Point];
 
-export type MediaKind = "video" | "image" | "gif";
-export type SourceKind = "none" | "video" | "image" | "gif" | "color" | "test" | "interactive" | "capture";
+export type MediaKind = "video" | "image" | "gif" | "motion";
+export type SourceKind = "none" | "video" | "image" | "gif" | "color" | "test" | "interactive" | "capture" | "motion";
 export type FxType = "pulse" | "hue" | "zoom" | "rgb_split" | "strobe" | "shake" | "invert";
 export type AudioBand = "bass" | "mid" | "high" | "level" | "beat";
 
@@ -73,8 +73,11 @@ export interface SourceSpec {
   loop: boolean;
   speed: number;
   offset_s: number;
-  /** Entrada de vídeo ("capture"): "auto", índice ou parte do nome. */
+  /** Entrada de vídeo ("capture"; no "motion", a câmera entregue ao motion): "auto", índice ou parte do nome. */
   device?: string | null;
+  /** Params e modo do motion (Motion Module v1). */
+  params?: Record<string, string | number | boolean>;
+  mode?: string | null;
 }
 
 // Mídia extra por cima do fundo da superfície (F9). rect = [x, y, w, h] em uv da superfície.

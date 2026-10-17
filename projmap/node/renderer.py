@@ -164,7 +164,10 @@ class Renderer:
         self._items = items
         self._surfaces = project.surfaces_for(node_id)
         self._has_fx = any(f.enabled for s in self._surfaces for f in s.fx)
-        if self._has_fx:
+        # Motions também reagem ao áudio do show (o hub manda os níveis para o navegador).
+        has_motion = any(s.source.kind == "motion" or any(la.source.kind == "motion" for la in s.layers)
+                         for s in self._surfaces)
+        if self._has_fx or has_motion:
             try:
                 self._audio_ensure(project.audio)
             except Exception as exc:  # noqa: BLE001 — sem áudio os efeitos ficam neutros, o show segue

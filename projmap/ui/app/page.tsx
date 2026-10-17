@@ -906,7 +906,16 @@ export default function Page() {
         onError={(m) => notify(m, "err")}
       />
       <PhoneDialog open={phoneOpen} onClose={() => setPhoneOpen(false)} interact={interactOn ? interact.st : null} />
-      <MotionStudioDialog open={motionsOpen} onClose={() => setMotionsOpen(false)} />
+      <MotionStudioDialog
+        open={motionsOpen}
+        onClose={() => setMotionsOpen(false)}
+        surfaces={project.surfaces.map((sf) => ({ id: sf.id, label: sf.label }))}
+        onProjectMotion={async (file, surfaceId) => {
+          const item = await uploadMedia(file);
+          updateSurface(surfaceId, (sf) => ({ ...sf, source: { ...sf.source, kind: "motion", media: item.sha256 } }));
+          notify(`Motion "${file.name}" na superfície`, "ok");
+        }}
+      />
       <AiDialog
         open={aiOpen}
         onClose={() => setAiOpen(false)}
@@ -983,5 +992,5 @@ function uniqueId(project: Project, prefix: string) {
 }
 
 function sourceLabel(s: Surface) {
-  return { none: "vazia", video: "vídeo", image: "imagem", gif: "GIF", color: "cor", test: "cartela", interactive: "interativa", capture: "entrada de vídeo" }[s.source.kind];
+  return { none: "vazia", video: "vídeo", image: "imagem", gif: "GIF", color: "cor", test: "cartela", interactive: "interativa", capture: "entrada de vídeo", motion: "motion" }[s.source.kind];
 }

@@ -43,7 +43,7 @@ type Card = {
   pick: () => Promise<MediaItem>;
 };
 
-const KIND_LABEL: Record<MediaKind, string> = { video: "Vídeo", gif: "GIF", image: "Foto" };
+const KIND_LABEL: Record<MediaKind, string> = { video: "Vídeo", gif: "GIF", image: "Foto", motion: "Motion" };
 
 export default function MediaGallery({ open, title, surfaceId, onPick, onClose, onError, onOk }: Props) {
   const [tab, setTabState] = useState<Tab>("project");

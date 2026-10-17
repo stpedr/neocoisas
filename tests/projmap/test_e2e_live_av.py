@@ -26,9 +26,6 @@ import asyncio
 import base64
 import json
 import os
-import shutil
-import socket
-import subprocess
 import sys
 import threading
 import time
@@ -46,44 +43,9 @@ sc = pytest.importorskip("soundcard")
 httpx = pytest.importorskip("httpx")
 from mcp import Client, StdioServerParameters  # noqa: E402
 
-REPO = Path(__file__).resolve().parents[2]
+from .live_helpers import REPO, kick_track, live_master  # noqa: E402
+
 RATE = 48000
-
-
-def _launcher() -> dict:
-    cfg = Path.home() / ".projmap" / "launcher.json"
-    return json.loads(cfg.read_text(encoding="utf-8")) if cfg.is_file() else {}
-
-
-def _show_dir() -> Path:
-    if os.environ.get("PROJMAP_LIVE_SHOW"):
-        return Path(os.environ["PROJMAP_LIVE_SHOW"])
-    cfg = _launcher()
-    if not cfg.get("shows_dir") or not cfg.get("last_show"):
-        pytest.skip("sem show conectado: defina PROJMAP_LIVE_SHOW")
-    return Path(cfg["shows_dir"]) / f"{cfg['last_show']}.projmap"
-
-
-def _free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
-
-
-def _kick_track(seconds: float, bpm: float = 120.0) -> np.ndarray:
-    """Bumbo (varredura 150→45 Hz) em cada tempo + chiado baixo contínuo
-    (mantém o analisador fora do 'silêncio' entre as batidas)."""
-    n = int(seconds * RATE)
-    rng = np.random.default_rng(7)
-    out = 0.01 * rng.standard_normal(n)
-    kick_len = int(0.25 * RATE)
-    kt = np.arange(kick_len) / RATE
-    freq = 45 + 105 * np.exp(-kt / 0.04)
-    kick = np.sin(2 * np.pi * np.cumsum(freq) / RATE) * np.exp(-kt / 0.09)
-    for start in np.arange(0.5, seconds - 0.3, 60.0 / bpm):
-        i = int(start * RATE)
-        out[i:i + kick_len] += 0.7 * kick[: n - i]
-    return np.clip(out, -1, 1).astype(np.float32).reshape(-1, 1).repeat(2, axis=1)
 
 
 def _dark_luma(png: bytes) -> float:
@@ -95,37 +57,8 @@ def _dark_luma(png: bytes) -> float:
 
 @pytest.fixture(scope="module")
 def master(tmp_path_factory):
-    src = _show_dir()
-    assert (src / "project.json").is_file(), f"show não encontrado: {src}"
-    show = tmp_path_factory.mktemp("live") / src.name
-    shutil.copytree(src, show, ignore=shutil.ignore_patterns("cache", "captures"))
-    port = _free_port()
-    display = os.environ.get("PROJMAP_LIVE_DISPLAY") or str(_launcher().get("display", "auto"))
-    log = open(show.parent / "master.log", "w", encoding="utf-8")
-    proc = subprocess.Popen([sys.executable, "-m", "projmap.master", "--project", str(show), "--port", str(port),
-                             "--display", display, "--no-interact"],
-                            cwd=REPO, stdout=log, stderr=subprocess.STDOUT)
-    url = f"http://127.0.0.1:{port}"
-    try:
-        end = time.monotonic() + 40
-        while True:
-            assert proc.poll() is None, f"mestre saiu (ver {log.name})"
-            try:
-                if httpx.get(f"{url}/api/health", timeout=1).status_code == 200:
-                    break
-            except httpx.HTTPError:
-                pass
-            assert time.monotonic() < end, "mestre não subiu em 40 s"
-            time.sleep(0.3)
+    with live_master(tmp_path_factory.mktemp("live")) as (url, show):
         yield url, show
-    finally:
-        proc.terminate()
-        try:
-            proc.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-        log.close()
-        print(f"\nlog do mestre: {log.name}")
 
 
 def test_webcam_em_tela_cheia_pisca_na_batida_do_audio(master):
@@ -189,7 +122,7 @@ def test_webcam_em_tela_cheia_pisca_na_batida_do_audio(master):
                 quiet.append(await snap())
                 await asyncio.sleep(0.1)
 
-            track = _kick_track(7.0)
+            track = kick_track(7.0)
             player = threading.Thread(target=lambda: sc.default_speaker().play(track, samplerate=RATE), daemon=True)
             player.start()
             await asyncio.sleep(1.5)  # histórico de ~1 s do detector de batida

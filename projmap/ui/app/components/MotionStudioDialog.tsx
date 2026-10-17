@@ -788,15 +788,23 @@ interface MotionStudioDialogProps {
   /** Permite injetar mock do gerador Claude e do smoke test em testes unitários (C.6). */
   claudeGenerator?: ClaudeStreamGenerator;
   smokeTestRunner?: (html: string, layerPreset?: Record<string, unknown>) => Promise<SmokeTestResult>;
+  /** Superfícies do projeto aberto: habilita "Projetar" em cada motion da biblioteca. */
+  surfaces?: { id: string; label: string }[];
+  /** Envia o .html do motion ao projeto e o põe como fonte da superfície. */
+  onProjectMotion?: (file: File, surfaceId: string) => Promise<void>;
 }
 
 export default function MotionStudioDialog({
   open,
   onClose,
+  surfaces = [],
+  onProjectMotion,
   claudeGenerator = api.motionAiGenerateStream,
   smokeTestRunner = runMotionSmokeTest,
 }: MotionStudioDialogProps) {
   const [studioTab, setStudioTab] = useState<"studio" | "claude">("studio");
+  const [projectTarget, setProjectTarget] = useState<Record<string, string>>({});
+  const [projecting, setProjecting] = useState<string | null>(null);
   const [library, setLibrary] = useState<MotionLibraryEntry[]>([]);
   const [presets, setPresets] = useState<MotionPreset[]>([]);
   const [rules, setRules] = useState<MotionRule[]>([]);
@@ -1765,6 +1773,42 @@ export default function MotionStudioDialog({
                       >
                         ▶ Executar
                       </button>
+                      {onProjectMotion && surfaces.length > 0 && (
+                        <>
+                          <select
+                            aria-label={`Superfície para ${item.key}`}
+                            className="rounded border border-border bg-secondary px-1.5 py-1 text-xs text-foreground"
+                            value={projectTarget[item.key] ?? surfaces[0].id}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setProjectTarget((cur) => ({ ...cur, [item.key]: v }));
+                            }}
+                          >
+                            {surfaces.map((sf) => (
+                              <option key={sf.id} value={sf.id}>
+                                {sf.label || sf.id}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            className="btn btn-small"
+                            aria-label={`Projetar ${item.key}`}
+                            title="Envia este motion ao projeto e mostra na superfície escolhida (no projetor)"
+                            disabled={projecting === item.key}
+                            onClick={() => {
+                              const target = projectTarget[item.key] ?? surfaces[0].id;
+                              const file = new File([item.html], `${item.id}-${item.version}.html`, { type: "text/html" });
+                              setProjecting(item.key);
+                              onProjectMotion(file, target)
+                                .catch((err: unknown) => console.error("Projetar motion:", err))
+                                .finally(() => setProjecting(null));
+                            }}
+                          >
+                            {projecting === item.key ? "Enviando…" : "📽 Projetar"}
+                          </button>
+                        </>
+                      )}
                       <button
                         type="button"
                         aria-label={`Remover ${item.key} da biblioteca`}
