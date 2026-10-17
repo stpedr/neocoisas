@@ -187,25 +187,22 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
     def detect_surfaces(node_id: str, body: DetectBody) -> dict:
         """Sugere superfícies a partir da foto do nó (F3). Não altera o projeto:
         a UI mostra os candidatos e cria só os que o operador escolher."""
-        import cv2
-        import numpy as np
-
-        from ..detect import get_detector
+        from ..detect import detect_from_photo
 
         _, project = state.snapshot()
         node = _node_or_404(project, node_id)
         path = store.resolve(node.photo)
         if path is None or not path.is_file():
             raise HTTPException(422, ["envie a foto da posição do projetor antes de detectar"])
-        bgr = cv2.imdecode(np.fromfile(str(path), dtype=np.uint8), cv2.IMREAD_COLOR)
-        if bgr is None:
-            raise HTTPException(422, ["foto ilegível"])
         try:
-            detector = get_detector(body.detector)
+            return detect_from_photo(
+                path,
+                detector_name=body.detector,
+                sensitivity=body.sensitivity,
+                max_candidates=body.max_candidates,
+            )
         except ValueError as exc:
             raise HTTPException(422, [str(exc)]) from exc
-        cands = detector.detect(bgr, sensitivity=body.sensitivity, max_candidates=body.max_candidates)
-        return {"detector": detector.name, "candidates": [c.to_dict() for c in cands]}
 
     @app.get("/api/project/export")
     def export_project() -> FileResponse:

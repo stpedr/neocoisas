@@ -6,6 +6,6 @@ roda no CI). O ``sam2`` entra depois pelo mesmo contrato.
 """
 
 from .base import Candidate, Detector
-from .factory import get_detector
+from .factory import detect_from_photo, get_detector
 
-__all__ = ["Candidate", "Detector", "get_detector"]
+__all__ = ["Candidate", "Detector", "detect_from_photo", "get_detector"]

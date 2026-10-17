@@ -12,7 +12,7 @@
 // cabeça (solvePnP, mesma função testada da webcam) e alimenta a cena interativa.
 
 import { useEffect, useRef, useState } from "react";
-import { API_BASE, withToken } from "../lib/api";
+import { API_BASE, api } from "../lib/api";
 
 // Mesmos índices de projmap/interact/sensors.py (FACE_LANDMARKS):
 // nariz, queixo, olho esq., olho dir., boca esq., boca dir.
@@ -58,9 +58,7 @@ export default function SensorPage() {
 
   // ---- WebSocket com reconexão
   function connect() {
-    const base = API_BASE || window.location.origin;
-    const url = withToken(base.replace(/^http/, "ws") + "/api/interact/phone");
-    const ws = new WebSocket(url);
+    const ws = new WebSocket(api.phoneWsUrl());
     wsRef.current = ws;
     ws.onopen = () => setWsOk(true);
     ws.onmessage = (ev) => {
@@ -78,23 +76,13 @@ export default function SensorPage() {
     };
   }
 
-  async function modelPath(): Promise<string> {
-    try {
-      const r = await fetch(`${API_BASE}/api/interact/face-model`, { method: "HEAD" });
-      if (r.ok) return `${API_BASE}/api/interact/face-model`;
-    } catch {
-      /* sem modelo local */
-    }
-    return REMOTE_MODEL; // precisa de internet no celular
-  }
-
   async function start() {
     setPhase("loading");
     setError("");
     try {
       const { FilesetResolver, FaceLandmarker } = await import("@mediapipe/tasks-vision");
       const fileset = await FilesetResolver.forVisionTasks(`${API_BASE}/mediapipe/wasm`);
-      const model = await modelPath();
+      const model = await api.resolveFaceModelUrl(REMOTE_MODEL);
       let landmarker;
       try {
         landmarker = await FaceLandmarker.createFromOptions(fileset, {

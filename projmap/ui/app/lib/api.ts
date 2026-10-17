@@ -177,6 +177,23 @@ export const api = {
       body: JSON.stringify(changes),
     }),
   interactDebug: (on: boolean) => call<InteractState>(`/api/interact/debug?on=${on}`, { method: "POST" }),
+  phoneWsUrl: () => {
+    const base = API_BASE || (typeof window !== "undefined" ? window.location.origin : "");
+    return withToken(`${base.replace(/^http/, "ws")}/api/interact/phone`);
+  },
+  resolveFaceModelUrl: async (fallbackUrl: string): Promise<string> => {
+    const localUrl = withToken(`${API_BASE}/api/interact/face-model`);
+    try {
+      const token = getToken();
+      const headers = new Headers();
+      if (token) headers.set("X-ProjMap-Token", token);
+      const res = await fetch(localUrl, { method: "HEAD", headers });
+      if (res.ok) return localUrl;
+    } catch {
+      /* sem modelo local */
+    }
+    return fallbackUrl;
+  },
 
   // presets de imagem do operador
   colorPresets: () => call<{ presets: ColorPreset[] }>("/api/color-presets"),
