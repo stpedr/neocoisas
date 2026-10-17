@@ -147,3 +147,96 @@ def test_esconder_senha_masks_rtsp_rtsps_and_https() -> None:
     assert esconder_senha("rtsp://op:123456@10.0.0.5:8554/live") == "rtsp://op:***@10.0.0.5:8554/live"
     assert esconder_senha("rtsps://op:segredo@stream.local:8322/cam") == "rtsps://op:***@stream.local:8322/cam"
     assert esconder_senha("https://user:token123@api.local/hook") == "https://user:***@api.local/hook"
+
+
+def test_effect_params_strict_coercion(tmp_path: Path) -> None:
+    from dataclasses import dataclass
+
+    @dataclass
+    class _DummyParams:
+        enabled: bool = True
+        gain: float = 1.0
+        count: int = 4
+
+    class _DummyEngine:
+        status = "ok"
+
+        def __init__(self) -> None:
+            self.params = _DummyParams()
+
+        def close(self) -> None:
+            pass
+
+    store = ProjectStore.create(tmp_path / "eff", name="Show Efeito")
+    state = ProjectState(store)
+    runtime = InteractionRuntime()
+    runtime._engine = _DummyEngine()  # type: ignore[assignment]
+    runtime._effect = "dummy"
+    app = create_app(
+        state,
+        runtime=runtime,
+        library_roots=[],
+        save_library_config=False,
+        config_dir=tmp_path / "cfg",
+    )
+    client = TestClient(app)
+
+    # String "false" deve virar False (e não True como bool("false"))
+    r_ok = client.patch("/api/interact/effects/params", json={"enabled": "false", "gain": "1.5", "count": 8})
+    assert r_ok.status_code == 200
+    params = r_ok.json()["effect_params"]
+    assert params["enabled"] is False
+    assert params["gain"] == 1.5
+    assert params["count"] == 8
+
+    # NaN / Inf / texto inválido devem retornar 422 (e não 500 ou NaN no shader)
+    assert client.patch("/api/interact/effects/params", json={"gain": "nan"}).status_code == 422
+    assert client.patch("/api/interact/effects/params", json={"gain": "inf"}).status_code == 422
+    assert client.patch("/api/interact/effects/params", json={"count": "nao-inteiro"}).status_code == 422
+    assert client.patch("/api/interact/effects/params", json={"enabled": "talvez"}).status_code == 422
+
+
+def test_renderer_live_frame_error_falls_back_to_magenta(gl_ctx, tmp_path: Path) -> None:
+    import numpy as np
+
+    from projmap.content.base import FrameSource
+    from projmap.core.project import Node, Output, Project, SourceSpec, Surface, Warp
+    from projmap.node.renderer import Renderer
+
+    class _ExplodingSource(FrameSource):
+        size = (16, 16)
+
+        def frame_at(self, t: float) -> tuple[int, np.ndarray]:
+            raise RuntimeError("falha de decodificação de vídeo no meio do show")
+
+    store = ProjectStore.create(tmp_path / "live_err", name="Show Resiliente")
+    proj = Project(
+        name="Show Resiliente",
+        nodes=[Node(id="proj-1", output=Output(width=160, height=90))],
+        surfaces=[
+            Surface(
+                id="s1",
+                label=" Video Quebrado",
+                node_id="proj-1",
+                warp=Warp(base=[(0.0, 0.0), (160.0, 0.0), (160.0, 90.0), (0.0, 90.0)]),
+                source=SourceSpec(kind="color", color=(0, 255, 0)),
+            )
+        ],
+    )
+    fbo = gl_ctx.simple_framebuffer((160, 90), components=4)
+    renderer = Renderer(gl_ctx, store.media_path, store.resolve)
+    try:
+        renderer.sync(proj, "proj-1")
+        # Simula uma fonte que abriu no sync mas falhou ao decodificar o quadro em render()
+        renderer._items[0].source = _ExplodingSource()
+        renderer.render(fbo, 1.0)
+        rgb = np.flipud(
+            np.frombuffer(fbo.read(components=3, alignment=1), dtype=np.uint8).reshape(90, 160, 3)
+        )
+        # Deve ter caído para magenta (255, 0, 255) sem levantar exceção
+        assert int(rgb[45, 80, 0]) > 200
+        assert int(rgb[45, 80, 1]) < 30
+        assert int(rgb[45, 80, 2]) > 200
+    finally:
+        renderer.release()
+        fbo.release()

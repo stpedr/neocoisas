@@ -50,8 +50,10 @@ def load_settings(path: Path = SETTINGS_PATH) -> Settings:
 
 
 def save_settings(s: Settings, path: Path = SETTINGS_PATH) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(asdict(s), ensure_ascii=False, indent=2), encoding="utf-8")
+    from ..core.store import _atomic_write_bytes
+
+    payload = json.dumps(asdict(s), ensure_ascii=False, indent=2).encode("utf-8")
+    _atomic_write_bytes(path, payload)
 
 
 def list_shows(shows_dir: str | Path) -> list[str]:

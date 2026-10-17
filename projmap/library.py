@@ -25,14 +25,15 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable, Optional
 
-from .core.store import GIF_EXTS, IMAGE_EXTS, VIDEO_EXTS, media_kind_for
+from .config import config_dir
+from .core.store import GIF_EXTS, IMAGE_EXTS, VIDEO_EXTS, _atomic_write_bytes, media_kind_for
 
 log = logging.getLogger(__name__)
 
 MEDIA_EXTS = VIDEO_EXTS | IMAGE_EXTS | GIF_EXTS
 MAX_ITEMS = 5000
 THUMB_SIZE = 320
-CONFIG_PATH = Path.home() / ".projmap" / "library.json"
+CONFIG_PATH = config_dir() / "library.json"
 
 
 @dataclass
@@ -74,8 +75,8 @@ def _load_config(path: Path) -> dict:
 
 def _save_config(path: Path, **changes) -> None:
     data = {**_load_config(path), **changes}  # preserva as outras chaves
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    payload = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    _atomic_write_bytes(path, payload)
 
 
 def save_roots(roots: Iterable[str], path: Path = CONFIG_PATH) -> None:

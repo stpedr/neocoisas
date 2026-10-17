@@ -188,7 +188,16 @@ class Renderer:
         surf = item.surface
         if item.source is None:
             return
-        key, rgba = item.source.frame_at(t)
+        try:
+            key, rgba = item.source.frame_at(t)
+        except Exception as exc:  # noqa: BLE001 — falha de decodificação ao vivo não derruba o projetor
+            log.error("superfície %s: falha ao ler quadro (%s); usando fallback magenta", surf.id, exc)
+            try:
+                item.source.close()
+            except Exception:  # noqa: BLE001
+                pass
+            item.source = StaticSource(solid(2, 2, (255, 0, 255)))
+            key, rgba = item.source.frame_at(t)
         if item.texture is None or item.frame_key != key or item.texture.size != (rgba.shape[1], rgba.shape[0]):
             item.texture = self._upload(item.texture, rgba)
             item.frame_key = key

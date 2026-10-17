@@ -37,6 +37,33 @@ class SensorBody(BaseModel):
     options: dict[str, Any] = Field(default_factory=dict)
 
 
+def _coerce_effect_param(key: str, current: Any, raw: Any) -> Any:
+    if isinstance(current, bool):
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, int) and raw in (0, 1):
+            return bool(raw)
+        if isinstance(raw, str):
+            norm = raw.strip().lower()
+            if norm in ("true", "1"):
+                return True
+            if norm in ("false", "0"):
+                return False
+        raise ValueError(f"{key}: esperado booleano (true/false)")
+    if isinstance(current, int):
+        if isinstance(raw, bool):
+            raise ValueError(f"{key}: esperado inteiro")
+        return int(raw)
+    if isinstance(current, float):
+        if isinstance(raw, bool):
+            raise ValueError(f"{key}: esperado número")
+        val = float(raw)
+        if not math.isfinite(val):
+            raise ValueError(f"{key}: valor numérico deve ser finito")
+        return val
+    return type(current)(raw)
+
+
 def create_router(runtime: InteractionRuntime,
                   client_factory: Callable[[], Optional[TextClient]]) -> APIRouter:
     r = APIRouter(prefix="/api/interact")
@@ -121,8 +148,14 @@ def create_router(runtime: InteractionRuntime,
         unknown = set(changes) - set(eng.params.__dict__)
         if unknown:
             raise HTTPException(422, [f"ajuste desconhecido: {', '.join(sorted(unknown))}"])
+        coerced: dict[str, Any] = {}
         for k, v in changes.items():
-            setattr(eng.params, k, type(getattr(eng.params, k))(v))
+            try:
+                coerced[k] = _coerce_effect_param(k, getattr(eng.params, k), v)
+            except (ValueError, TypeError) as exc:
+                raise HTTPException(422, [str(exc)]) from exc
+        for k, val in coerced.items():
+            setattr(eng.params, k, val)
         return state()
 
     @r.post("/generate")
