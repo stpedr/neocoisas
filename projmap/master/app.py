@@ -63,7 +63,8 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
                nlp_client_factory: Any = None, token: Optional[str] = None,
                host: str = "127.0.0.1", port: int = 8100,
                library_roots: Optional[list[str]] = None, save_library_config: bool = True,
-               config_dir: Optional[Path] = None, drive_config: Any = None, drive_http: Any = None) -> FastAPI:
+               config_dir: Optional[Path] = None, drive_config: Any = None, drive_http: Any = None,
+               ai_client_factory: Any = None) -> FastAPI:
     """``runtime``: ``InteractionRuntime`` da camada interativa (opcional).
     ``nlp_client_factory``: devolve o cliente LLM para texto→cena (padrão: o do repo).
     ``token``: token de pareamento; exigido de clientes fora desta máquina (F6).
@@ -230,6 +231,7 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
     from ..gdrive import drive_config as read_drive_config
     from ..library import load_gdrive_folder, save_gdrive_folder
     from .gdrive_api import create_router as create_gdrive_router
+    from .motions_api import create_router as create_motions_router
 
     cfg_dir = Path(config_dir) if config_dir else default_config_dir()
     lib_cfg = cfg_dir / "library.json"
@@ -239,6 +241,7 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
         token_path=cfg_dir / "gdrive-token.json",
         save_folder=(lambda f: save_gdrive_folder(f, lib_cfg)) if save_library_config else None,
         http=drive_http))
+    app.include_router(create_motions_router(config_dir=cfg_dir, ai_client_factory=ai_client_factory))
 
     if runtime is not None:
         from ..interact.api import create_router

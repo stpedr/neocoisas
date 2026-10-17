@@ -220,4 +220,93 @@ export const api = {
   driveThumbUrl: (id: string) => withToken(`${API_BASE}/api/gdrive/${encodeURIComponent(id)}/thumb`),
   driveImport: (id: string) =>
     call<{ revision: number; item: MediaItem }>(`/api/gdrive/${encodeURIComponent(id)}/import`, { method: "POST" }),
+
+  // Geração de Motions com Claude (C.1)
+  motionAiConfig: () => call<{ configured: boolean; model: string }>("/api/motions/ai/config"),
+  motionAiSetConfig: (body: { api_key?: string; model?: string }) =>
+    call<{ configured: boolean; model: string }>("/api/motions/ai/config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  motionAiGenerateStream: async (
+    body: {
+      kind: "new" | "edit" | "repair";
+      prompt?: string;
+      current_html?: string;
+      errors?: string[];
+      images?: { media_type: string; data: string }[];
+      model?: string;
+    },
+    onProgress: (ev: { elapsed_s: number; tokens_received: number; section: string }) => void,
+    signal?: AbortSignal,
+  ): Promise<{
+    ok: boolean;
+    html: string;
+    layer_preset: Record<string, unknown>;
+    notes: string;
+    errors: string[];
+    usage: {
+      input_tokens: number;
+      output_tokens: number;
+      cache_creation_input_tokens: number;
+      cache_read_input_tokens: number;
+      estimated_cost_usd: number;
+    };
+  }> => {
+    const token = getToken();
+    const headers = new Headers({ "Content-Type": "application/json" });
+    if (token) headers.set("X-ProjMap-Token", token);
+    const res = await fetch(`${API_BASE}/api/motions/ai/generate`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal,
+    });
+    if (!res.ok) {
+      let details: string[] = [];
+      try {
+        const errBody = await res.json();
+        details = Array.isArray(errBody.detail) ? errBody.detail : [String(errBody.detail ?? res.statusText)];
+      } catch {
+        details = [res.statusText];
+      }
+      throw new ApiError(res.status, details);
+    }
+    const text = await res.text();
+    let donePayload: {
+      ok: boolean;
+      html: string;
+      layer_preset: Record<string, unknown>;
+      notes: string;
+      errors: string[];
+      usage: {
+        input_tokens: number;
+        output_tokens: number;
+        cache_creation_input_tokens: number;
+        cache_read_input_tokens: number;
+        estimated_cost_usd: number;
+      };
+    } | null = null;
+
+    for (const line of text.split(/\r?\n/)) {
+      if (!line.startsWith("data: ")) continue;
+      try {
+        const ev = JSON.parse(line.slice(6));
+        if (ev.type === "progress") {
+          onProgress(ev);
+        } else if (ev.type === "done") {
+          donePayload = ev;
+        }
+      } catch {
+        /* ignore malformed line */
+      }
+    }
+
+    if (!donePayload) {
+      throw new ApiError(500, ["Stream de geração encerrou sem evento final."]);
+    }
+    return donePayload;
+  },
 };
+

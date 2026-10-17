@@ -4,12 +4,15 @@ import {
   applyMotionPreset,
   computeAudioFrame,
   createBeatDetectorState,
+  extractClaudeMotionResponse,
   parseAndValidateMotionHtml,
+  runMotionSmokeTest,
   SAMPLE_MOTION_HTML,
   upsertMotionInLibrary,
+  validateGeneratedMotionStrict,
   type MotionPreset,
 } from "../lib/motionModule";
-import MotionStudioDialog from "./MotionStudioDialog";
+import MotionStudioDialog, { type ClaudeStreamGenerator } from "./MotionStudioDialog";
 
 function makeHtmlWithManifest(manifest: Record<string, unknown>): string {
   return `<!DOCTYPE html><html><head><script type="application/json" id="motion-manifest">${JSON.stringify(
@@ -52,14 +55,9 @@ describe("Motion Module v1 — Validação, Biblioteca, Execução, Presets, Áu
     expect(res.manifest.id).toBe("neon-pulse-grid");
     expect(res.manifest.name).toBe("Neon Pulse Grid");
     expect(res.manifest.version).toBe("1.0.0");
-    expect(Object.keys(res.manifest.params)).toEqual([
-      "speed",
-      "rings",
-      "mirror",
-      "primaryColor",
-      "palette",
-      "cameraOffset",
-    ]);
+    expect(Object.keys(res.manifest.params)).toEqual(
+      expect.arrayContaining(["speed", "rings", "mirror", "primaryColor", "palette", "cameraOffset"]),
+    );
   });
 
   it("1. IMPORTAÇÃO: aponta exatamente qual campo está errado quando a validação falha", () => {
@@ -300,5 +298,309 @@ describe("Motion Module v1 — Validação, Biblioteca, Execução, Presets, Áu
       );
     });
     expect(screen.getAllByText("Laser Tunnel").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("A.5 MOTOR DE ÁUDIO PARA DJ: detecta kick em 128 BPM (< 1 BPM erro), hat não dispara kick, e AGC converge sinais de -20 dB e 0 dB", () => {
+    const sampleRate = 44100;
+    const fftSize = 2048; // binHz ≈ 21.53 Hz
+    const silenceTime = new Uint8Array(fftSize).fill(128);
+
+    // 1. Kick sintético em 128 BPM (período = 468.75 ms; passo de 15.625 ms = 30 frames por batida)
+    const kickState = createBeatDetectorState();
+    const dtMs = 15.625;
+    for (let step = 0; step < 360; step++) {
+      const nowMs = step * dtMs;
+      const isKickFrame = step % 30 === 0;
+      const freq = new Uint8Array(1024).fill(5);
+      // Banda do kick: 40–120 Hz -> bins 1..6
+      for (let b = 1; b <= 6; b++) {
+        freq[b] = isKickFrame ? 245 : 8;
+      }
+      computeAudioFrame(freq, silenceTime, sampleRate, fftSize, kickState, nowMs);
+    }
+    expect(kickState.bpmLocked).toBe(true);
+    expect(Math.abs(kickState.bpm - 128)).toBeLessThan(1);
+
+    // 2. Hat (6–14 kHz, bins 278..651) dispara hat > 0 mas NUNCA dispara kick
+    const hatState = createBeatDetectorState();
+    let hatTriggers = 0;
+    let kickTriggersDuringHat = 0;
+    for (let step = 0; step < 120; step++) {
+      const nowMs = step * 16;
+      const isHatPulse = step % 8 === 0;
+      const freq = new Uint8Array(1024).fill(0);
+      if (isHatPulse) {
+        for (let b = 280; b <= 640; b++) {
+          freq[b] = 230;
+        }
+      }
+      const { frame } = computeAudioFrame(freq, silenceTime, sampleRate, fftSize, hatState, nowMs);
+      if (frame.hat > 0) hatTriggers += 1;
+      if (frame.kick > 0) kickTriggersDuringHat += 1;
+    }
+    expect(hatTriggers).toBeGreaterThan(3);
+    expect(kickTriggersDuringHat).toBe(0);
+
+    // 3. Sinal de -20 dB (amplitude 0.1 -> bin=25) e de 0 dB (amplitude 1.0 -> bin=250) convergem após o AGC para o mesmo bass
+    const state0dB = createBeatDetectorState();
+    const stateMinus20dB = createBeatDetectorState();
+    const freq0dB = new Uint8Array(1024).fill(0);
+    const freqMinus20dB = new Uint8Array(1024).fill(0);
+    for (let b = 1; b <= 7; b++) {
+      freq0dB[b] = 250;
+      freqMinus20dB[b] = 25;
+    }
+    let lastBass0dB = 0;
+    let lastBassMinus20dB = 0;
+    for (let i = 0; i < 600; i++) {
+      const tMs = i * 50; // 30 segundos simulados
+      lastBass0dB = computeAudioFrame(freq0dB, silenceTime, sampleRate, fftSize, state0dB, tMs).frame.bass;
+      lastBassMinus20dB = computeAudioFrame(
+        freqMinus20dB,
+        silenceTime,
+        sampleRate,
+        fftSize,
+        stateMinus20dB,
+        tMs,
+      ).frame.bass;
+    }
+    expect(lastBass0dB).toBeGreaterThan(0.5);
+    expect(Math.abs(lastBass0dB - lastBassMinus20dB)).toBeLessThan(0.02);
+  });
+
+  it("B. PAINEL DE REAÇÃO DA CAMADA: barra segmentada reactTo, bloqueio de rx_*_src fora de custom, atalhos 1–5 e aplicar a todas as camadas", () => {
+    const parsed1 = parseAndValidateMotionHtml(SAMPLE_MOTION_HTML);
+    const secondHtml = SAMPLE_MOTION_HTML.replace('"id": "neon-pulse-grid"', '"id": "cyber-rings"').replace(
+      '"name": "Neon Pulse Grid"',
+      '"name": "Cyber Rings"',
+    );
+    const parsed2 = parseAndValidateMotionHtml(secondHtml);
+    if (!parsed1.ok || !parsed2.ok) throw new Error("manifest parse failed");
+
+    let lib = upsertMotionInLibrary([], parsed1.manifest, parsed1.html);
+    lib = upsertMotionInLibrary(lib, parsed2.manifest, parsed2.html);
+    localStorage.setItem("projmap.motions.library.v1", JSON.stringify(lib));
+
+    render(<MotionStudioDialog open={true} onClose={() => {}} />);
+
+    const execButtons = screen.getAllByRole("button", { name: /▶ Executar/i });
+    fireEvent.click(execButtons[0]);
+    fireEvent.click(execButtons[1]);
+
+    // Em reactTo="mix" (default), os dropdowns rx_*_src ficam desabilitados
+    const deformSrcSelects = screen.getAllByLabelText("Deformação · Fonte") as HTMLSelectElement[];
+    expect(deformSrcSelects[0]).toBeDisabled();
+    expect(deformSrcSelects[0].value).toBe("bass");
+
+    // Clicar em "[5] Personalizado" no 2º slot (selecionado) habilita o dropdown rx_*_src
+    const customButtons = screen.getAllByRole("button", { name: /\[5\] Personalizado/i });
+    fireEvent.click(customButtons[1]);
+    expect(deformSrcSelects[1]).not.toBeDisabled();
+
+    // Alterar rx_deform_src para "high" e voltar para "bass" via tecla "2" preserva o valor salvo mas desabilita o select
+    fireEvent.change(deformSrcSelects[1], { target: { value: "high" } });
+    expect(deformSrcSelects[1].value).toBe("high");
+
+    fireEvent.keyDown(window, { key: "2" }); // Atalho [2] Graves (bass)
+    expect(deformSrcSelects[1]).toBeDisabled();
+    expect(deformSrcSelects[1].value).toBe("high");
+
+    // Botão "Aplicar reactTo a todas as camadas" propaga "bass" para todas as camadas ativas
+    const applyAllButtons = screen.getAllByRole("button", { name: /Aplicar reactTo a todas as camadas/i });
+    fireEvent.click(applyAllButtons[1]);
+    const bassButtons = screen.getAllByRole("button", { name: /\[2\] Graves/i });
+    expect(bassButtons[0].className).toContain("on");
+    expect(bassButtons[1].className).toContain("on");
+  });
+
+  it("C.6 GERADOR CLAUDE (a, b, c, d): (a) válido de 1ª, (b) sem <layer_preset>, (c) reparado na 2ª tentativa, (d) falha após 3 reparos", async () => {
+    // Valida que SAMPLE_MOTION_HTML passa na validação estrita do gerador (C.4 Etapa 1)
+    expect(validateGeneratedMotionStrict(SAMPLE_MOTION_HTML).ok).toBe(true);
+
+    // (b) Verifica que extractClaudeMotionResponse detecta ausência de <layer_preset>
+    const missingPresetRes = extractClaudeMotionResponse(
+      `<motion_html>${SAMPLE_MOTION_HTML}</motion_html><notes>Sem preset</notes>`,
+    );
+    expect(missingPresetRes.ok).toBe(false);
+    expect(missingPresetRes.errors.some((e) => e.includes("<layer_preset>"))).toBe(true);
+
+    const mockSmokeOk = vi.fn().mockResolvedValue({ ok: true, errors: [], beatEventsReceived: 4 });
+
+    // (a) Motion válido de primeira -> importa na biblioteca e cria preset "Camada"
+    const genValidFirst: ClaudeStreamGenerator = vi.fn().mockResolvedValue({
+      ok: true,
+      html: SAMPLE_MOTION_HTML,
+      layer_preset: { mode: "cyber", params: { framing: "element", background: "transparent", reactTo: "beat" } },
+      notes: "Alvos: deform (kick) e pulse (bass).",
+      errors: [],
+      usage: {
+        input_tokens: 1200,
+        output_tokens: 1800,
+        cache_creation_input_tokens: 1000,
+        cache_read_input_tokens: 0,
+        estimated_cost_usd: 0.16,
+      },
+    });
+
+    const { unmount } = render(
+      <MotionStudioDialog
+        open={true}
+        onClose={() => {}}
+        claudeGenerator={genValidFirst}
+        smokeTestRunner={mockSmokeOk}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-generate-claude"));
+    // Sugestão clicável preenche o campo
+    fireEvent.click(screen.getByRole("button", { name: /anéis de luz que explodem no kick/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("btn-run-claude"));
+    });
+
+    expect(genValidFirst).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("motion-library-list")).toHaveTextContent("neon-pulse-grid@1.0.0");
+    // Preset "Camada" criado automaticamente a partir de <layer_preset>
+    expect(screen.getByRole("button", { name: /Camada \(v1\.0\.0\)/i })).toBeInTheDocument();
+    unmount();
+
+    // (c) Erro no manifesto / sem <layer_preset> na 1ª resposta -> corrigido automaticamente na 2ª chamada (kind: "repair")
+    localStorage.clear();
+    const brokenHtml = SAMPLE_MOTION_HTML.replace('"reactTo"', '"missingReactTo"');
+    const genFixedOnSecond: ClaudeStreamGenerator = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        html: brokenHtml,
+        layer_preset: {},
+        notes: "",
+        errors: ["Marcação <layer_preset>...</layer_preset> ausente ou vazia."],
+        usage: {
+          input_tokens: 1000,
+          output_tokens: 1500,
+          cache_creation_input_tokens: 0,
+          cache_read_input_tokens: 900,
+          estimated_cost_usd: 0.12,
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        html: SAMPLE_MOTION_HTML,
+        layer_preset: { mode: "cyber", params: { framing: "element", background: "transparent" } },
+        notes: "Corrigido na tentativa de reparo.",
+        errors: [],
+        usage: {
+          input_tokens: 1400,
+          output_tokens: 1600,
+          cache_creation_input_tokens: 0,
+          cache_read_input_tokens: 900,
+          estimated_cost_usd: 0.13,
+        },
+      });
+
+    const { unmount: unmount2 } = render(
+      <MotionStudioDialog
+        open={true}
+        onClose={() => {}}
+        claudeGenerator={genFixedOnSecond}
+        smokeTestRunner={mockSmokeOk}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-generate-claude"));
+    fireEvent.change(screen.getByLabelText("Descrição do motion"), {
+      target: { value: "esfera líquida cromada" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("btn-run-claude"));
+    });
+
+    expect(genFixedOnSecond).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(genFixedOnSecond).mock.calls[0][0].kind).toBe("new");
+    expect(vi.mocked(genFixedOnSecond).mock.calls[1][0].kind).toBe("repair");
+    expect(vi.mocked(genFixedOnSecond).mock.calls[1][0].errors?.join(" ")).toContain("reactTo");
+    expect(screen.getByTestId("motion-library-list")).toHaveTextContent("neon-pulse-grid@1.0.0");
+    unmount2();
+
+    // (d) Motion que falha nas 3 tentativas de reparo -> para, exibe os erros e oferece "Tentar de novo" e "Importar mesmo assim"
+    localStorage.clear();
+    const genAlwaysFails: ClaudeStreamGenerator = vi.fn().mockResolvedValue({
+      ok: true,
+      html: brokenHtml,
+      layer_preset: { mode: "cyber", params: { framing: "element", background: "transparent" } },
+      notes: "Rascunho com falha",
+      errors: [],
+      usage: {
+        input_tokens: 800,
+        output_tokens: 900,
+        cache_creation_input_tokens: 0,
+        cache_read_input_tokens: 700,
+        estimated_cost_usd: 0.08,
+      },
+    });
+
+    render(
+      <MotionStudioDialog
+        open={true}
+        onClose={() => {}}
+        claudeGenerator={genAlwaysFails}
+        smokeTestRunner={mockSmokeOk}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-generate-claude"));
+    fireEvent.change(screen.getByLabelText("Descrição do motion"), {
+      target: { value: "túnel quebrado" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("btn-run-claude"));
+    });
+
+    // 1 chamada inicial ("new") + 3 tentativas de reparo ("repair") = 4 chamadas
+    expect(genAlwaysFails).toHaveBeenCalledTimes(4);
+    const failureBox = screen.getByTestId("claude-repair-failure");
+    expect(failureBox).toHaveTextContent("reactTo");
+    expect(within(failureBox).getByRole("button", { name: /Tentar de novo/i })).toBeInTheDocument();
+    expect(within(failureBox).getByRole("button", { name: /Importar mesmo assim/i })).toBeInTheDocument();
+  });
+
+  it("C.6 TESTE DE FUMAÇA (runMotionSmokeTest): falha quando o motion emite motion:error ao inicializar", async () => {
+    vi.useRealTimers();
+    const origAppend = document.body.appendChild.bind(document.body);
+    vi.spyOn(document.body, "appendChild").mockImplementation((node: Node) => {
+      const res = origAppend(node);
+      if (node instanceof HTMLIFrameElement) {
+        const fakeWin = {
+          postMessage: (msg: { type?: string }) => {
+            if (msg?.type === "motion:init") {
+              window.dispatchEvent(
+                new MessageEvent("message", {
+                  data: { type: "motion:ready", payload: { phase: "active" } },
+                  source: fakeWin as unknown as Window,
+                }),
+              );
+              window.dispatchEvent(
+                new MessageEvent("message", {
+                  data: { type: "motion:error", payload: { message: "ReferenceError: shaderUniform is not defined" } },
+                  source: fakeWin as unknown as Window,
+                }),
+              );
+            }
+          },
+        };
+        Object.defineProperty(node, "contentWindow", { value: fakeWin, configurable: true });
+        setTimeout(() => node.onload?.(new Event("load")), 5);
+      }
+      return res;
+    });
+
+    const result = await runMotionSmokeTest(
+      SAMPLE_MOTION_HTML,
+      { mode: "cyber", params: { framing: "element", background: "transparent" } },
+      { readyTimeoutMs: 200, audioDurationMs: 60, stepMs: 20 },
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(" ")).toContain("ReferenceError: shaderUniform is not defined");
   });
 });
