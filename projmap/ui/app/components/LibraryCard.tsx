@@ -5,8 +5,16 @@
 
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 
-export default function LibraryCard({ onError, onOk }: { onError: (m: string) => void; onOk: (m: string) => void }) {
+export default function LibraryCard({
+  onError,
+  onOk,
+}: {
+  onError: (m: string) => void;
+  onOk: (m: string) => void;
+}) {
   const [roots, setRoots] = useState<{ path: string; exists: boolean }[]>([]);
   const [count, setCount] = useState(0);
   const [canEdit, setCanEdit] = useState(false);
@@ -14,11 +22,14 @@ export default function LibraryCard({ onError, onOk }: { onError: (m: string) =>
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api.library().then((l) => {
-      setRoots(l.roots);
-      setCount(l.items.length);
-      setCanEdit(l.can_edit_roots);
-    }).catch(() => setCanEdit(false));
+    api
+      .library()
+      .then((l) => {
+        setRoots(l.roots);
+        setCount(l.items.length);
+        setCanEdit(l.can_edit_roots);
+      })
+      .catch(() => setCanEdit(false));
   }, []);
 
   if (!canEdit) return null;
@@ -50,15 +61,35 @@ export default function LibraryCard({ onError, onOk }: { onError: (m: string) =>
       </p>
       {roots.map((r) => (
         <div key={r.path} className="row root-row">
-          <span className={`root-path ${r.exists ? "" : "root-missing"}`} title={r.exists ? r.path : "pasta não encontrada"}>{r.path}</span>
-          <button className="btn btn-small" disabled={busy} onClick={() => save(roots.filter((x) => x.path !== r.path).map((x) => x.path))}>Remover</button>
+          <span
+            className={`root-path ${r.exists ? "" : "root-missing"}`}
+            title={r.exists ? r.path : "pasta não encontrada"}
+          >
+            {r.path}
+          </span>
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={() => save(roots.filter((x) => x.path !== r.path).map((x) => x.path))}
+          >
+            Remover
+          </Button>
         </div>
       ))}
       <div className="row">
-        <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Colar o caminho da pasta" />
-        <button className="btn btn-accent" disabled={busy || !draft.trim()} onClick={() => save([...roots.map((r) => r.path), draft.trim()])}>
+        <Input
+          className="flex-1"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Colar o caminho da pasta"
+        />
+        <Button
+          variant="primary"
+          disabled={busy || !draft.trim()}
+          onClick={() => save([...roots.map((r) => r.path), draft.trim()])}
+        >
           Adicionar
-        </button>
+        </Button>
       </div>
     </div>
   );

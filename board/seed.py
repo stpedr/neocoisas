@@ -1016,8 +1016,8 @@ SEED_CARDS: list[dict] = [
     },
     {
         'title': 'ProjMap UI — camadas e galeria: Framer Motion + Dialog',
-        'description': 'LayersPanel: reorder de camadas com layout do Framer Motion. MediaGallery/ImageCard/LibraryCard/SuggestAll: migra pra Dialog do shadcn + AnimatePresence no backdrop. LayersPanel é peça sensível (F9, prévia ao vivo) — cobrir com teste e2e.',
-        'column': 'backlog',
+        'description': 'LayersPanel: reorder de camadas com layout do Framer Motion (mantendo botões ▲/▼, sem dnd-kit) + Card/Button/Checkbox/Input/Select/Slider do shadcn. MediaGallery/ImageCard/LibraryCard/SuggestAll: migrados pra Dialog do shadcn (@radix-ui/react-dialog) + AnimatePresence/motion.div com useReducedMotion. 11 testes TDD em Vitest + teste e2e em Playwright cobrindo reorder de camadas e abertura do Dialog. Achado real: HTMLMediaElement.prototype.play no jsdom retorna undefined e quebrava v.play().catch() em preview.ts. Entrega: docs/entregas/projmap-ui-camadas-galeria-fase4.md.',
+        'column': 'done',
         'sprint': 'Sprint 12 · UI moderna + PWA + SQLAlchemy',
         'labels': ['frontend', 'projmap', 'prioridade:média'],
     },

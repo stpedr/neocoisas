@@ -30,3 +30,11 @@ Element.prototype.releasePointerCapture ??= () => {};
 // jsdom também não implementa scrollIntoView — Radix Select chama isso ao
 // abrir, pra rolar até o item selecionado.
 Element.prototype.scrollIntoView ??= () => {};
+
+// jsdom implementa HTMLMediaElement.prototype.play como stub que emite
+// "Not implemented" e retorna undefined (em vez de Promise), quebrando
+// `v.play().catch(...)` em preview.ts quando LayersPanel calcula mediaAspect.
+if (typeof HTMLMediaElement !== "undefined") {
+  HTMLMediaElement.prototype.play = () => Promise.resolve();
+}
+
