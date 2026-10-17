@@ -1,6 +1,6 @@
 [project]
 name = "projmap"
-version = "1.0.0"
+version = "1.1.0"
 description = "ProjMap — Sistema standalone de projeção mapeada em tempo real, calibração e interação"
 requires-python = ">=3.11"
 

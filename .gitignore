@@ -30,3 +30,6 @@ models/
 # ícone gerado por python -m projmap.desktop.install
 projmap/desktop/projmap.ico
 projmap/desktop/projmap.png
+
+# builds de release (packaging/omarchy/build.py)
+dist/
