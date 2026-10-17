@@ -144,6 +144,49 @@ describe("SurfacePanel", () => {
     expect(await screen.findByText(/Nenhum arquivo deste tipo no projeto ainda/)).toBeInTheDocument();
   });
 
+  it("trocar a Fonte para Entrada de vídeo aplica na hora, sem mídia e com dispositivo 'auto'", async () => {
+    const props = setup();
+
+    await userEvent.click(screen.getByLabelText("Fonte"));
+    await userEvent.click(await screen.findByRole("option", { name: "Entrada de vídeo (câmera/captura)" }));
+
+    const next = props.onChange.mock.calls.at(-1)![0](surface());
+    expect(next.source.kind).toBe("capture");
+    expect(next.source.media).toBeNull();
+    expect(next.source.device).toBe("auto");
+  });
+
+  it("com Entrada de vídeo, editar o Dispositivo chama onChange com o nome", async () => {
+    const capture = { kind: "capture" as const, media: null, device: "auto", color: [255, 255, 255] as [number, number, number],
+                      fit: "stretch" as const, loop: true, speed: 1, offset_s: 0 };
+    const props = setup({ surface: surface({ source: capture }) });
+    const dev = screen.getByLabelText("Dispositivo");
+    await userEvent.type(dev, "x");
+
+    const next = props.onChange.mock.calls.at(-1)![0](surface({ source: capture }));
+    expect(next.source.device).toBe("autox");
+  });
+
+  it("Tela cheia mapeia a superfície na saída inteira do projetor", async () => {
+    const node = { id: "n1", name: "P1", photo: null, photo_boundary: [[0, 0], [1, 0], [1, 1], [0, 1]] as [number, number][],
+                   output: { width: 1280, height: 720, intensity: 1, blackout: false, pattern: "none" as const, show_outlines: false,
+                             latency_ms: 0, color: { brightness: 1, contrast: 1, saturation: 1, gamma: 1, temperature: 0 },
+                             flip_h: false, flip_v: false } };
+    const props = setup({ project: project({ nodes: [node] }) });
+    await userEvent.click(screen.getByRole("button", { name: "Tela cheia" }));
+
+    const next = props.onChange.mock.calls.at(-1)![0](surface());
+    expect(next.warp.base).toEqual([[0, 0], [1280, 0], [1280, 720], [0, 720]]);
+  });
+
+  it("adicionar efeito de áudio chama onChange com a lista fx", async () => {
+    const props = setup();
+    await userEvent.click(screen.getByRole("button", { name: "+ Efeito" }));
+
+    const next = props.onChange.mock.calls.at(-1)![0](surface());
+    expect(next.fx).toEqual([{ type: "pulse", band: "bass", amount: 0.5, enabled: true }]);
+  });
+
   it("mover a Opacidade pelo teclado chama onChange", async () => {
     const props = setup();
     const op = screen.getByRole("slider", { name: /Opacidade/ });

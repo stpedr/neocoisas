@@ -4,7 +4,23 @@ export type Point = [number, number];
 export type Quad = [Point, Point, Point, Point];
 
 export type MediaKind = "video" | "image" | "gif";
-export type SourceKind = "none" | "video" | "image" | "gif" | "color" | "test" | "interactive";
+export type SourceKind = "none" | "video" | "image" | "gif" | "color" | "test" | "interactive" | "capture";
+export type FxType = "pulse" | "hue" | "zoom" | "rgb_split" | "strobe" | "shake" | "invert";
+export type AudioBand = "bass" | "mid" | "high" | "level" | "beat";
+
+// Efeito reativo ao áudio por cima da fonte (espelho de core/project.py::AudioFx).
+export interface AudioFx {
+  type: FxType;
+  band: AudioBand;
+  amount: number;
+  enabled: boolean;
+}
+
+// Entrada de áudio dos efeitos (core/project.py::AudioInput).
+export interface AudioInput {
+  device: string;
+  gain: number;
+}
 export type Pattern = "none" | "white" | "grid" | "edges" | "black";
 export type Fit = "stretch" | "cover" | "contain";
 export type BlendMode = "normal" | "add" | "multiply";
@@ -57,6 +73,8 @@ export interface SourceSpec {
   loop: boolean;
   speed: number;
   offset_s: number;
+  /** Entrada de vídeo ("capture"): "auto", índice ou parte do nome. */
+  device?: string | null;
 }
 
 // Mídia extra por cima do fundo da superfície (F9). rect = [x, y, w, h] em uv da superfície.
@@ -83,6 +101,8 @@ export interface Surface {
   blend_mode: BlendMode;
   layers: Layer[];
   color: ColorAdjust;
+  /** Efeitos reativos ao áudio (opcional: projetos antigos não têm). */
+  fx?: AudioFx[];
 }
 
 export interface Look {
@@ -99,6 +119,8 @@ export interface Project {
   surfaces: Surface[];
   media: Record<string, MediaItem>;
   looks: Look[];
+  /** Entrada de áudio dos efeitos (opcional: projetos antigos não têm). */
+  audio?: AudioInput;
 }
 
 export const DEFAULT_SOURCE: SourceSpec = {

@@ -27,10 +27,21 @@ ACCENT = "#7c5cff"
 NEW = "＋ Novo show…"
 
 
+def _app_version() -> str:
+    """Versão do ProjMap lida do pyproject.toml (para o título do Lançador)."""
+    try:
+        import tomllib
+
+        with open(REPO_ROOT / "pyproject.toml", "rb") as f:
+            return str(tomllib.load(f)["project"]["version"])
+    except (OSError, KeyError, ValueError):
+        return "?"
+
+
 class Launcher(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("ProjMap")
+        self.title(f"ProjMap v{_app_version()}")
         self.configure(bg=BG)
         self.minsize(420, 0)
         self.geometry("520x760")

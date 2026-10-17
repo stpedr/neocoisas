@@ -4,7 +4,7 @@ O editor manda o projeto inteiro (``PUT /api/project``); o celular não. Numa
 rede Wi-Fi instável um PUT do documento inteiro atropelaria edições do editor
 feitas ao mesmo tempo. Aqui cada comando mexe só no que precisa:
 
-- ``PATCH /api/surfaces/{id}`` — visibilidade, opacidade e fonte;
+- ``PATCH /api/surfaces/{id}`` — visibilidade, opacidade, fonte, cor e efeitos de áudio;
 - ``/api/looks`` — salvar/recuperar/apagar cenas (cues);
 - ``GET /api/remote/pair`` — URL + token + QR (SVG) para parear (só no próprio mestre).
 
@@ -20,7 +20,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, ValidationError
 
-from ..core.project import ColorAdjust, Look, Project, SourceSpec, SurfaceLook, new_id
+from ..core.project import AudioFx, ColorAdjust, Look, Project, SourceSpec, SurfaceLook, new_id
 from ..core.state import ProjectState
 from .auth import is_loopback
 
@@ -30,6 +30,7 @@ class SurfacePatch(BaseModel):
     opacity: Optional[float] = Field(None, ge=0.0, le=1.0)
     source: Optional[dict[str, Any]] = None
     color: Optional[ColorAdjust] = None  # preset de imagem aplicado na superfície
+    fx: Optional[list[AudioFx]] = Field(None, max_length=8)  # efeitos reativos ao áudio
 
 
 class LookCreate(BaseModel):
@@ -123,6 +124,8 @@ def create_router(state: ProjectState, host: str = "127.0.0.1", port: int = 8100
                 surf.source = SourceSpec.model_validate({**surf.source.model_dump(), **body.source})
             if body.color is not None:
                 surf.color = body.color
+            if body.fx is not None:
+                surf.fx = [f.model_copy() for f in body.fx]
             return p
 
         try:

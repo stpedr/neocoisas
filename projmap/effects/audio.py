@@ -57,7 +57,10 @@ class AudioAnalyzer:
     """Analisa blocos de ``AUDIO_SALTO`` amostras mono (``feed``); a thread de
     captura (``start``) alimenta pelo loopback do Windows."""
 
-    def __init__(self) -> None:
+    def __init__(self, device: str = "loopback") -> None:
+        # "loopback" = o que toca no PC; "mic" = microfone padrão; outro = parte do nome do dispositivo
+        self.device = device
+        self.device_label = ""
         n = C.AUDIO_JANELA_FFT
         self._window = np.zeros(n, np.float32)
         self._hann = (0.5 - 0.5 * np.cos(2 * np.pi * np.arange(n) / (n - 1))).astype(np.float32)
@@ -135,8 +138,9 @@ class AudioAnalyzer:
             return
         while not self._stop.is_set():
             try:
-                mic, label = _pick_capture_device(sc)
-                log.info("áudio: capturando o que toca em '%s'", label)
+                mic, label = _pick_capture_device(sc, self.device)
+                self.device_label = label
+                log.info("áudio: capturando '%s' (%s)", label, self.device)
                 with mic.recorder(samplerate=C.AUDIO_TAXA, channels=1, blocksize=C.AUDIO_SALTO) as rec:
                     while not self._stop.is_set():
                         data = rec.record(numframes=C.AUDIO_SALTO)
@@ -148,9 +152,21 @@ class AudioAnalyzer:
                 self._stop.wait(2.0)
 
 
-def _pick_capture_device(sc):  # noqa: ANN001, ANN202
-    """Escolhe o dispositivo de captura de áudio: loopback WASAPI no Windows ou
-    fonte '.monitor' do PulseAudio/PipeWire no Linux (com fallback para microfone)."""
+def _pick_capture_device(sc, device: str = "loopback"):  # noqa: ANN001, ANN202
+    """Escolhe o dispositivo de captura de áudio.
+
+    ``loopback``: loopback WASAPI no Windows ou fonte '.monitor' do
+    PulseAudio/PipeWire no Linux (com fallback para microfone). ``mic``: o
+    microfone padrão. Outro texto: o primeiro dispositivo cujo nome o contém."""
+    want = (device or "loopback").strip().lower()
+    if want == "mic":
+        mic = sc.default_microphone()
+        return mic, getattr(mic, "name", "microfone padrão")
+    if want != "loopback":
+        for mic in sc.all_microphones(include_loopback=True):
+            if want in getattr(mic, "name", "").lower():
+                return mic, getattr(mic, "name", want)
+        raise RuntimeError(f"dispositivo de áudio '{device}' não encontrado")
     speaker = sc.default_speaker()
     for query in (getattr(speaker, "id", None), getattr(speaker, "name", None)):
         if not query:

@@ -111,10 +111,13 @@ def main(argv: list[str] | None = None) -> None:
         if publisher is not None:
             runtime.publisher = publisher.start(runtime.render)
 
+    from ..node.tap import OutputTap
+
+    tap = OutputTap()
     exposed = args.host not in ("127.0.0.1", "localhost")
     token = args.token or pairing_token_from_env() or (new_token() if exposed else None)
     app = create_app(state, UI_DIR, runtime=runtime, token=token, host=args.host, port=args.port,
-                     library_roots=args.library)
+                     library_roots=args.library, output_tap=tap)
     if exposed:
         log.info("remote no celular (mesma rede): %s", remote_url(args.host, args.port, token))
         log.info("ou abra o card 'Remote' no editor e escaneie o QR")
@@ -157,12 +160,15 @@ def main(argv: list[str] | None = None) -> None:
 
     try:
         run_output(state.snapshot, node_id, media_path, store.resolve, display=args.display,
-                   windowed=args.windowed)
+                   windowed=args.windowed, tap=tap)
     finally:
         server.should_exit = True
         thread.join(timeout=5)
         if runtime:
             runtime.stop()
+        from ..inputs.audio import bus
+
+        bus().stop()
 
 
 def _load_dotenv() -> None:

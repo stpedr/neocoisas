@@ -19,6 +19,7 @@ from typing import Callable, Optional
 
 from ..core.project import Project
 from .renderer import MediaResolver, PathResolver, Renderer
+from .tap import OutputTap
 
 log = logging.getLogger(__name__)
 
@@ -34,8 +35,11 @@ def run_output(
     windowed: bool = False,
     window_size: tuple[int, int] = (960, 540),
     on_frame: Optional[Callable[[], None]] = None,
+    tap: Optional[OutputTap] = None,
 ) -> None:
+    """``tap``: atende pedidos de snapshot da saída (``GET /api/nodes/{id}/snapshot``)."""
     import moderngl
+    import numpy as np
     import pyglet
 
     from .screens import choose_screen, list_screens
@@ -84,6 +88,10 @@ def run_output(
         ctx.screen.viewport = (0, 0, fb_w, fb_h)
         now = time.perf_counter()
         renderer.render(ctx.screen, now - t0)
+        if tap is not None:
+            tap.service(lambda: np.flipud(np.frombuffer(
+                ctx.screen.read(viewport=(0, 0, fb_w, fb_h), components=3, alignment=1),
+                dtype=np.uint8).reshape(fb_h, fb_w, 3)).copy())
         dt = now - stats["last"]
         stats["last"] = now
         stats["frames"] += 1
@@ -109,7 +117,12 @@ def run_output(
 
     @window.event
     def on_close():  # noqa: ANN202
+        if tap is not None:
+            tap.attached = False
         renderer.release()
+
+    if tap is not None:
+        tap.attached = True
 
     pyglet.app.run(interval=0)  # redesenha o mais rápido possível; o vsync limita ao refresh
 

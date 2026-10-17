@@ -23,7 +23,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Mapping, Optional, cast
 
 import cv2
 import moderngl
@@ -33,7 +33,8 @@ from ..content.base import FrameSource, StaticSource
 from ..content.factory import get_source
 from ..content.patterns import edges_pattern, grid_pattern, solid
 from ..core.geometry import rect_quad
-from ..core.project import ColorAdjust, Layer, Node, Project, SourceSpec, Surface
+from ..core.project import AudioInput, ColorAdjust, Layer, Node, Project, SourceSpec, Surface
+from ..mapping.fx import NEUTRAL_FX, FxUniforms, compute_fx
 from ..mapping.warp import UvTransform, fit_transform, hinv_for, layer_uvx
 
 log = logging.getLogger(__name__)
@@ -46,6 +47,14 @@ NEUTRAL = ColorAdjust()
 
 MediaResolver = Callable[[str], Path]
 PathResolver = Callable[[Optional[str]], Optional[Path]]
+LevelsProvider = Callable[[], Mapping[str, float]]
+AudioEnsure = Callable[[AudioInput], None]
+
+
+def _default_audio() -> tuple[LevelsProvider, AudioEnsure]:
+    from ..inputs.audio import bus
+
+    return (lambda: bus().levels()), (lambda spec: bus().ensure(spec))
 
 
 def shader_source(name: str, gles: bool = False) -> str:
@@ -91,8 +100,18 @@ class _Item:
 
 class Renderer:
     def __init__(self, ctx: moderngl.Context, media_path: MediaResolver, resolve_path: PathResolver,
-                 gles: bool = False):
+                 gles: bool = False, audio_levels: Optional[LevelsProvider] = None,
+                 audio_ensure: Optional[AudioEnsure] = None):
+        """``audio_levels``/``audio_ensure``: de onde vêm os níveis dos efeitos
+        ``fx`` (padrão: o barramento de áudio do processo, ``inputs/audio.py``)."""
         self.ctx = ctx
+        if audio_levels is None or audio_ensure is None:
+            default_levels, default_ensure = _default_audio()
+            audio_levels = audio_levels or default_levels
+            audio_ensure = audio_ensure or default_ensure
+        self._audio_levels = audio_levels
+        self._audio_ensure = audio_ensure
+        self._has_fx = False
         self._media_path = media_path
         self._resolve_path = resolve_path
         self.surface_prog = ctx.program(
@@ -144,6 +163,12 @@ class Renderer:
             self._release_item(stale)
         self._items = items
         self._surfaces = project.surfaces_for(node_id)
+        self._has_fx = any(f.enabled for s in self._surfaces for f in s.fx)
+        if self._has_fx:
+            try:
+                self._audio_ensure(project.audio)
+            except Exception as exc:  # noqa: BLE001 — sem áudio os efeitos ficam neutros, o show segue
+                log.error("entrada de áudio indisponível (%s): efeitos sem reação", exc)
 
     def _open_spec(self, surface_id: str, spec: SourceSpec) -> Optional[FrameSource]:
         try:
@@ -177,14 +202,33 @@ class Renderer:
             self._draw_pattern(node)
         else:
             self._set_adjust("o", out.color)
+            levels = self._levels() if self._has_fx else {}
+            fx_cache: dict[str, FxUniforms] = {}
             for item in self._items:
-                self._draw_item(item, t, out.intensity)
+                surf = item.surface
+                if surf.id not in fx_cache:
+                    fx_cache[surf.id] = compute_fx(surf.fx, levels, t) if surf.fx and levels else NEUTRAL_FX
+                self._draw_item(item, t, out.intensity, fx_cache[surf.id])
 
         if out.show_outlines:
             self._draw_outlines()
         ctx.disable(moderngl.BLEND)
 
-    def _draw_item(self, item: _Item, t: float, intensity: float) -> None:
+    def _levels(self) -> Mapping[str, float]:
+        try:
+            return self._audio_levels()
+        except Exception as exc:  # noqa: BLE001
+            log.error("falha ao ler o áudio (%s)", exc)
+            return {}
+
+    def _set_fx(self, fx: FxUniforms) -> None:
+        prog = self.surface_prog
+        for name, value in (("u_fx_gain", fx.gain), ("u_fx_hue", fx.hue), ("u_fx_zoom", fx.zoom),
+                            ("u_fx_split", fx.split), ("u_fx_shift", fx.shift), ("u_fx_invert", fx.invert),
+                            ("u_fx_flash", fx.flash)):
+            cast(moderngl.Uniform, prog[name]).value = value
+
+    def _draw_item(self, item: _Item, t: float, intensity: float, fx: FxUniforms = NEUTRAL_FX) -> None:
         surf = item.surface
         if item.source is None:
             return
@@ -210,6 +254,7 @@ class Renderer:
         prog["u_feather"].value = float(surf.feather)
         prog["u_multiply"].value = 1 if surf.blend_mode == "multiply" else 0
         self._set_adjust("s", surf.color)
+        self._set_fx(fx)
         if surf.blend_mode == "add":
             self.ctx.blend_func = moderngl.ONE, moderngl.ONE
         elif surf.blend_mode == "multiply":
@@ -313,14 +358,18 @@ class Renderer:
 
 def render_offscreen(project: Project, node_id: str, media_path: MediaResolver, resolve_path: PathResolver,
                      t: float = 0.0, ctx: Optional[moderngl.Context] = None,
-                     size: Optional[tuple[int, int]] = None) -> np.ndarray:
+                     size: Optional[tuple[int, int]] = None,
+                     audio_levels: Optional[LevelsProvider] = None) -> np.ndarray:
     """Renderiza um frame num FBO e devolve RGB ``uint8 (h, w, 3)`` (linha 0 = topo)."""
     own = ctx is None
     ctx = ctx or moderngl.create_standalone_context()
     node = project.node(node_id)
     w, h = size or (node.output.width, node.output.height)
     fbo = ctx.simple_framebuffer((w, h), components=4)
-    renderer = Renderer(ctx, media_path, resolve_path)
+    if audio_levels is None:
+        renderer = Renderer(ctx, media_path, resolve_path)
+    else:
+        renderer = Renderer(ctx, media_path, resolve_path, audio_levels=audio_levels, audio_ensure=lambda _spec: None)
     try:
         renderer.sync(project, node_id)
         renderer.render(fbo, t)

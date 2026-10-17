@@ -983,5 +983,5 @@ function uniqueId(project: Project, prefix: string) {
 }
 
 function sourceLabel(s: Surface) {
-  return { none: "vazia", video: "vídeo", image: "imagem", gif: "GIF", color: "cor", test: "cartela", interactive: "interativa" }[s.source.kind];
+  return { none: "vazia", video: "vídeo", image: "imagem", gif: "GIF", color: "cor", test: "cartela", interactive: "interativa", capture: "entrada de vídeo" }[s.source.kind];
 }

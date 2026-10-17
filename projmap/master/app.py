@@ -64,7 +64,7 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
                host: str = "127.0.0.1", port: int = 8100,
                library_roots: Optional[list[str]] = None, save_library_config: bool = True,
                config_dir: Optional[Path] = None, drive_config: Any = None, drive_http: Any = None,
-               ai_client_factory: Any = None) -> FastAPI:
+               ai_client_factory: Any = None, output_tap: Any = None) -> FastAPI:
     """``runtime``: ``InteractionRuntime`` da camada interativa (opcional).
     ``nlp_client_factory``: devolve o cliente LLM para texto→cena (padrão: o do repo).
     ``token``: token de pareamento; exigido de clientes fora desta máquina (F6).
@@ -72,7 +72,8 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
     ``library_roots``: pastas da galeria (padrão: ``~/.projmap/library.json``).
     ``config_dir``: preferências da máquina (padrão ``~/.projmap``): presets de
     imagem, token e pasta do Google Drive.
-    ``drive_config``: ``gdrive.DriveConfig`` (padrão: lido do ambiente/.env)."""
+    ``drive_config``: ``gdrive.DriveConfig`` (padrão: lido do ambiente/.env).
+    ``output_tap``: ``node.tap.OutputTap`` da janela de saída (snapshot via API)."""
     app = FastAPI(title="ProjMap — mestre", version=__version__)
     # Dev: UI no `next dev` (outra porta) chamando a API local.
     app.add_middleware(
@@ -224,6 +225,9 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
         )
 
     app.include_router(create_remote_router(state, host=host, port=port, token=token))
+    from .inputs_api import create_router as create_inputs_router
+
+    app.include_router(create_inputs_router(state, tap=output_tap))
     library = Library(load_roots() if library_roots is None else library_roots, store.root / "cache")
     app.include_router(create_library_router(state, library, save_config=save_library_config))
 
@@ -250,6 +254,15 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
         app.include_router(create_router(runtime, nlp_client_factory or default_client))
 
     if ui_dir is not None and (ui_dir / "index.html").is_file():
+        @app.middleware("http")
+        async def html_no_cache(request, call_next):  # type: ignore[no-untyped-def]
+            # Páginas HTML sem cache: depois de um build novo o navegador não
+            # continua mostrando o editor antigo (JS/CSS já têm hash no nome).
+            response = await call_next(request)
+            if response.headers.get("content-type", "").startswith("text/html"):
+                response.headers["Cache-Control"] = "no-cache"
+            return response
+
         app.mount("/", StaticFiles(directory=ui_dir, html=True), name="ui")
     else:
         @app.get("/")

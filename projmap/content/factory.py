@@ -96,6 +96,10 @@ def get_source(spec: SourceSpec, media_path: Optional[MediaResolver] = None) -> 
         return StaticSource(make_test_card())
     if kind == "interactive":
         return InteractiveSource()
+    if kind == "capture":
+        from ..inputs.video import open_capture  # import tardio: só abre câmera se alguma superfície pedir
+
+        return open_capture(spec.device)
     if media_path is None or not spec.media:
         raise ValueError(f"fonte '{kind}' precisa de mídia")
     path = media_path(spec.media)

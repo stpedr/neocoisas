@@ -25,6 +25,7 @@ from typing import Sequence
 import numpy as np
 
 from ..core.geometry import as_points, quad_to_unit_square
+from .fx import NEUTRAL_FX, FxUniforms, apply_color_fx, fx_sample_uv
 
 
 @dataclass(frozen=True)
@@ -122,8 +123,11 @@ def render_surface_cpu(
     uvx: UvTransform = UvTransform(),
     feather: float = 0.0,
     opacity: float = 1.0,
+    fx: FxUniforms = NEUTRAL_FX,
 ) -> np.ndarray:
     """Renderiza uma superfície sobre preto, igual ao shader (bilinear, borda grudada).
+
+    ``fx``: efeitos reativos ao áudio (``mapping/fx.py``), aplicados antes do alfa.
 
     Devolve ``float32 (h, w, 4)`` com RGB já multiplicado pelo alfa final.
     """
@@ -140,7 +144,13 @@ def render_surface_cpu(
     tv = v * uvx.scale[1] + uvx.offset[1]
     in_tex = (tu >= 0) & (tu <= 1) & (tv >= 0) & (tv <= 1)
 
-    color = _sample_bilinear(rgba, np.nan_to_num(tu), np.nan_to_num(tv))
+    su, sv = fx_sample_uv(np.nan_to_num(tu), np.nan_to_num(tv), fx)
+    color = _sample_bilinear(rgba, su, sv)
+    if fx.split:
+        color[..., 0] = _sample_bilinear(rgba, np.clip(su + fx.split, 0, 1), sv)[..., 0]
+        color[..., 2] = _sample_bilinear(rgba, np.clip(su - fx.split, 0, 1), sv)[..., 2]
+    if not fx.is_neutral():
+        color[..., :3] = apply_color_fx(color[..., :3], fx)
 
     alpha = color[..., 3] * opacity
     if feather > 0:

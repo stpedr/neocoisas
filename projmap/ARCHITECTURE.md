@@ -193,3 +193,24 @@ Guia de uso: [`interact/README.md`](interact/README.md).
 - CORS liberado só para `localhost`, para a UI em modo dev.
 - Senhas (PJLink, F5) vão só no `.env`. O projeto guarda apenas o nome da
   variável.
+
+## 10. Entradas ao vivo, efeitos de áudio e MCP
+
+Entrega: [`docs/entregas/projmap-entradas-av-efeitos-mcp.md`](../docs/entregas/projmap-entradas-av-efeitos-mcp.md).
+
+- **Vídeo ao vivo é só mais um `kind`** (`capture`), como o factory previa: a
+  câmera roda numa thread por dispositivo e o render pega o quadro mais novo
+  sem esperar. Captura compartilhada por contagem de referências (no Windows
+  uma câmera só abre uma vez).
+- **Efeitos no shader, fórmulas em Python.** `mapping/fx.py` transforma os
+  níveis do áudio em uniforms; `surface.frag` aplica. O mesmo `fx.py` é o
+  espelho em CPU, e os testes exigem GPU = CPU, como nos ajustes de cor.
+- **Áudio sob demanda.** O barramento (`inputs/audio.py`) só abre o
+  dispositivo quando alguma superfície tem efeito; parar/trocar captura roda
+  fora da thread do GL para não congelar a parede.
+- **Ver a parede sem câmera.** `node/tap.py` lê o framebuffer da janela de
+  saída quando a API pede (`GET /api/nodes/{id}/snapshot`); sem pedido o custo
+  é um `Event.is_set()` por frame.
+- **MCP como cliente da API.** `projmap/mcp_server` não abre câmera nem janela:
+  só chama a API do mestre, então toda validação continua no pydantic do
+  mestre e o MCP pode ser ligado/desligado sem mexer no show.

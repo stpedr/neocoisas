@@ -1056,4 +1056,18 @@ SEED_CARDS: list[dict] = [
         'sprint': 'Sprint 12 · UI moderna + PWA + SQLAlchemy',
         'labels': ['frontend', 'projmap', 'prioridade:baixa'],
     },
+    {
+        'title': 'ProjMap — entrada de vídeo/áudio ao vivo + efeitos reativos + servidor MCP',
+        'description': 'Fonte "capture" (webcam/placa HDMI, captura compartilhada), entrada de áudio do show (loopback/mic/nome + ganho), efeitos Surface.fx na GPU com espelho em CPU (pulse, hue, zoom, rgb_split, strobe, shake, invert), snapshot real da saída e servidor MCP (python -m projmap.mcp_server). E2E ao vivo no projetor: webcam em tela cheia piscando na batida (docs/entregas/projmap-entradas-av-efeitos-mcp.md).',
+        'column': 'done',
+        'sprint': 'Sprint 13 · Entradas ao vivo + MCP',
+        'labels': ['backend', 'frontend', 'projmap', 'prioridade:alta'],
+    },
+    {
+        'title': 'ProjMap — build de release para Omarchy (Arch Linux / Hyprland)',
+        'description': 'Tarball com UI compilada + install.sh (pacman, venv uv Python 3.12 com tkinter, comandos projmap/projmap-master/projmap-node e atalho no menu). Gerado por packaging/omarchy/build.py e publicado na release v1.1.0 (docs/entregas/projmap-build-omarchy.md).',
+        'column': 'done',
+        'sprint': 'Sprint 13 · Entradas ao vivo + MCP',
+        'labels': ['infra', 'projmap', 'prioridade:média'],
+    },
 ]

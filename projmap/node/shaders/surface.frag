@@ -15,6 +15,14 @@ uniform float u_temp_s;     //   temperatura (-1 frio … +1 quente)
 uniform vec4 u_adj_o;       // ajuste do projetor inteiro (mesma ordem)
 uniform float u_temp_o;
 uniform vec2 u_flip;        // (-1 = espelhado) em x e y: retroprojeção / projetor de teto
+// Efeitos reativos ao áudio (espelho de projmap/mapping/fx.py; neutros = 1,0,1,0,(0,0),0,0).
+uniform float u_fx_gain;
+uniform float u_fx_hue;     // rad, em torno do eixo cinza
+uniform float u_fx_zoom;    // >1 aproxima
+uniform float u_fx_split;   // separação R/B em uv
+uniform vec2 u_fx_shift;    // tremor em uv
+uniform float u_fx_invert;
+uniform float u_fx_flash;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -27,6 +35,12 @@ vec3 adjust(vec3 c, vec4 adj, float temp) {
     c *= vec3(1.0 + 0.12 * temp, 1.0 + 0.02 * temp, 1.0 - 0.12 * temp);  // temperatura
     c = clamp(c, 0.0, 1.0);
     return pow(c, vec3(1.0 / adj.w));       // gama
+}
+
+vec3 hue_rotate(vec3 c, float a) {
+    const vec3 K = vec3(0.57735026919);
+    float co = cos(a);
+    return c * co + cross(K, c) * sin(a) + K * dot(K, c) * (1.0 - co);
 }
 
 out vec4 frag;
@@ -44,7 +58,17 @@ void main() {
     vec2 tuv = uv * u_uvx.xy + u_uvx.zw;
     if (any(lessThan(tuv, vec2(0.0))) || any(greaterThan(tuv, vec2(1.0)))) discard;
 
-    vec4 c = texture(u_tex, tuv);
+    vec2 suv = clamp((tuv - 0.5) / u_fx_zoom + 0.5 + u_fx_shift, 0.0, 1.0);
+    vec4 c = texture(u_tex, suv);
+    if (u_fx_split != 0.0) {
+        c.r = texture(u_tex, clamp(suv + vec2(u_fx_split, 0.0), 0.0, 1.0)).r;
+        c.b = texture(u_tex, clamp(suv - vec2(u_fx_split, 0.0), 0.0, 1.0)).b;
+    }
+    c.rgb *= u_fx_gain;
+    if (u_fx_hue != 0.0) c.rgb = hue_rotate(c.rgb, u_fx_hue);
+    c.rgb = clamp(c.rgb, 0.0, 1.0);
+    c.rgb = c.rgb + (1.0 - 2.0 * c.rgb) * u_fx_invert;
+    c.rgb = c.rgb + (1.0 - c.rgb) * u_fx_flash;
     c.rgb = adjust(adjust(c.rgb, u_adj_s, u_temp_s), u_adj_o, u_temp_o);
     float a = c.a * u_opacity;
     if (u_feather > 0.0) {

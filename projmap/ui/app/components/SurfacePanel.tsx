@@ -5,6 +5,7 @@ import { api } from "../lib/api";
 import { validateQuad } from "../lib/geometry";
 import type { MediaItem, Project, SourceKind, Surface } from "../lib/types";
 import { DEFAULT_COLOR } from "../lib/types";
+import AudioFxSection from "./AudioFxSection";
 import ColorControls, { isNeutral } from "./ColorControls";
 import ColorPresets from "./ColorPresets";
 import { Button } from "./ui/button";
@@ -26,6 +27,7 @@ interface Props {
 
 const KINDS: { id: SourceKind; label: string }[] = [
   { id: "video", label: "Vídeo" },
+  { id: "capture", label: "Entrada de vídeo (câmera/captura)" },
   { id: "gif", label: "GIF animado" },
   { id: "image", label: "Imagem" },
   { id: "color", label: "Cor sólida" },
@@ -57,7 +59,17 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
       return;
     }
     setWantKind(null);
-    onChange((cur) => ({ ...cur, source: { ...cur.source, kind, media: isMedia ? sha : null } }));
+    onChange((cur) => ({
+      ...cur,
+      source: { ...cur.source, kind, media: isMedia ? sha : null, ...(kind === "capture" ? { device: cur.source.device || "auto" } : {}) },
+    }));
+  };
+
+  const node = project.nodes.find((n) => n.id === s.node_id);
+  const fullscreen = () => {
+    if (!node) return;
+    const { width: w, height: h } = node.output;
+    onChange((c) => ({ ...c, warp: { ...c.warp, base: [[0, 0], [w, 0], [w, h], [0, h]] } }));
   };
 
   const upload = async (file: File) => {
@@ -157,6 +169,21 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
         </label>
       )}
 
+      {s.source.kind === "capture" && (
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground" title="Webcam ou placa de captura HDMI deste PC">
+          Dispositivo
+          <Input
+            value={s.source.device ?? ""}
+            placeholder="auto (primeira câmera física), índice ou parte do nome"
+            maxLength={128}
+            onChange={(e) => {
+              const device = e.target.value;
+              onChange((c) => ({ ...c, source: { ...c.source, device } }));
+            }}
+          />
+        </label>
+      )}
+
       {needsMedia && s.source.kind === shownKind && (
         <div className="flex items-end gap-2">
           <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-muted-foreground">
@@ -238,6 +265,13 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
         </label>
       </div>
 
+      <details className="flex flex-col gap-2" open={(s.fx ?? []).length > 0}>
+        <summary className="cursor-pointer text-xs text-muted-foreground">
+          Efeitos de áudio{(s.fx ?? []).length ? ` · ${(s.fx ?? []).length}` : ""}
+        </summary>
+        <AudioFxSection fx={s.fx ?? []} onChange={(fx) => onChange((c) => ({ ...c, fx }))} />
+      </details>
+
       <details className="flex flex-col gap-2" open={!isNeutral(s.color ?? DEFAULT_COLOR)}>
         <summary className="cursor-pointer text-xs text-muted-foreground">
           Imagem desta superfície (brilho, contraste, presets){isNeutral(s.color ?? DEFAULT_COLOR) ? "" : " · ajustada"}
@@ -255,6 +289,11 @@ export default function SurfacePanel({ surface: s, project, onChange, onDelete, 
 
       <details className="flex flex-col gap-1.5">
         <summary className="cursor-pointer text-xs text-muted-foreground">Cantos (px do projetor)</summary>
+        {node && (
+          <Button variant="default" size="sm" onClick={fullscreen} title="Mapeia a superfície na saída inteira do projetor">
+            Tela cheia
+          </Button>
+        )}
         {s.warp.base.map((p, i) => (
           <div className="flex items-center gap-2" key={i}>
             <span className="w-6 text-[11px] font-bold text-muted-foreground">{["TL", "TR", "BR", "BL"][i]}</span>

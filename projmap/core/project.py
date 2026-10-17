@@ -27,7 +27,9 @@ _ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,62}$")
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 
 MediaKind = Literal["video", "image", "gif"]
-SourceKind = Literal["none", "video", "image", "gif", "color", "test", "interactive"]
+SourceKind = Literal["none", "video", "image", "gif", "color", "test", "interactive", "capture"]
+FxType = Literal["pulse", "hue", "zoom", "rgb_split", "strobe", "shake", "invert"]
+AudioBand = Literal["bass", "mid", "high", "level", "beat"]
 Pattern = Literal["none", "white", "grid", "edges", "black"]
 
 
@@ -133,12 +135,35 @@ class SourceSpec(_Model):
     loop: bool = True
     speed: float = Field(1.0, gt=0.0, le=16.0)
     offset_s: float = Field(0.0, description="deslocamento de tempo da fonte")
+    device: Optional[str] = Field(None, max_length=128,
+                                  description="entrada de vídeo ('capture'): 'auto', índice ou parte do nome")
 
     @model_validator(mode="after")
     def _media_required(self) -> "SourceSpec":
         if self.kind in ("video", "image", "gif") and not self.media:
             raise ValueError(f"fonte '{self.kind}' exige 'media'")
         return self
+
+
+class AudioFx(_Model):
+    """Efeito reativo ao áudio aplicado por cima da fonte da superfície (vídeo ao
+    vivo, arquivo, GIF…). A intensidade segue uma banda da entrada de áudio.
+
+    Fórmulas em ``projmap/mapping/fx.py`` (CPU) e ``node/shaders/surface.frag`` (GPU).
+    """
+
+    type: FxType
+    band: AudioBand = "bass"
+    amount: float = Field(0.5, ge=0.0, le=1.0, allow_inf_nan=False)
+    enabled: bool = True
+
+
+class AudioInput(_Model):
+    """De onde vem o áudio que move os efeitos (``Surface.fx``)."""
+
+    device: str = Field("loopback", min_length=1, max_length=128,
+                        description="'loopback' (o que toca no PC), 'mic' (microfone padrão) ou parte do nome")
+    gain: float = Field(1.0, ge=0.0, le=8.0, allow_inf_nan=False, description="ganho aplicado aos níveis")
 
 
 class Warp(_Model):
@@ -206,6 +231,7 @@ class Surface(_Model):
     blend_mode: Literal["normal", "add", "multiply"] = "normal"
     layers: list[Layer] = Field(default_factory=list, description="mídias extras por cima do fundo (F9)")
     color: ColorAdjust = Field(default_factory=ColorAdjust, description="ajuste de imagem só desta superfície")
+    fx: list[AudioFx] = Field(default_factory=list, max_length=8, description="efeitos reativos ao áudio")
 
     @field_validator("id")
     @classmethod
@@ -243,6 +269,7 @@ class Project(_Model):
     surfaces: list[Surface] = Field(default_factory=list)
     media: dict[str, MediaItem] = Field(default_factory=dict)
     looks: list[Look] = Field(default_factory=list)
+    audio: AudioInput = Field(default_factory=AudioInput, description="entrada de áudio dos efeitos")
 
     @model_validator(mode="after")
     def _references(self) -> "Project":

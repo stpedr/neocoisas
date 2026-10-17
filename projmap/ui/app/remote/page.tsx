@@ -338,7 +338,7 @@ function SurfaceCard({ surface, media, onPatch, onDrag, onGallery, onError }: {
       <button className="media-pick" onClick={onGallery}>
         {cur ? <img src={api.mediaThumbUrl(cur.sha256)} alt="" /> : <span className="media-pick-empty">🖼</span>}
         <span>
-          <b>{cur ? cur.filename : { none: "Nada (preto)", test: "Cartela de teste", color: "Cor sólida", interactive: "Cena interativa", video: "Vídeo", gif: "GIF", image: "Imagem" }[surface.source.kind]}</b>
+          <b>{cur ? cur.filename : { none: "Nada (preto)", test: "Cartela de teste", color: "Cor sólida", interactive: "Cena interativa", video: "Vídeo", gif: "GIF", image: "Imagem", capture: "Entrada de vídeo" }[surface.source.kind]}</b>
           <span className="dim small">toque para escolher na galeria</span>
         </span>
       </button>

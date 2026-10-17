@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "projmap": {
+      "type": "stdio",
+      "command": ".venv-projmap/Scripts/python.exe",
+      "args": ["-m", "projmap.mcp_server"],
+      "env": {
+        "PROJMAP_URL": "http://127.0.0.1:8100"
+      }
+    }
+  }
+}
