@@ -120,7 +120,7 @@ def file_snapshot(project_file: Path, load: Callable[[], Project]) -> Snapshot:
 
     def snap() -> tuple[int, Project]:
         now = time.monotonic()
-        if state["project"] is None or now - state["checked"] > 0.5:
+        if state["project"] is None or now - state["checked"] > 0.1:
             state["checked"] = now
             mtime = project_file.stat().st_mtime_ns
             if mtime != state["mtime"]:

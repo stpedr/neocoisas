@@ -540,6 +540,23 @@ export default function Page() {
             aria-label="Nome do projeto"
             onChange={(e) => commit({ ...project, name: e.target.value })}
           />
+          {project.nodes.length > 1 && (
+            <select
+              value={node.id}
+              aria-label="Projetor ativo"
+              onChange={(e) => {
+                setNodeId(e.target.value);
+                setSelectedId(null);
+                setSelectedLayerId(null);
+              }}
+            >
+              {project.nodes.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.name || n.id}
+                </option>
+              ))}
+            </select>
+          )}
           <span className={`save save-${save}`}>{{ idle: "", saving: "Salvando…", saved: "Salvo", error: "Erro ao salvar" }[save]}</span>
         </div>
         <div className="output-controls" role="group" aria-label="Saída do projetor">
@@ -793,7 +810,54 @@ export default function Page() {
             </Drawer>
           )}
 
-          <Drawer id="projetor" icon="⚙" title="Projetor" badge={`${out.width}×${out.height}`}>
+          <Drawer
+            id="projetor"
+            icon="⚙"
+            title="Projetor"
+            badge={`${node.name || node.id} · ${out.width}×${out.height}`}
+            actions={
+              <button
+                className="btn btn-accent btn-small"
+                onClick={addNode}
+                title="Adicionar outro projetor ao show (ex.: Projetor 2)"
+              >
+                + Projetor
+              </button>
+            }
+          >
+            {project.nodes.length > 1 && (
+              <label>
+                Projetor selecionado
+                <select
+                  value={node.id}
+                  onChange={(e) => {
+                    setNodeId(e.target.value);
+                    setSelectedId(null);
+                    setSelectedLayerId(null);
+                  }}
+                >
+                  {project.nodes.map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {n.name || n.id} ({n.id})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label>
+              Nome do projetor
+              <input
+                type="text"
+                value={node.name}
+                placeholder={node.id}
+                onChange={(e) =>
+                  commit({
+                    ...project,
+                    nodes: project.nodes.map((n) => (n.id === node.id ? { ...n, name: e.target.value } : n)),
+                  })
+                }
+              />
+            </label>
             <div className="row">
               <label>
                 Largura
@@ -873,6 +937,37 @@ export default function Page() {
         s.node_id !== node.id ? s : { ...s, warp: { ...s.warp, base: s.warp.base.map(([x, y]) => [x * sx, y * sy] as Point) } },
       ),
     });
+  }
+
+  function addNode() {
+    if (!project) return;
+    const used = new Set(project.nodes.map((n) => n.id));
+    let idx = project.nodes.length + 1;
+    while (used.has(`proj-${idx}`)) idx++;
+    const newId = `proj-${idx}`;
+    const nextNode = {
+      id: newId,
+      name: `Projetor ${idx}`,
+      photo: null,
+      photo_boundary: rectQuad(0, 0, 1, 1),
+      output: {
+        width: 1920,
+        height: 1080,
+        intensity: 1,
+        blackout: false,
+        pattern: "none" as Pattern,
+        show_outlines: false,
+        latency_ms: 0,
+        color: { ...DEFAULT_COLOR },
+        flip_h: false,
+        flip_v: false,
+      },
+    };
+    commit({ ...project, nodes: [...project.nodes, nextNode] });
+    setNodeId(newId);
+    setSelectedId(null);
+    setSelectedLayerId(null);
+    notify(`${nextNode.name} (${newId}) adicionado.`);
   }
 }
 

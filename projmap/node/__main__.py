@@ -21,7 +21,7 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="projmap.node", description=__doc__.split("\n")[0])
     parser.add_argument("--project", required=True, help="diretório do projeto (.projmap)")
     parser.add_argument("--node", default=None, help="id do nó (padrão: o primeiro)")
-    parser.add_argument("--display", type=int, default=0)
+    parser.add_argument("--display", default="auto", help="tela da saída: auto, 0 (principal), 1, 2…")
     parser.add_argument("--windowed", action="store_true")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
