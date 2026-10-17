@@ -382,6 +382,18 @@ brilho, sensibilidade ao som, tamanho das peças e quantidade de ecos.
   OpenGL e o YOLO usarem a placa dedicada — sem isso a projeção e os efeitos
   caem na Intel integrada, bem mais lenta.
 
+## 6.4 Motion Camera Grain Crimson
+
+O exemplo `projmap/motion/examples/camera-grain-crimson.html` transforma a
+entrada de câmera em preto, branco e tons de cinza, com grão e pulsos vermelhos
+guiados pelo áudio. Importe pelo botão **+ Motion** da superfície e escolha
+**auto** em *Entrada de vídeo do motion*. Os agudos aumentam o grão, os graves
+reforçam o vermelho, a energia altera o contraste e o kick dispara o impacto.
+
+O motion tem três modos: **Vermelho granulado**, **Preto e branco** e
+**Negativo vermelho**. Sem câmera ele mantém um fundo procedural, permitindo
+testar a reação ao som antes de ligar o dispositivo.
+
 ## 7. Salvar, fazer backup e levar para outro PC
 
 - **Salvar:** não há botão. Cada mudança é gravada na hora na pasta do projeto

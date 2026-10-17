@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -58,6 +60,18 @@ describe("Motion Module v1 — Validação, Biblioteca, Execução, Presets, Áu
     expect(Object.keys(res.manifest.params)).toEqual(
       expect.arrayContaining(["speed", "rings", "mirror", "primaryColor", "palette", "cameraOffset"]),
     );
+  });
+
+  it("1. IMPORTAÇÃO: aceita estritamente o motion distribuído Camera Grain Crimson", () => {
+    const html = readFileSync(
+      resolve(process.cwd(), "../motion/examples/camera-grain-crimson.html"),
+      "utf8",
+    );
+    const res = validateGeneratedMotionStrict(html);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.manifest.id).toBe("camera-grain-crimson");
+    expect(res.manifest.modes.map((mode) => mode.id)).toEqual(["crimson", "monochrome", "negative"]);
   });
 
   it("1. IMPORTAÇÃO: aponta exatamente qual campo está errado quando a validação falha", () => {

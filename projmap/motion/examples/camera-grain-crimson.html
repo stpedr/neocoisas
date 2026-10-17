@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Camera Grain Crimson — ProjMap</title>
+<script type="application/json" id="motion-manifest">
+{
+  "spec": "motion-module/1",
+  "id": "camera-grain-crimson",
+  "name": "Camera Grain Crimson",
+  "version": "1.0.0",
+  "description": "Câmera em preto, branco e cinza com granulação vermelha audio-reativa.",
+  "author": "ProjMap",
+  "tags": ["camera", "audio-reactive", "grain", "red", "monochrome"],
+  "modes": [
+    { "id": "crimson", "label": "Vermelho granulado" },
+    { "id": "monochrome", "label": "Preto e branco" },
+    { "id": "negative", "label": "Negativo vermelho" }
+  ],
+  "defaultMode": "crimson",
+  "audio": { "internal": ["mic"], "external": true },
+  "video": { "input": true },
+  "params": [
+    { "id": "background", "label": "Fundo", "group": "Camada", "type": "select", "default": "black",
+      "options": [{ "value": "black", "label": "Preto" }, { "value": "transparent", "label": "Transparente" }] },
+    { "id": "framing", "label": "Enquadramento", "group": "Camada", "type": "select", "default": "scene",
+      "options": [{ "value": "scene", "label": "Cena completa" }, { "value": "element", "label": "Elemento" }] },
+    { "id": "seed", "label": "Variação", "group": "Camada", "type": "int", "min": 0, "max": 999, "step": 1, "default": 173 },
+    { "id": "scale", "label": "Escala", "group": "Camada", "type": "float", "min": 0.3, "max": 2, "step": 0.01, "default": 1 },
+    { "id": "offsetX", "label": "Posição horizontal", "group": "Camada", "type": "float", "min": -1, "max": 1, "step": 0.01, "default": 0 },
+    { "id": "offsetY", "label": "Posição vertical", "group": "Camada", "type": "float", "min": -1, "max": 1, "step": 0.01, "default": 0 },
+    { "id": "exposure", "label": "Exposição", "group": "Imagem", "type": "float", "min": 0.25, "max": 2.5, "step": 0.01, "default": 1 },
+    { "id": "interactive", "label": "Clique gera impacto", "group": "Camada", "type": "bool", "default": true },
+    { "id": "mirror", "label": "Espelhar câmera", "group": "Imagem", "type": "bool", "default": true },
+    { "id": "contrast", "label": "Contraste", "group": "Imagem", "type": "float", "min": 0.5, "max": 3, "step": 0.01, "default": 1.45 },
+    { "id": "posterize", "label": "Tons de cinza", "group": "Imagem", "type": "int", "min": 2, "max": 16, "step": 1, "default": 6 },
+    { "id": "threshold", "label": "Recorte preto e branco", "group": "Imagem", "type": "float", "min": 0, "max": 1, "step": 0.01, "default": 0.18 },
+    { "id": "grainSize", "label": "Tamanho do grão", "group": "Textura", "type": "int", "min": 1, "max": 8, "step": 1, "default": 2 },
+    { "id": "grainAmount", "label": "Quantidade de grão", "group": "Textura", "type": "float", "min": 0, "max": 1.5, "step": 0.01, "default": 0.55 },
+    { "id": "scanlines", "label": "Linhas de varredura", "group": "Textura", "type": "float", "min": 0, "max": 1, "step": 0.01, "default": 0.24 },
+    { "id": "redColor", "label": "Vermelho", "group": "Cor", "type": "color", "default": "#e51b23" },
+    { "id": "redMix", "label": "Mistura vermelha", "group": "Cor", "type": "float", "min": 0, "max": 1.5, "step": 0.01, "default": 0.8 },
+    { "id": "idleMotion", "label": "Movimento em repouso", "group": "Movimento", "type": "float", "min": 0, "max": 2, "step": 0.01, "default": 0.35 },
+    { "id": "reactTo", "label": "Reagir a", "group": "Reação ao áudio", "type": "select", "default": "mix",
+      "options": [{ "value": "mix", "label": "Mix sugerido" }, { "value": "bass", "label": "Graves" }, { "value": "high", "label": "Agudos" }, { "value": "beat", "label": "Batidas" }, { "value": "custom", "label": "Personalizado" }] },
+    { "id": "reactAmount", "label": "Intensidade geral", "group": "Reação ao áudio", "type": "float", "min": 0, "max": 2, "step": 0.01, "default": 1 },
+    { "id": "sensitivity", "label": "Sensibilidade", "group": "Reação ao áudio", "type": "float", "min": 0.5, "max": 2, "step": 0.01, "default": 1 },
+    { "id": "beatCooldown", "label": "Intervalo entre impactos", "group": "Reação ao áudio", "type": "float", "min": 0.1, "max": 0.6, "step": 0.01, "default": 0.22 },
+    { "id": "tempoSync", "label": "Sincronizar varredura ao BPM", "group": "Reação ao áudio", "type": "bool", "default": false },
+    { "id": "rx_grain_src", "label": "Grão · fonte", "group": "Reação ao áudio", "type": "select", "default": "high",
+      "options": [{ "value": "bass", "label": "Graves" }, { "value": "mid", "label": "Médios" }, { "value": "high", "label": "Agudos" }, { "value": "level", "label": "Volume" }, { "value": "energy", "label": "Energia" }, { "value": "kick", "label": "Kick" }, { "value": "snare", "label": "Caixa" }, { "value": "hat", "label": "Chimbal" }, { "value": "beat", "label": "Batida" }, { "value": "downbeat", "label": "Primeiro tempo" }, { "value": "off", "label": "Desligado" }] },
+    { "id": "rx_grain_amt", "label": "Grão · intensidade", "group": "Reação ao áudio", "type": "float", "min": 0, "max": 2, "step": 0.01, "default": 1 },
+    { "id": "rx_grain_smooth", "label": "Grão · suavização", "group": "Reação ao áudio", "type": "float", "min": 0.02, "max": 1, "step": 0.01, "default": 0.12 },
+    { "id": "rx_red_src", "label": "Vermelho · fonte", "group": "Reação ao áudio", "type": "select", "default": "bass",
+      "options": [{ "value": "bass", "label": "Graves" }, { "value": "mid", "label": "Médios" }, { "value": "high", "label": "Agudos" }, { "value": "level", "label": "Volume" }, { "value": "energy", "label": "Energia" }, { "value": "kick", "label": "Kick" }, { "value": "snare", "label": "Caixa" }, { "value": "hat", "label": "Chimbal" }, { "value": "beat", "label": "Batida" }, { "value": "downbeat", "label": "Primeiro tempo" }, { "value": "off", "label": "Desligado" }] },
+    { "id": "rx_red_amt", "label": "Vermelho · intensidade", "group": "Reação ao áudio", "type": "float", "min": 0, "max": 2, "step": 0.01, "default": 1.15 },
+    { "id": "rx_red_smooth", "label": "Vermelho · suavização", "group": "Reação ao áudio", "type": "float", "min": 0.02, "max": 1, "step": 0.01, "default": 0.18 },
+    { "id": "rx_contrast_src", "label": "Contraste · fonte", "group": "Reação ao áudio", "type": "select", "default": "energy",
+      "options": [{ "value": "bass", "label": "Graves" }, { "value": "mid", "label": "Médios" }, { "value": "high", "label": "Agudos" }, { "value": "level", "label": "Volume" }, { "value": "energy", "label": "Energia" }, { "value": "kick", "label": "Kick" }, { "value": "snare", "label": "Caixa" }, { "value": "hat", "label": "Chimbal" }, { "value": "beat", "label": "Batida" }, { "value": "downbeat", "label": "Primeiro tempo" }, { "value": "off", "label": "Desligado" }] },
+    { "id": "rx_contrast_amt", "label": "Contraste · intensidade", "group": "Reação ao áudio", "type": "float", "min": 0, "max": 2, "step": 0.01, "default": 0.75 },
+    { "id": "rx_contrast_smooth", "label": "Contraste · suavização", "group": "Reação ao áudio", "type": "float", "min": 0.02, "max": 1, "step": 0.01, "default": 0.35 },
+    { "id": "rx_flash_src", "label": "Impacto · fonte", "group": "Reação ao áudio", "type": "select", "default": "kick",
+      "options": [{ "value": "bass", "label": "Graves" }, { "value": "mid", "label": "Médios" }, { "value": "high", "label": "Agudos" }, { "value": "level", "label": "Volume" }, { "value": "energy", "label": "Energia" }, { "value": "kick", "label": "Kick" }, { "value": "snare", "label": "Caixa" }, { "value": "hat", "label": "Chimbal" }, { "value": "beat", "label": "Batida" }, { "value": "downbeat", "label": "Primeiro tempo" }, { "value": "off", "label": "Desligado" }] },
+    { "id": "rx_flash_amt", "label": "Impacto · intensidade", "group": "Reação ao áudio", "type": "float", "min": 0, "max": 2, "step": 0.01, "default": 1 },
+    { "id": "rx_flash_smooth", "label": "Impacto · decaimento", "group": "Reação ao áudio", "type": "float", "min": 0.02, "max": 1, "step": 0.01, "default": 0.2 }
+  ],
+  "triggers": [
+    { "id": "strike", "label": "Impacto manual" },
+    { "id": "invert", "label": "Alternar negativo" },
+    { "id": "reset", "label": "Restaurar visual" }
+  ],
+  "events": ["beat", "mode"]
+}
+</script>
+<style>
+:root{color-scheme:normal;background:#000;font-family:Inter,ui-sans-serif,system-ui,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#eee}
+#output{position:fixed;inset:0;width:100%;height:100%;display:block;background:#000;touch-action:none;cursor:crosshair}
+#panel{position:fixed;left:18px;bottom:18px;z-index:2;display:flex;align-items:center;gap:12px;max-width:calc(100vw - 36px);padding:12px 14px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:rgba(9,9,9,.78);backdrop-filter:blur(12px);box-shadow:0 10px 32px rgba(0,0,0,.38)}
+#panel strong{display:block;font-size:14px;letter-spacing:.04em;text-transform:uppercase}#panel small{display:block;color:#aaa;margin-top:2px}
+#activate{border:0;border-radius:10px;background:#d71920;color:#fff;font-weight:700;padding:10px 13px;white-space:nowrap;cursor:pointer}
+#activate:hover{background:#ff3038}.embed #panel{display:none!important}.transparent{background:transparent!important}
+</style>
+</head>
+<body>
+<canvas id="output" aria-label="Câmera granulada audio-reativa"></canvas>
+<div id="panel"><button id="activate" type="button">Ativar câmera + microfone</button><div><strong>Camera Grain Crimson</strong><small id="status">Abra no ProjMap ou ative os dispositivos para testar.</small></div></div>
+<script>
+(function(){
+"use strict";
+
+// MANIFEST + PARAMS ---------------------------------------------------------
+var MANIFEST=JSON.parse(document.getElementById("motion-manifest").textContent);
+var defs={},P={};
+for(var di=0;di<MANIFEST.params.length;di++){var d=MANIFEST.params[di];defs[d.id]=d;P[d.id]=d.default;}
+var mode=MANIFEST.defaultMode,playing=true,destroyed=false,embedded=false;
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function normalizeParam(key,value){
+  var d=defs[key];if(!d)return undefined;
+  if(d.type==="bool")return !!value;
+  if(d.type==="color"){var c=String(value);if(c.charAt(0)!=="#")c="#"+c;return /^#[0-9a-f]{6}$/i.test(c)?c:d.default;}
+  if(d.type==="select")return d.options.some(function(o){return o.value===String(value);})?String(value):d.default;
+  var n=Number(value);if(!isFinite(n))n=d.default;n=clamp(n,d.min,d.max);return d.type==="int"?Math.round(n):n;
+}
+function setParams(next){if(!next)return;Object.keys(next).forEach(function(k){var v=normalizeParam(k,next[k]);if(v!==undefined)P[k]=v;});applyBackground();queueState();}
+function paramsFromUrl(){var q=new URLSearchParams(location.search);var next={};q.forEach(function(v,k){if(k==="mode")setMode(v);else if(defs[k])next[k]=defs[k].type==="bool"?v!=="false":v;});setParams(next);if(q.get("embed")==="1")setEmbed(true);}
+
+// CANVAS + VIDEO ------------------------------------------------------------
+var canvas=document.getElementById("output"),ctx=canvas.getContext("2d",{alpha:true});
+var work=document.createElement("canvas"),wg=work.getContext("2d",{willReadFrequently:true});
+var videoFrame=null,videoAt=0,localVideo=null,localStream=null;
+var frameNo=0,lastDraw=performance.now(),readySent=false;
+function resize(){var dpr=Math.min(devicePixelRatio||1,1.5);var w=Math.max(16,Math.round(innerWidth*dpr));var h=Math.max(16,Math.round(innerHeight*dpr));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}}
+function setEmbed(on){embedded=!!on;document.body.classList.toggle("embed",embedded);}
+function applyBackground(){var transparent=P.background==="transparent";document.documentElement.classList.toggle("transparent",transparent);document.body.classList.toggle("transparent",transparent);}
+function sourceAlive(now){return (videoFrame&&now-videoAt<1100)||(localVideo&&localVideo.readyState>=2);}
+function currentSource(now){if(videoFrame&&now-videoAt<1100)return videoFrame;if(localVideo&&localVideo.readyState>=2)return localVideo;return null;}
+function drawCover(g,src,w,h){
+  var sw=src.videoWidth||src.width||w,sh=src.videoHeight||src.height||h;
+  var fit=P.framing==="element"?Math.min(w/sw,h/sh):Math.max(w/sw,h/sh);
+  var zoom=fit*P.scale,dw=sw*zoom,dh=sh*zoom;
+  var x=(w-dw)*.5+P.offsetX*w*.42,y=(h-dh)*.5+P.offsetY*h*.42;
+  g.save();if(P.mirror){g.translate(w,0);g.scale(-1,1);x=w-x-dw;}g.drawImage(src,x,y,dw,dh);g.restore();
+}
+function fallback(g,w,h,now){
+  var t=now*.001*(.15+P.idleMotion*.35),seed=P.seed*.013;
+  var grad=g.createRadialGradient(w*(.5+Math.sin(t+seed)*.08),h*.48,0,w*.5,h*.5,Math.max(w,h)*.72);
+  grad.addColorStop(0,"#777");grad.addColorStop(.32,"#292929");grad.addColorStop(1,"#050505");g.fillStyle=grad;g.fillRect(0,0,w,h);
+  g.fillStyle="rgba(255,255,255,.08)";for(var i=0;i<7;i++){var yy=(i+1)*h/8+Math.sin(t*1.7+i+seed)*h*.018;g.fillRect(0,yy,w,1);}
+}
+
+// AUDIO + REACT -------------------------------------------------------------
+var A={bass:0,mid:0,high:0,level:0,energy:0,kick:0,snare:0,hat:0,beat:0,downbeat:0,bpm:0,beatPhase:0,barPhase:0};
+var audioPresent={};
+var eventEnv={kick:0,snare:0,hat:0,beat:0,downbeat:0};
+var smooth={grain:0,red:0,contrast:0},flash=0,lastAudioAt=0,lastTriggerAt=-10,prevTrigger=0;
+var audioContext=null,analyser=null,audioData=null,localEnergy=0,prevBands={bass:0,mid:0,high:0};
+function val(name){if(name==="off")return 0;if(eventEnv[name]!==undefined)return eventEnv[name];if(name==="energy"&&!audioPresent.energy)return clamp(Number(A.level)||0,0,1);return clamp(Number(A[name])||0,0,1);}
+function sourceFor(target,suggested,isTrigger){
+  if(P.reactTo==="custom")return P["rx_"+target+"_src"];
+  if(P.reactTo==="bass")return isTrigger?"kick":"bass";
+  if(P.reactTo==="high")return isTrigger?"hat":"high";
+  if(P.reactTo==="beat")return "beat";
+  return suggested;
+}
+function targetValue(name,suggested){return clamp(val(sourceFor(name,suggested,false))*P["rx_"+name+"_amt"]*P.reactAmount*P.sensitivity,0,2);}
+function updateContinuous(dt){
+  [["grain","high"],["red","bass"],["contrast","energy"]].forEach(function(x){var n=x[0],goal=targetValue(n,x[1]);var tau=Math.max(.02,P["rx_"+n+"_smooth"]);smooth[n]+= (goal-smooth[n])*(1-Math.exp(-dt/tau));});
+}
+function triggerImpact(strength,now){strength=clamp(strength*P.rx_flash_amt*P.reactAmount*P.sensitivity,0,2);if(strength<=0||now-lastTriggerAt<P.beatCooldown*1000)return;lastTriggerAt=now;flash=Math.max(flash,strength);post("motion:event",{name:"beat",data:{strength:strength}});}
+function updateTrigger(now){
+  var src=sourceFor("flash","kick",true),v=val(src);
+  if(eventEnv[src]!==undefined){if(v>.02&&prevTrigger<=.02)triggerImpact(v,now);}else if(v>.62&&prevTrigger<=.62)triggerImpact(v,now);
+  prevTrigger=v;
+}
+function feedAudio(payload){
+  payload=payload||{};Object.keys(A).forEach(function(k){if(payload[k]!==undefined){A[k]=Number(payload[k])||0;audioPresent[k]=true;}});
+  ["kick","snare","hat","beat","downbeat"].forEach(function(k){var v=payload[k];if(v===undefined&&k!=="beat")v=payload.beat;if((Number(v)||0)>0)eventEnv[k]=Math.max(eventEnv[k],clamp(Number(v),0,1));});
+  lastAudioAt=performance.now();
+}
+function analyseLocal(){
+  if(!analyser||!audioData)return;analyser.getByteFrequencyData(audioData);var nyq=audioContext.sampleRate/2;
+  function band(lo,hi){var a=Math.floor(lo/nyq*audioData.length),b=Math.max(a+1,Math.ceil(hi/nyq*audioData.length)),sum=0;for(var i=a;i<Math.min(b,audioData.length);i++)sum+=audioData[i];return sum/Math.max(1,b-a)/255;}
+  var bass=band(25,140),mid=band(250,2200),high=band(4000,12000),level=(bass*.45+mid*.35+high*.2);
+  localEnergy+= (level-localEnergy)*.025;var kick=Math.max(0,bass-prevBands.bass*1.2)>.12?1:0;var snare=Math.max(0,mid-prevBands.mid*1.15)>.14?1:0;var hat=Math.max(0,high-prevBands.high*1.1)>.12?1:0;
+  prevBands={bass:bass,mid:mid,high:high};feedAudio({bass:bass,mid:mid,high:high,level:level,energy:localEnergy,kick:kick,snare:snare,hat:hat,beat:kick});
+}
+function decayAudio(dt,now){
+  var stale=now-lastAudioAt>500;if(stale&&!analyser){["bass","mid","high","level","energy"].forEach(function(k){A[k]*=Math.exp(-dt/1.2);});}
+  var decay=Math.exp(-dt/Math.max(.02,P.rx_flash_smooth));Object.keys(eventEnv).forEach(function(k){eventEnv[k]*=decay;});flash*=decay;
+}
+
+// IMAGE EFFECT --------------------------------------------------------------
+function rgb(hex){return [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)];}
+function noise(x,y,f,seed){var n=(x*374761393+y*668265263+f*1442695041+seed*1013904223)|0;n=(n^(n>>>13))*1274126177;return ((n^(n>>>16))>>>0)/4294967295;}
+function processPixels(img,w,h,now){
+  var data=img.data,red=rgb(P.redColor),grainBoost=clamp(P.grainAmount*(.3+smooth.grain),0,2),redBoost=clamp(P.redMix*(.28+smooth.red)+flash*.38,0,2),cont=P.contrast*(1+smooth.contrast*.55),levels=Math.max(2,P.posterize),step=255/(levels-1),gs=Math.max(1,P.grainSize),seed=P.seed|0;
+  for(var y=0;y<h;y++)for(var x=0;x<w;x++){
+    var i=(y*w+x)*4,g=(data[i]*.2126+data[i+1]*.7152+data[i+2]*.0722)*P.exposure;
+    g=(g-128)*cont+128;if(g<255*P.threshold)g*=.28;g=Math.round(clamp(g,0,255)/step)*step;
+    var n=(noise((x/gs)|0,(y/gs)|0,frameNo,seed)-.5)*150*grainBoost;g=clamp(g+n,0,255);
+    if(mode==="negative")g=255-g;
+    var accent=clamp((Math.abs(n)/75+smooth.red*.72+flash)*redBoost,0,1);
+    if(mode==="monochrome")accent=flash*.38;
+    data[i]=clamp(g*(1-accent)+red[0]*accent,0,255);data[i+1]=clamp(g*(1-accent)+red[1]*accent,0,255);data[i+2]=clamp(g*(1-accent)+red[2]*accent,0,255);
+    data[i+3]=P.background==="transparent"?Math.max(data[i],data[i+1],data[i+2]):255;
+  }
+  return img;
+}
+function render(now){
+  if(destroyed)return;
+  resize();var dt=Math.min(.1,Math.max(.001,(now-lastDraw)/1000));lastDraw=now;if(!playing){requestAnimationFrame(render);return;}
+  frameNo++;analyseLocal();decayAudio(dt,now);updateContinuous(dt);updateTrigger(now);
+  var maxW=Math.min(canvas.width,720),maxH=Math.max(16,Math.round(maxW*canvas.height/canvas.width));if(maxH>480){maxH=480;maxW=Math.round(maxH*canvas.width/canvas.height);}if(work.width!==maxW||work.height!==maxH){work.width=maxW;work.height=maxH;}
+  wg.clearRect(0,0,maxW,maxH);var src=currentSource(now);if(src)drawCover(wg,src,maxW,maxH);else fallback(wg,maxW,maxH,now);
+  var img=wg.getImageData(0,0,maxW,maxH);wg.putImageData(processPixels(img,maxW,maxH,now),0,0);
+  if(P.background==="transparent")ctx.clearRect(0,0,canvas.width,canvas.height);else{ctx.fillStyle="#000";ctx.fillRect(0,0,canvas.width,canvas.height);}
+  ctx.imageSmoothingEnabled=false;ctx.drawImage(work,0,0,canvas.width,canvas.height);
+  var scanPhase=P.tempoSync&&A.bpm>0?A.barPhase:((now*.00008*(.25+P.idleMotion)+P.seed*.001)%1);ctx.save();ctx.globalCompositeOperation="multiply";ctx.fillStyle="rgba(0,0,0,"+clamp(P.scanlines*.34,0,.6)+")";for(var sy=Math.floor(scanPhase*6);sy<canvas.height;sy+=6)ctx.fillRect(0,sy,canvas.width,2);ctx.restore();
+  if(flash>.02){ctx.fillStyle="rgba(255,255,255,"+clamp(flash*.16,0,.38)+")";ctx.fillRect(0,0,canvas.width,canvas.height);}
+  if(!readySent){readySent=true;post("motion:ready",{manifest:MANIFEST});}
+  requestAnimationFrame(render);
+}
+
+// STATE + API ---------------------------------------------------------------
+var stateQueued=false;
+function post(type,payload){if(window.parent&&window.parent!==window)try{window.parent.postMessage({type:type,payload:payload||{}},"*");}catch(_e){}}
+function getState(){return {mode:mode,playing:playing,audioSource:lastAudioAt?"external":"idle",video:sourceAlive(performance.now()),params:Object.assign({},P)};}
+function queueState(){if(stateQueued)return;stateQueued=true;requestAnimationFrame(function(){stateQueued=false;post("motion:state",getState());});}
+function setMode(next){if(!MANIFEST.modes.some(function(m){return m.id===next;}))return;mode=next;post("motion:event",{name:"mode",data:{mode:mode}});queueState();}
+function trigger(id){if(id==="strike")triggerImpact(1,performance.now());else if(id==="invert")setMode(mode==="negative"?"crimson":"negative");else if(id==="reset"){mode=MANIFEST.defaultMode;flash=0;smooth={grain:0,red:0,contrast:0};queueState();}}
+function init(payload){payload=payload||{};if(payload.embed)setEmbed(true);if(payload.params)setParams(payload.params);if(payload.mode)setMode(payload.mode);playing=true;post("motion:ready",{manifest:MANIFEST});queueState();}
+function destroy(){destroyed=true;playing=false;if(videoFrame&&videoFrame.close)videoFrame.close();videoFrame=null;if(localStream)localStream.getTracks().forEach(function(t){t.stop();});if(audioContext)audioContext.close();localStream=null;audioContext=null;analyser=null;}
+window.addEventListener("message",function(e){
+  if(e.source!==window.parent||!e.data||typeof e.data.type!=="string")return;var p=e.data.payload||{};
+  if(e.data.type==="motion:init")init(p);else if(e.data.type==="motion:setParams")setParams(p);else if(e.data.type==="motion:setMode")setMode(p.mode);else if(e.data.type==="motion:trigger")trigger(p.id);else if(e.data.type==="motion:play"){playing=true;queueState();}else if(e.data.type==="motion:pause"){playing=false;queueState();}else if(e.data.type==="motion:audio")feedAudio(p);else if(e.data.type==="motion:video"&&p.frame){if(videoFrame&&videoFrame.close)videoFrame.close();videoFrame=p.frame;videoAt=performance.now();}else if(e.data.type==="motion:destroy")destroy();
+});
+window.MotionModule={spec:"motion-module/1",getManifest:function(){return MANIFEST;},getState:getState,init:init,setParams:setParams,setMode:setMode,trigger:trigger,play:function(){playing=true;},pause:function(){playing=false;},feedAudio:feedAudio,destroy:destroy};
+
+// STANDALONE UI -------------------------------------------------------------
+document.getElementById("activate").addEventListener("click",async function(){
+  var status=document.getElementById("status");try{localStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:true});localVideo=document.createElement("video");localVideo.muted=true;localVideo.playsInline=true;localVideo.srcObject=localStream;await localVideo.play();audioContext=new (window.AudioContext||window.webkitAudioContext)();analyser=audioContext.createAnalyser();analyser.fftSize=1024;audioData=new Uint8Array(analyser.frequencyBinCount);audioContext.createMediaStreamSource(localStream).connect(analyser);status.textContent="Câmera e microfone ativos.";}catch(err){status.textContent="Não foi possível abrir câmera/microfone: "+(err&&err.message?err.message:String(err));post("motion:error",{message:status.textContent});}
+});
+canvas.addEventListener("pointerdown",function(){if(P.interactive)triggerImpact(1,performance.now());});
+window.addEventListener("resize",resize);window.addEventListener("beforeunload",destroy);
+window.addEventListener("error",function(e){post("motion:error",{message:String(e.message||e.error||"Erro no motion")});});
+window.addEventListener("unhandledrejection",function(e){post("motion:error",{message:String(e.reason&&e.reason.message||e.reason||"Promise rejeitada")});});
+var nativeConsoleError=console.error.bind(console);console.error=function(){nativeConsoleError.apply(console,arguments);post("motion:error",{message:Array.prototype.map.call(arguments,String).join(" ")});};
+paramsFromUrl();applyBackground();resize();requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

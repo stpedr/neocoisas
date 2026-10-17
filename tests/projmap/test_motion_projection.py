@@ -19,12 +19,21 @@ from projmap.motion.manifest import parse_motion_html
 
 FIXTURE = Path(__file__).parent / "fixtures" / "motion_test_av.html"
 UI_OUT = Path(__file__).resolve().parents[2] / "projmap" / "ui" / "out"
+CAMERA_GRAIN = Path(__file__).resolve().parents[2] / "projmap" / "motion" / "examples" / "camera-grain-crimson.html"
 
 
 # ---------------------------------------------------------------- manifesto
 def test_manifesto_do_motion_de_teste():
     info = parse_motion_html(FIXTURE.read_bytes())
     assert (info.id, info.name, info.version, info.video_input) == ("projmap-teste-av", "Teste AV", "1.0.0", True)
+
+
+def test_motion_camera_grain_distribuido_declara_video_e_modos():
+    info = parse_motion_html(CAMERA_GRAIN.read_bytes())
+    assert (info.id, info.name, info.version, info.video_input) == (
+        "camera-grain-crimson", "Camera Grain Crimson", "1.0.0", True,
+    )
+    assert info.modes == ["crimson", "monochrome", "negative"]
 
 
 @pytest.mark.parametrize("html, msg", [
