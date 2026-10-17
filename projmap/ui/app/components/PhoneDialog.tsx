@@ -51,7 +51,13 @@ export default function PhoneDialog({ open, onClose, interact }: {
               <div className="qr">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`data:image/svg+xml;utf8,${encodeURIComponent(pair.qr_svg)}`}
+                  width={222}
+                  height={222}
+                  src={`data:image/svg+xml;utf8,${encodeURIComponent(
+                    pair.qr_svg.includes("xmlns=")
+                      ? pair.qr_svg
+                      : pair.qr_svg.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" '),
+                  )}`}
                   alt="QR Code de pareamento"
                 />
               </div>

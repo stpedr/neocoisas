@@ -61,7 +61,10 @@ def qr_svg(text: str) -> Optional[str]:
         import segno
     except ImportError:
         return None
-    return segno.make(text, error="m").svg_inline(scale=6, border=2, dark="#000", light="#fff")
+    svg = segno.make(text, error="m").svg_inline(scale=6, border=2, dark="#000", light="#fff")
+    if "xmlns=" not in svg:
+        svg = svg.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ', 1)
+    return svg
 
 
 def recall_look(project: Project, look: Look) -> list[str]:
