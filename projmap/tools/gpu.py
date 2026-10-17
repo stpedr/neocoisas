@@ -55,20 +55,41 @@ def set_preference(paths: list[Path], value: str | None = HIGH_PERFORMANCE) -> l
     return paths
 
 
+def linux_gpu_env() -> dict[str, str]:
+    """Variáveis de ambiente PRIME Render Offload para notebooks híbridos no Linux."""
+    if not sys.platform.startswith("linux"):
+        return {}
+    import shutil
+
+    if Path("/proc/driver/nvidia").is_dir() or shutil.which("nvidia-smi"):
+        return {
+            "__NV_PRIME_RENDER_OFFLOAD": "1",
+            "__GLX_VENDOR_LIBRARY_NAME": "nvidia",
+            "DRI_PRIME": "1",
+        }
+    return {"DRI_PRIME": "1"}
+
+
 def gl_renderer() -> str:
     """Placa usada pelo OpenGL num processo novo (a preferência só vale para novos)."""
+    import os
+
     code = "import moderngl; print(moderngl.create_standalone_context().info['GL_RENDERER'])"
-    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60)
+    env = {**os.environ, **linux_gpu_env()}
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60, env=env)
     return (out.stdout or out.stderr).strip().splitlines()[-1] if (out.stdout or out.stderr) else "?"
 
 
 def main(argv: list[str] | None = None) -> None:
-    if sys.platform != "win32":
-        print("Só é necessário no Windows.")
-        return
     ap = argparse.ArgumentParser(prog="projmap.tools.gpu", description=__doc__.split("\n")[0])
-    ap.add_argument("--remover", action="store_true", help="volta à escolha padrão do Windows")
+    ap.add_argument("--remover", action="store_true", help="volta à escolha padrão do sistema")
     args = ap.parse_args(argv)
+    if sys.platform != "win32":
+        env = linux_gpu_env()
+        if env:
+            print("Linux PRIME Render Offload:", " ".join(f"{k}={v}" for k, v in env.items()))
+        print("OpenGL agora em:", gl_renderer())
+        return
     paths = set_preference(python_executables(), None if args.remover else HIGH_PERFORMANCE)
     for p in paths:
         print(("padrão: " if args.remover else "alto desempenho: ") + str(p))
@@ -77,3 +98,4 @@ def main(argv: list[str] | None = None) -> None:
 
 if __name__ == "__main__":
     main()
+

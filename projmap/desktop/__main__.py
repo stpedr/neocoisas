@@ -51,18 +51,20 @@ class Launcher(tk.Tk):
 
     # ------------------------------------------------------------------ UI
     def _style(self) -> None:
+        sans = "Segoe UI" if sys.platform == "win32" else "DejaVu Sans"
+        sans_bold = "Segoe UI Semibold" if sys.platform == "win32" else "DejaVu Sans"
         st = ttk.Style(self)
         st.theme_use("clam")
-        st.configure(".", background=BG, foreground=FG, fieldbackground=CARD, font=("Segoe UI", 10))
+        st.configure(".", background=BG, foreground=FG, fieldbackground=CARD, font=(sans, 10))
         st.configure("Card.TFrame", background=CARD)
         st.configure("Card.TLabel", background=CARD, foreground=FG)
-        st.configure("Dim.TLabel", background=CARD, foreground=DIM, font=("Segoe UI", 9))
-        st.configure("Title.TLabel", background=BG, foreground=FG, font=("Segoe UI Semibold", 16))
+        st.configure("Dim.TLabel", background=CARD, foreground=DIM, font=(sans, 9))
+        st.configure("Title.TLabel", background=BG, foreground=FG, font=(sans_bold, 16, "bold"))
         st.configure("TRadiobutton", background=CARD, foreground=FG)
         st.configure("TCheckbutton", background=CARD, foreground=FG)
         st.map("TRadiobutton", background=[("active", CARD)])
         st.map("TCheckbutton", background=[("active", CARD)])
-        st.configure("Accent.TButton", background=ACCENT, foreground="#fff", font=("Segoe UI Semibold", 11), padding=8)
+        st.configure("Accent.TButton", background=ACCENT, foreground="#fff", font=(sans_bold, 11, "bold"), padding=8)
         st.map("Accent.TButton", background=[("active", "#6a4cf0"), ("disabled", "#3b3466")])
         st.configure("TButton", padding=6, background="#1b2330", foreground=FG, bordercolor="#33415a")
         st.map("TButton", background=[("active", "#263041"), ("disabled", CARD)], foreground=[("disabled", "#5b6b82")])
@@ -80,9 +82,10 @@ class Launcher(tk.Tk):
             st.map(w, indicatorbackground=[("selected", "#1b2330")], indicatorforeground=[("selected", ACCENT)])
 
     def _card(self, title: str) -> ttk.Frame:
+        sans_bold = "Segoe UI Semibold" if sys.platform == "win32" else "DejaVu Sans"
         f = ttk.Frame(self.body, style="Card.TFrame", padding=12)
         f.pack(fill="x", padx=14, pady=(0, 10))
-        ttk.Label(f, text=title, style="Card.TLabel", font=("Segoe UI Semibold", 11)).pack(anchor="w")
+        ttk.Label(f, text=title, style="Card.TLabel", font=(sans_bold, 11, "bold")).pack(anchor="w")
         return f
 
     def _build(self) -> None:
@@ -282,8 +285,10 @@ class Launcher(tk.Tk):
         save_settings(s)
         os.makedirs(s.shows_dir, exist_ok=True)
         cmd = master_command(s, show)
+        from ..tools.gpu import linux_gpu_env
+
         flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-        env = {**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"}
+        env = {**linux_gpu_env(), **os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"}
         self.remote_url = ""
         self.proc = subprocess.Popen(cmd, cwd=str(REPO_ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                      text=True, encoding="utf-8", errors="replace", env=env, creationflags=flags)

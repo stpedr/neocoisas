@@ -77,7 +77,11 @@ def list_cameras() -> list[CameraInfo]:
         cams = []
         for d in sorted(sys_v4l.glob("video*"), key=lambda p: int(re.sub(r"\D", "", p.name) or 0)):
             try:
-                cams.append(CameraInfo(int(re.sub(r"\D", "", d.name)), (d / "name").read_text().strip()))
+                # No Linux >= 4.16 cada webcam USB cria 2 nós (index 0 = vídeo, index 1 = metadados).
+                v4l_idx = d / "index"
+                if v4l_idx.is_file() and v4l_idx.read_text(encoding="utf-8", errors="ignore").strip() not in ("", "0"):
+                    continue
+                cams.append(CameraInfo(int(re.sub(r"\D", "", d.name)), (d / "name").read_text(encoding="utf-8", errors="replace").strip()))
             except (OSError, ValueError):
                 continue
         if cams:
@@ -119,7 +123,11 @@ def choose_camera(cams: list[CameraInfo], want: Union[str, int, None] = "auto") 
 def _backend() -> int:
     import cv2
 
-    return cv2.CAP_DSHOW if sys.platform == "win32" else cv2.CAP_ANY
+    if sys.platform == "win32":
+        return cv2.CAP_DSHOW
+    if sys.platform.startswith("linux"):
+        return getattr(cv2, "CAP_V4L2", cv2.CAP_ANY)
+    return cv2.CAP_ANY
 
 
 def open_camera(index: int, width: int = 1280, height: int = 720, fps: int = 30, mjpg: bool = True,

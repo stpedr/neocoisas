@@ -128,16 +128,15 @@ class AudioAnalyzer:
         try:
             import soundcard as sc
 
-            # "data discontinuity" é só um bloco atrasado do WASAPI: inofensivo e muito repetitivo.
+            # "data discontinuity" é só um bloco atrasado do WASAPI/PulseAudio: inofensivo e muito repetitivo.
             warnings.filterwarnings("ignore", category=sc.SoundcardRuntimeWarning)
         except Exception as exc:  # noqa: BLE001
             log.warning("áudio indisponível (instale 'soundcard'): %s", exc)
             return
         while not self._stop.is_set():
             try:
-                speaker = sc.default_speaker()
-                mic = sc.get_microphone(speaker.name, include_loopback=True)
-                log.info("áudio: capturando o que toca em '%s'", speaker.name)
+                mic, label = _pick_capture_device(sc)
+                log.info("áudio: capturando o que toca em '%s'", label)
                 with mic.recorder(samplerate=C.AUDIO_TAXA, channels=1, blocksize=C.AUDIO_SALTO) as rec:
                     while not self._stop.is_set():
                         data = rec.record(numframes=C.AUDIO_SALTO)
@@ -147,3 +146,26 @@ class AudioAnalyzer:
                 with self._lock:
                     self.levels.ativo = False
                 self._stop.wait(2.0)
+
+
+def _pick_capture_device(sc):  # noqa: ANN001, ANN202
+    """Escolhe o dispositivo de captura de áudio: loopback WASAPI no Windows ou
+    fonte '.monitor' do PulseAudio/PipeWire no Linux (com fallback para microfone)."""
+    speaker = sc.default_speaker()
+    for query in (getattr(speaker, "id", None), getattr(speaker, "name", None)):
+        if not query:
+            continue
+        try:
+            mic = sc.get_microphone(query, include_loopback=True)
+            if mic is not None:
+                return mic, getattr(speaker, "name", str(query))
+        except Exception:  # noqa: BLE001
+            continue
+    for mic in sc.all_microphones(include_loopback=True):
+        name_l = getattr(mic, "name", "").lower()
+        id_l = str(getattr(mic, "id", "")).lower()
+        if getattr(mic, "isloopback", False) or "monitor" in name_l or ".monitor" in id_l:
+            return mic, getattr(mic, "name", "monitor")
+    mic = sc.default_microphone()
+    return mic, getattr(mic, "name", "microfone padrão")
+

@@ -5,6 +5,7 @@ import Editor, { type Mode, type View } from "./components/Editor";
 import InteractPanel from "./components/InteractPanel";
 import PhoneDialog from "./components/PhoneDialog";
 import AiDialog from "./components/AiDialog";
+import MotionStudioDialog from "./components/MotionStudioDialog";
 import SurfacePanel from "./components/SurfacePanel";
 import LayersPanel from "./components/LayersPanel";
 import DetectPanel from "./components/DetectPanel";
@@ -56,6 +57,7 @@ export default function Page() {
   const [panel, setPanel] = useState<{ open: boolean; w: number }>({ open: true, w: 0 });
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [motionsOpen, setMotionsOpen] = useState(false);
   const interact = useInteract();
   const [loadError, setLoadError] = useState<string | null>(null);
   const [photoVersion, setPhotoVersion] = useState(0);
@@ -626,6 +628,9 @@ export default function Page() {
               <button className="dock-btn" onClick={openLibrary} title="Vídeos, GIFs e imagens: projeto, pastas do PC e Google Drive">
                 <span aria-hidden>🖼</span> Mídias
               </button>
+              <button className="dock-btn" onClick={() => setMotionsOpen(true)} title="Importador e Host de Motions (Motion Module v1)">
+                <span aria-hidden>🎬</span> Motions
+              </button>
               <button className="dock-btn" onClick={() => setPhoneOpen(true)} title="Controle remoto no celular (QR) e celular como sensor">
                 <span aria-hidden>📱</span> Celular
               </button>
@@ -901,6 +906,7 @@ export default function Page() {
         onError={(m) => notify(m, "err")}
       />
       <PhoneDialog open={phoneOpen} onClose={() => setPhoneOpen(false)} interact={interactOn ? interact.st : null} />
+      <MotionStudioDialog open={motionsOpen} onClose={() => setMotionsOpen(false)} />
       <AiDialog
         open={aiOpen}
         onClose={() => setAiOpen(false)}

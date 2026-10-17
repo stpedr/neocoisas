@@ -81,8 +81,23 @@ def create_windows_shortcut(lnk: Path, target: str, args: str, workdir: Path, ic
 def linux_desktop_entry(target: str, icon: Path) -> str:
     return (
         "[Desktop Entry]\nType=Application\nName=ProjMap\nComment=Projeção mapeada\n"
-        f"Exec={target} -m projmap.desktop\nPath={REPO_ROOT}\nIcon={icon}\nTerminal=false\nCategories=AudioVideo;Graphics;\n"
+        f'Exec="{target}" -m projmap.desktop\nPath={REPO_ROOT}\nIcon={icon}\nTerminal=false\nCategories=AudioVideo;Graphics;\n'
     )
+
+
+def _linux_shortcut_paths(desktop: bool) -> list[Path]:
+    paths = [Path.home() / ".local" / "share" / "applications" / "projmap.desktop"]
+    if desktop:
+        desk_dir = Path(os.environ.get("XDG_DESKTOP_DIR", "")) if os.environ.get("XDG_DESKTOP_DIR") else None
+        if not desk_dir or not desk_dir.is_dir():
+            for cand in (Path.home() / "Desktop", Path.home() / "Área de Trabalho", Path.home() / "Area de Trabalho"):
+                if cand.is_dir():
+                    desk_dir = cand
+                    break
+            else:
+                desk_dir = Path.home() / "Desktop"
+        paths.append(desk_dir / "projmap.desktop")
+    return paths
 
 
 def install(desktop: bool = False) -> list[Path]:
@@ -103,16 +118,21 @@ def install(desktop: bool = False) -> list[Path]:
     from PIL import Image
 
     Image.open(icon).save(png)
-    entry = Path.home() / ".local" / "share" / "applications" / "projmap.desktop"
-    entry.parent.mkdir(parents=True, exist_ok=True)
-    entry.write_text(linux_desktop_entry(target, png), encoding="utf-8")
-    return [entry]
+    content = linux_desktop_entry(target, png)
+    out = _linux_shortcut_paths(desktop)
+    for entry in out:
+        entry.parent.mkdir(parents=True, exist_ok=True)
+        entry.write_text(content, encoding="utf-8")
+        try:
+            entry.chmod(0o755)
+        except OSError:
+            pass
+    return out
 
 
 def uninstall() -> list[Path]:
     removed = []
-    cands = windows_shortcut_paths(True) if sys.platform == "win32" else [
-        Path.home() / ".local" / "share" / "applications" / "projmap.desktop"]
+    cands = windows_shortcut_paths(True) if sys.platform == "win32" else _linux_shortcut_paths(True)
     for p in cands:
         if p.exists():
             p.unlink()

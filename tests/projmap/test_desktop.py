@@ -103,3 +103,31 @@ def test_interacao_so_quando_pedida(tmp_path):
 
     weird = master_command(Settings(shows_dir=str(tmp_path), interact=True, sensor="kinect9000"), "S", python="python")
     assert weird[weird.index("--sensor") + 1] == "phone"  # valor estranho no json não quebra o mestre
+
+
+def test_linux_desktop_entry_e_atalhos(tmp_path, monkeypatch):
+    from projmap.desktop.install import _linux_shortcut_paths, linux_desktop_entry
+
+    monkeypatch.setenv("XDG_DESKTOP_DIR", str(tmp_path))
+    paths = _linux_shortcut_paths(desktop=True)
+    assert len(paths) == 2
+    assert paths[1] == tmp_path / "projmap.desktop"
+    entry = linux_desktop_entry("/opt/my venv/bin/python", tmp_path / "icon.png")
+    assert 'Exec="/opt/my venv/bin/python" -m projmap.desktop' in entry
+
+
+def test_linux_pulseaudio_monitor_fallback():
+    from types import SimpleNamespace
+    from projmap.effects.audio import _pick_capture_device
+
+    monitor_mic = SimpleNamespace(name="Monitor of Built-in Audio Analog Stereo", id="alsa_output.pci.monitor", isloopback=True)
+    fake_sc = SimpleNamespace(
+        default_speaker=lambda: SimpleNamespace(name="Built-in Audio", id="alsa_output.pci"),
+        get_microphone=lambda _q, include_loopback=True: (_ for _ in ()).throw(RuntimeError("sem match direto")),
+        all_microphones=lambda include_loopback=True: [monitor_mic],
+        default_microphone=lambda: SimpleNamespace(name="Mic padrao", id="mic0"),
+    )
+    mic, label = _pick_capture_device(fake_sc)
+    assert mic is monitor_mic
+    assert "Monitor" in label
+

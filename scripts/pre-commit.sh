@@ -10,6 +10,9 @@ echo "[pre-commit] Verificando Quality Gates do ProjMap..."
 if [ -x ".venv-projmap/Scripts/ruff.exe" ]; then
   .venv-projmap/Scripts/ruff.exe check projmap tests/projmap
   .venv-projmap/Scripts/mypy.exe
+elif [ -x ".venv-projmap/bin/ruff" ]; then
+  .venv-projmap/bin/ruff check projmap tests/projmap
+  .venv-projmap/bin/mypy
 elif command -v ruff >/dev/null 2>&1; then
   ruff check projmap tests/projmap
   mypy
