@@ -7,8 +7,6 @@ from typing import Any, Callable, Optional
 
 import json
 import logging
-import os
-from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -174,7 +172,9 @@ def create_router(runtime: InteractionRuntime,
         Procura ``PROJMAP_FACE_MODEL`` ou ``models/face_landmarker.task``; sem ele, a
         página ``/sensor`` baixa do servidor oficial do MediaPipe.
         """
-        path = Path(os.environ.get("PROJMAP_FACE_MODEL", "models/face_landmarker.task"))
+        from ..config import face_model_path
+
+        path = face_model_path()
         if not path.is_file():
             raise HTTPException(404, "modelo local ausente (rode: python -m projmap.tools.fetch_models)")
         return FileResponse(path, media_type="application/octet-stream")

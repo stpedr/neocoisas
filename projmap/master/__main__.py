@@ -112,7 +112,7 @@ def main(argv: list[str] | None = None) -> None:
             runtime.publisher = publisher.start(runtime.render)
 
     exposed = args.host not in ("127.0.0.1", "localhost")
-    token = args.token or (new_token() if exposed else None)
+    token = args.token or pairing_token_from_env() or (new_token() if exposed else None)
     app = create_app(state, UI_DIR, runtime=runtime, token=token, host=args.host, port=args.port,
                      library_roots=args.library)
     if exposed:
@@ -166,13 +166,11 @@ def main(argv: list[str] | None = None) -> None:
 
 
 def _load_dotenv() -> None:
-    """Lê o ``.env`` da raiz do repositório (chaves do Google Drive, LLM etc.).
-    Variáveis já definidas no ambiente têm prioridade."""
-    try:
-        from dotenv import load_dotenv
-    except ImportError:
-        return
-    load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
+    """Lê ``.env.projmap`` / ``.env`` da raiz do repositório sem dependências externas."""
+    load_projmap_env()
+
+
+from ..config import load_projmap_env, pairing_token_from_env  # noqa: E402
 
 
 if __name__ == "__main__":

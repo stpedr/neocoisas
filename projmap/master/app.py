@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field, ValidationError
 from starlette.background import BackgroundTask
 
 from .. import __version__
+from ..config import config_dir as default_config_dir, max_photo_bytes
 from ..core.project import Output, Project, parse_project
 from ..core.state import ProjectState
 from .auth import PairingTokenMiddleware
@@ -36,7 +37,7 @@ from ..library import Library, load_roots
 from .library_api import create_router as create_library_router
 from .remote import create_router as create_remote_router
 
-MAX_PHOTO_BYTES = 25 * 1024 * 1024  # 25 MB
+MAX_PHOTO_BYTES = max_photo_bytes()
 
 
 class ProjectBody(BaseModel):
@@ -233,7 +234,7 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
     from ..library import load_gdrive_folder, save_gdrive_folder
     from .gdrive_api import create_router as create_gdrive_router
 
-    cfg_dir = Path(config_dir) if config_dir else Path.home() / ".projmap"
+    cfg_dir = Path(config_dir) if config_dir else default_config_dir()
     lib_cfg = cfg_dir / "library.json"
     dcfg = drive_config or read_drive_config(saved_folder=load_gdrive_folder(lib_cfg))
     app.include_router(create_gdrive_router(

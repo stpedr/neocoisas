@@ -9,8 +9,9 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-CONFIG_DIR = Path.home() / ".projmap"
+from ..config import REPO_ROOT, config_dir
+
+CONFIG_DIR = config_dir()
 SETTINGS_PATH = CONFIG_DIR / "launcher.json"
 DEFAULT_SHOWS_DIR = Path.home() / "Documents" / "ProjMap"
 

@@ -50,27 +50,10 @@ def esconder_senha(url: str) -> str:
 
 
 def carregar_env(caminho: Optional[Path] = None) -> None:
-    """Lê o ``.env`` da raiz do repositório para ``os.environ``.
+    """Lê ``.env.projmap`` / ``.env`` da raiz do repositório para ``os.environ``."""
+    from ..config import load_projmap_env
 
-    Sem dependência externa e **sem sobrescrever** o que já veio do ambiente.
-    """
-    caminho = caminho or Path(__file__).resolve().parents[2] / ".env"
-    try:
-        texto = caminho.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return
-    for linha in texto.splitlines():
-        linha = linha.strip()
-        if not linha or linha.startswith("#") or "=" not in linha:
-            continue
-        chave, _, valor = linha.partition("=")
-        chave = chave.strip()
-        if chave.startswith("export "):
-            chave = chave[7:].strip()
-        valor = valor.strip()
-        if len(valor) >= 2 and valor[0] == valor[-1] and valor[0] in "\"'":
-            valor = valor[1:-1]
-        os.environ.setdefault(chave, valor)
+    load_projmap_env(caminho)
 
 
 class RtspPublisher:
