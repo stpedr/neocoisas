@@ -157,6 +157,8 @@ def create_router(runtime: InteractionRuntime,
 
     @r.post("/sensor")
     def set_sensor(body: SensorBody) -> dict:
+        if "model_path" in body.options:
+            raise HTTPException(422, ["model_path não pode ser definido pela API (use PROJMAP_FACE_MODEL)"])
         try:
             runtime.set_sensor(get_sensor(body.kind, aspect=runtime.spec.aspect, **body.options))
         except (ValueError, RuntimeError, OSError, TypeError) as exc:

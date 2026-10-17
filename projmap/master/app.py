@@ -16,6 +16,7 @@ Princípios:
 
 from __future__ import annotations
 
+import shutil
 import tempfile
 from pathlib import Path
 from typing import Any, Optional
@@ -25,6 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
+from starlette.background import BackgroundTask
 
 from .. import __version__
 from ..core.project import Output, Project, parse_project
@@ -33,6 +35,8 @@ from .auth import PairingTokenMiddleware
 from ..library import Library, load_roots
 from .library_api import create_router as create_library_router
 from .remote import create_router as create_remote_router
+
+MAX_PHOTO_BYTES = 25 * 1024 * 1024  # 25 MB
 
 
 class ProjectBody(BaseModel):
@@ -154,8 +158,11 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
     async def upload_photo(node_id: str, file: UploadFile = File(...)) -> dict:
         _, project = state.snapshot()
         _node_or_404(project, node_id)
+        data = await file.read(MAX_PHOTO_BYTES + 1)
+        if len(data) > MAX_PHOTO_BYTES:
+            raise HTTPException(413, ["foto excede o limite de 25 MB"])
         try:
-            rel = store.set_photo(node_id, await file.read(), file.filename or "foto.jpg")
+            rel = store.set_photo(node_id, data, file.filename or "foto.jpg")
         except ValueError as exc:
             raise HTTPException(422, [str(exc)]) from exc
 
@@ -202,10 +209,20 @@ def create_app(state: ProjectState, ui_dir: Optional[Path] = None, runtime: Any 
     @app.get("/api/project/export")
     def export_project() -> FileResponse:
         _, project = state.snapshot()
-        tmp = Path(tempfile.mkdtemp(prefix="projmap-export-")) / "projeto.pmz"
-        store.export_pmz(tmp)
+        tmp_dir = Path(tempfile.mkdtemp(prefix="projmap-export-"))
+        tmp = tmp_dir / "projeto.pmz"
+        try:
+            store.export_pmz(tmp)
+        except BaseException:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            raise
         safe = "".join(c if c.isalnum() or c in "-_" else "-" for c in project.name).strip("-") or "projeto"
-        return FileResponse(tmp, filename=f"{safe}.pmz", media_type="application/zip")
+        return FileResponse(
+            tmp,
+            filename=f"{safe}.pmz",
+            media_type="application/zip",
+            background=BackgroundTask(shutil.rmtree, tmp_dir, True),
+        )
 
     app.include_router(create_remote_router(state, host=host, port=port, token=token))
     library = Library(load_roots() if library_roots is None else library_roots, store.root / "cache")

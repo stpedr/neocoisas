@@ -41,7 +41,7 @@ log = logging.getLogger(__name__)
 
 Fonte = Callable[[tuple[int, int]], "tuple[int, np.ndarray]"]
 
-_SENHA = re.compile(r"(rtsp://[^:/@\s]+:)([^@/\s]+)(@)", re.IGNORECASE)
+_SENHA = re.compile(r"((?:rtsps?|https?)://[^:/@\s]+:)([^@/\s]+)(@)", re.IGNORECASE)
 
 
 def esconder_senha(url: str) -> str:

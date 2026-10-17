@@ -48,7 +48,13 @@ export default function PhoneDialog({ open, onClose, interact }: {
         {pair?.lan && (
           <div className="phone-pair">
             {pair.qr_svg ? (
-              <div className="qr" dangerouslySetInnerHTML={{ __html: pair.qr_svg }} />
+              <div className="qr">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`data:image/svg+xml;utf8,${encodeURIComponent(pair.qr_svg)}`}
+                  alt="QR Code de pareamento"
+                />
+              </div>
             ) : (
               <p className="dim small">Instale <code>segno</code> no mestre para ver o QR.</p>
             )}

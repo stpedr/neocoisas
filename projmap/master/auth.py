@@ -20,10 +20,11 @@ from __future__ import annotations
 import hmac
 import json
 import secrets
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlparse
 
 HEADER = "x-projmap-token"
 LOOPBACK = {"127.0.0.1", "::1", "localhost"}
+LOOPBACK_HOSTS = {"127.0.0.1", "::1", "[::1]", "localhost", "testserver"}
 PROTECTED_PREFIXES = ("/api/", "/media/")
 
 
@@ -32,9 +33,34 @@ def new_token() -> str:
     return secrets.token_urlsafe(9)
 
 
+def _header(scope, key: bytes) -> str | None:
+    for name, value in scope.get("headers", []):
+        if name.lower() == key:
+            return value.decode("latin-1")
+    return None
+
+
+def _host_only(netloc: str) -> str:
+    netloc = netloc.strip().lower()
+    if netloc.startswith("["):
+        end = netloc.find("]")
+        return netloc[: end + 1] if end != -1 else netloc
+    return netloc.split(":", 1)[0]
+
+
 def is_loopback(scope) -> bool:
     client = scope.get("client")
-    return bool(client) and client[0] in LOOPBACK
+    if not (bool(client) and client[0] in LOOPBACK):
+        return False
+    host = _header(scope, b"host")
+    if host is not None and _host_only(host) not in LOOPBACK_HOSTS:
+        return False
+    origin = _header(scope, b"origin")
+    if origin is not None:
+        parsed = urlparse(origin)
+        if _host_only(parsed.netloc) not in LOOPBACK_HOSTS:
+            return False
+    return True
 
 
 def request_token(scope) -> str | None:

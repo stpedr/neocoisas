@@ -99,10 +99,13 @@ class SimSensor:
 
 
 # --------------------------------------------------------------------- osc
+MAX_OSC_PLAYERS = 32
+
+
 class OscSensor:
     kind = "osc"
 
-    def __init__(self, aspect: float = 16 / 9, host: str = "0.0.0.0", port: int = 7001, timeout: float = 1.0):
+    def __init__(self, aspect: float = 16 / 9, host: str = "127.0.0.1", port: int = 7001, timeout: float = 1.0):
         from pythonosc.dispatcher import Dispatcher
         from pythonosc.osc_server import ThreadingOSCUDPServer
 
@@ -119,10 +122,23 @@ class OscSensor:
         self._thread = threading.Thread(target=self._server.serve_forever, name="osc-sensor", daemon=True)
         self._thread.start()
 
+    def _prune_stale(self, now: float) -> None:
+        stale = [pid for pid, seen in self._seen.items() if now - seen > self.timeout * 3]
+        for pid in stale:
+            self._players.pop(pid, None)
+            self._seen.pop(pid, None)
+        while len(self._players) >= MAX_OSC_PLAYERS and self._seen:
+            oldest_pid = min(self._seen, key=lambda k: self._seen[k])
+            self._players.pop(oldest_pid, None)
+            self._seen.pop(oldest_pid, None)
+
     def _get(self, pid: int) -> Player:
+        now = time.monotonic()
         if pid not in self._players:
+            if len(self._players) >= MAX_OSC_PLAYERS:
+                self._prune_stale(now)
             self._players[pid] = Player(id=pid, x=self.aspect / 2)
-        self._seen[pid] = time.monotonic()
+        self._seen[pid] = now
         return self._players[pid]
 
     def _on_player(self, _addr: str, *args) -> None:
@@ -160,6 +176,7 @@ class OscSensor:
     def players(self) -> list[Player]:
         now = time.monotonic()
         with self._lock:
+            self._prune_stale(now)
             out = []
             for pid, p in self._players.items():
                 fresh = now - self._seen.get(pid, 0) <= self.timeout
@@ -377,13 +394,24 @@ class WebcamSensor:
         self._cap.release()
 
 
+_ALLOWED_SENSOR_OPTIONS: dict[str, set[str]] = {
+    "sim": {"script", "period"},
+    "osc": {"host", "port", "timeout"},
+    "webcam": {"camera", "model_path", "mirror", "distance_scale", "size", "fps"},
+    "phone": {"mirror", "distance_scale", "timeout", "face_lost_after"},
+}
+
+
 def get_sensor(kind: str = "sim", aspect: float = 16 / 9, **options) -> Sensor:
+    if kind not in _ALLOWED_SENSOR_OPTIONS:
+        raise ValueError(f"sensor desconhecido: {kind} (sim | osc | webcam | phone)")
+    unknown = set(options) - _ALLOWED_SENSOR_OPTIONS[kind]
+    if unknown:
+        raise ValueError(f"opções inválidas para sensor '{kind}': {', '.join(sorted(unknown))}")
     if kind == "sim":
         return SimSensor(aspect=aspect, **options)
     if kind == "osc":
         return OscSensor(aspect=aspect, **options)
     if kind == "webcam":
         return WebcamSensor(aspect=aspect, **options)
-    if kind == "phone":
-        return PhoneSensor(aspect=aspect, **options)
-    raise ValueError(f"sensor desconhecido: {kind} (sim | osc | webcam | phone)")
+    return PhoneSensor(aspect=aspect, **options)
