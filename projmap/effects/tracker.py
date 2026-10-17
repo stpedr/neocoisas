@@ -11,7 +11,11 @@ import numpy as np
 from . import config as C
 
 NUM_KEYPOINTS = 17
-PULSO_E, PULSO_D = 9, 10
+# Mesma ordem do ``enum`` de ``DetectorPessoas.h`` (COCO): "E"/"D" são os lados
+# que o modelo rotula pela aparência, não os lados da tela.
+NARIZ, OLHO_E, OLHO_D, ORELHA_E, ORELHA_D = 0, 1, 2, 3, 4
+OMBRO_E, OMBRO_D, COTOVELO_E, COTOVELO_D, PULSO_E, PULSO_D = 5, 6, 7, 8, 9, 10
+QUADRIL_E, QUADRIL_D, JOELHO_E, JOELHO_D, TORNOZELO_E, TORNOZELO_D = 11, 12, 13, 14, 15, 16
 
 
 class OneEuro:

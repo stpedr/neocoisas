@@ -21,6 +21,10 @@ EFFECTS: dict[str, EffectInfo] = {
                           "A pessoa vira um mosaico de peças LEGO; ao se mexer, as peças se soltam e caem."),
     "vf-ecos": EffectInfo("vf-ecos", "ecos", "Ecos em quadrinhos",
                           "A pessoa vira HQ (nanquim e retícula) e deixa ecos coloridos; na batida, um carimbo."),
+    "vf-bichinho": EffectInfo("vf-bichinho", "bichinho", "Bichinho espelho",
+                              "A pessoa vira um gato, dinossauro ou coelho que imita os seus movimentos."),
+    "vf-paraquedas": EffectInfo("vf-paraquedas", "paraquedas", "Salto de paraquedas",
+                                "Um avião solta paraquedistas com o rosto de quem está na frente da câmera."),
 }
 
 

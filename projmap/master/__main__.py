@@ -2,8 +2,8 @@
 
 Exemplos::
 
-    # projeto novo (ou existente) e saída em tela cheia no 2º monitor/projetor
-    python -m projmap.master --project shows/teste.projmap --display 1
+    # projeto novo (ou existente) e saída em tela cheia no projetor (achado sozinho)
+    python -m projmap.master --project shows/teste.projmap
 
     # sem projetor: saída numa janela de preview
     python -m projmap.master --project shows/teste.projmap --windowed
@@ -48,7 +48,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--token", default=None,
                         help="token de pareamento do remote (padrão: gerado a cada execução, se exposto na LAN)")
     parser.add_argument("--node", default=None, help="nó desta saída (padrão: o primeiro do projeto)")
-    parser.add_argument("--display", type=int, default=0, help="índice do monitor/projetor para a saída")
+    parser.add_argument("--display", default="auto",
+                        help="tela da saída: auto (= a primeira que não é a principal, o projetor), "
+                             "0 = principal, 1, 2… = as outras da esquerda p/ direita. Liste: python -m projmap.node.screens")
     parser.add_argument("--windowed", action="store_true", help="saída em janela (preview) em vez de tela cheia")
     parser.add_argument("--no-output", action="store_true", help="não abre a janela de saída")
     parser.add_argument("--open", action="store_true", help="abre a UI no navegador")
@@ -100,6 +102,13 @@ def main(argv: list[str] | None = None) -> None:
         runtime = runtime.start()
         log.info("camada interativa: cena '%s', sensor %s%s", runtime.spec.title, args.sensor,
                  f", OSC → {args.osc_out}" if args.osc_out else "")
+        # Transmissão RTSP da camada interativa (só se PROJMAP_RTSP_URL estiver
+        # no .env). A URL carrega senha, por isso não vem por linha de comando.
+        from ..interact.stream import publisher_from_env
+
+        publisher = publisher_from_env()
+        if publisher is not None:
+            runtime.publisher = publisher.start(runtime.render)
 
     exposed = args.host not in ("127.0.0.1", "localhost")
     token = args.token or (new_token() if exposed else None)

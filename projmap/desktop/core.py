@@ -22,7 +22,7 @@ class Settings:
     shows_dir: str = str(DEFAULT_SHOWS_DIR)
     last_show: str = ""
     output: str = "display"  # display | window | none
-    display: int = 1
+    display: str = "auto"  # auto (projetor) | 0 = principal | 1, 2… = as outras
     lan: bool = True  # liberar o celular na mesma rede
     port: int = 8100
     token: str = ""  # vazio = gerado a cada execução
@@ -38,6 +38,8 @@ def load_settings(path: Path = SETTINGS_PATH) -> Settings:
     except (OSError, ValueError):
         return Settings()
     known = {k: v for k, v in data.items() if k in Settings.__dataclass_fields__}
+    if "display" in known:  # versões antigas guardavam um número na ordem do Windows (instável)
+        known["display"] = "auto" if isinstance(known["display"], int) else str(known["display"])
     try:
         return Settings(**known)
     except TypeError:
@@ -79,7 +81,7 @@ def master_command(s: Settings, show: str, python: Optional[str] = None) -> list
     cmd = [py, "-m", "projmap.master", "--project", str(show_path(s, show)), "--name", safe_show_name(show),
            "--port", str(int(s.port))]
     if s.output == "display":
-        cmd += ["--display", str(int(s.display))]
+        cmd += ["--display", str(s.display or "auto")]
     elif s.output == "window":
         cmd += ["--windowed"]
     else:

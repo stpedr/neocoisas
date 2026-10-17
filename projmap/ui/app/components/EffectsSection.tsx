@@ -1,8 +1,9 @@
 "use client";
 
 // Efeitos visuais importados do visual_frames (Adriel Vasques): Luz reativa,
-// LEGO, Ecos em quadrinhos. A câmera vê as pessoas (YOLO na GPU) e a música do
-// PC muda as cores. Aparecem nas superfícies com a fonte "Cena interativa".
+// LEGO, Ecos em quadrinhos, Bichinho espelho e Salto de paraquedas. A câmera vê
+// as pessoas (YOLO na GPU) e a música do PC muda as cores. Aparecem nas
+// superfícies com a fonte "Cena interativa".
 
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
@@ -108,6 +109,23 @@ export default function EffectsSection({ st, onState, onError }: {
                     <input type="range" min={1} max={8} step={1} value={p.distancia_ecos} onChange={(e) => tune({ distancia_ecos: Number(e.target.value) })} />
                   </label>
                 </>
+              )}
+              {active === "vf-bichinho" && (
+                <>
+                  <div className="preset-grid">
+                    {["Gato", "Dinossauro", "Coelho"].map((nome, i) => (
+                      <button key={nome} className={`btn btn-small ${Math.round(p.animal) === i ? "btn-accent" : ""}`}
+                              onClick={() => tune({ animal: i })}>{nome}</button>
+                    ))}
+                  </div>
+                  <label className="toggle"><input type="checkbox" checked={p.fundo_colorido} onChange={(e) => tune({ fundo_colorido: e.target.checked })} /> Fundo colorido</label>
+                </>
+              )}
+              {active === "vf-paraquedas" && (
+                <label className="slider">
+                  <span className="color-row">Intervalo do avião <span className="dim">{Math.round(p.intervalo_aviao)}s</span></span>
+                  <input type="range" min={3} max={20} step={1} value={p.intervalo_aviao} onChange={(e) => tune({ intervalo_aviao: Number(e.target.value) })} />
+                </label>
               )}
             </div>
           )}

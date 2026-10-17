@@ -289,6 +289,11 @@ class PhoneSensor:
         pass
 
 
+def next_timestamp_ms(last_ms: int, elapsed_s: float) -> int:
+    """Horário do próximo quadro para o MediaPipe: em ms e sempre maior que o anterior."""
+    return max(last_ms + 1, int(elapsed_s * 1000))
+
+
 class WebcamSensor:
     kind = "webcam"
 
@@ -335,6 +340,7 @@ class WebcamSensor:
         import cv2
 
         t0 = time.monotonic()
+        last_ts = -1
         while not self._stop:
             ok, frame = self._cap.read()
             if not ok:
@@ -343,7 +349,14 @@ class WebcamSensor:
             h, w = frame.shape[:2]
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             image = self._mp.Image(image_format=self._mp.ImageFormat.SRGB, data=rgb)
-            result = self._landmarker.detect_for_video(image, int((time.monotonic() - t0) * 1000))
+            # O MediaPipe exige horário ESTRITAMENTE crescente; a 30 fps dois quadros
+            # podem cair no mesmo milissegundo (visto com a C920) e isso matava a thread.
+            last_ts = next_timestamp_ms(last_ts, time.monotonic() - t0)
+            try:
+                result = self._landmarker.detect_for_video(image, last_ts)
+            except Exception as exc:  # noqa: BLE001 — um quadro ruim não pode parar o sensor
+                log.warning("webcam: quadro ignorado (%s)", exc)
+                continue
             with self._lock:
                 p = self._player
                 if not result.face_landmarks:

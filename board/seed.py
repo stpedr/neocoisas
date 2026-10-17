@@ -933,10 +933,10 @@ SEED_CARDS: list[dict] = [
     },
     {
         'title': 'ProjMap — Efeitos do visual_frames, fase 2 (Bichinho espelho, Paraquedas)',
-        'description': 'Traduzir atualizarBichinho/atualizarRig (dinâmica de 2ª ordem, IK, Verlet do rabo) e a cena de Paraquedistas.cpp (recorte de rostos com CLAHE).',
-        'column': 'backlog',
+        'description': 'Traduz atualizarBichinho/atualizarRig (dinâmica de 2ª ordem, rig chibi por retargeting, Verlet do rabo) e a cena de Paraquedistas.cpp (recorte de rostos com CLAHE, desenhada com OpenCV sobre o shader). Completa os 5 efeitos do autor. Inclui as otimizações medidas: bilateral em meia resolução e preprocess com buffer fixo.',
+        'column': 'done',
         'sprint': 'Sprint 11 · Projeção mapeada',
-        'labels': ['backend', 'interativo', 'projmap', 'prioridade:média'],
+        'labels': ['backend', 'frontend', 'interativo', 'projmap', 'prioridade:média'],
     },
     {
         'title': 'ProjMap F7 — Conteúdo por IA por superfície (opcional)',

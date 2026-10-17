@@ -106,13 +106,16 @@ class Launcher(tk.Tk):
         self.out_var = tk.StringVar(value=self.s.output)
         r = ttk.Frame(c, style="Card.TFrame")
         r.pack(fill="x", pady=(6, 0))
-        ttk.Radiobutton(r, text="Projetor (tela cheia no monitor", value="display", variable=self.out_var).pack(side="left")
-        self.disp_var = tk.IntVar(value=self.s.display)
-        ttk.Spinbox(r, from_=0, to=8, width=3, textvariable=self.disp_var).pack(side="left")
-        ttk.Label(r, text=")", style="Card.TLabel").pack(side="left")
+        ttk.Radiobutton(r, text="Projetor, tela cheia em:", value="display", variable=self.out_var).pack(side="left")
+        self.disp_var = tk.StringVar()
+        self.disp_box = ttk.Combobox(r, textvariable=self.disp_var, state="readonly", width=30)
+        self.disp_box.pack(side="left", padx=(6, 0))
+        ttk.Button(r, text="↻", width=3, command=self._load_screens).pack(side="left", padx=(6, 0))
         ttk.Radiobutton(c, text="Janela de teste (sem projetor)", value="window", variable=self.out_var).pack(anchor="w")
         ttk.Radiobutton(c, text="Só o editor (sem saída)", value="none", variable=self.out_var).pack(anchor="w")
-        ttk.Label(c, text="Monitor 0 é a tela principal; o projetor costuma ser o 1.", style="Dim.TLabel").pack(anchor="w")
+        self.screens_hint = ttk.Label(c, text="", style="Dim.TLabel", wraplength=420, justify="left")
+        self.screens_hint.pack(anchor="w")
+        self.after(200, self._load_screens)
 
         # Interação
         c = self._card("Interação (jogos com fantasmas, estrela…)")
@@ -157,6 +160,25 @@ class Launcher(tk.Tk):
         self.log = tk.Text(log_f, height=7, bg=CARD, fg=DIM, insertbackground=FG, relief="flat", font=("Consolas", 9), wrap="word")
         self.log.pack(fill="both", expand=True)
         self.log.configure(state="disabled")
+
+    # ------------------------------------------------------------ telas
+    def _load_screens(self) -> None:
+        try:
+            from ..node.screens import choose_screen, list_screens
+
+            screens = list_screens()
+            pick = choose_screen(screens, "auto")
+        except Exception:  # noqa: BLE001
+            screens, pick = [], None
+        auto = f"auto ({pick.width}x{pick.height}{', principal' if pick.primary else ''})" if pick else "auto"
+        self._screens = {auto: "auto", **{s.label: str(s.index) for s in screens}}
+        self.disp_box["values"] = list(self._screens)
+        cur = str(self.s.display or "auto")
+        self.disp_var.set(next((k for k, v in self._screens.items() if v == cur), auto))
+        if len(screens) <= 1:
+            self.screens_hint.configure(text="Só uma tela detectada. Ligue o projetor e aperte Windows+P → Estender.")
+        else:
+            self.screens_hint.configure(text="'auto' escolhe o projetor (a tela que não é a principal).")
 
     # ------------------------------------------------------------ câmeras
     def _load_cameras(self) -> None:
@@ -218,7 +240,8 @@ class Launcher(tk.Tk):
             messagebox.showinfo("ProjMap", "Escolha um show ou crie um novo.")
             return
         s = self.s
-        s.last_show, s.output, s.display = show, self.out_var.get(), int(self.disp_var.get() or 0)
+        s.last_show, s.output = show, self.out_var.get()
+        s.display = getattr(self, "_screens", {}).get(self.disp_var.get(), "auto")
         s.lan, s.open_browser = bool(self.lan_var.get()), bool(self.browser_var.get())
         s.sensor = {SENSORS[0]: "sim", SENSORS[1]: "webcam", SENSORS[2]: "phone"}.get(self.sensor_var.get(), "sim")
         s.camera = self._camera_value()
