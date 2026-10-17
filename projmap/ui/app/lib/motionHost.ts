@@ -35,8 +35,9 @@ export function unpackPacket(buf: ArrayBuffer): { header: JsonHeader; body: Uint
  * frame rate, porque o agendador do headless é instável).
  *
  * Logo depois de cada requestAnimationFrame do motion (ainda no mesmo quadro, com o
- * buffer do WebGL desenhado) ele codifica o maior <canvas> em JPEG (``toBlob`` roda
- * fora da thread principal) e manda só os bytes para a página host. Um quadro por vez
+ * buffer do WebGL desenhado) ele captura o maior <canvas>. Canvas que opta por
+ * ``data-projmap-transport="rgba"`` usa ``readPixels`` direto da GPU e evita o ciclo
+ * JPEG encode/decode; os demais continuam em JPEG assíncrono. Um quadro por vez
  * (dois em voo foi medido pior: disputa a GPU com o projetor); o ``projmap:ack`` libera
  * o próximo, e um ack perdido expira em 1 s. */
 function shimSource(fps: number): string {
@@ -45,7 +46,8 @@ var P=window.parent,busy=0,since=0,last=0,lastRaf=0,MIN=1000 / ${fps}-2,raf=wind
 function pick(){var cs=document.getElementsByTagName("canvas"),best=null,a=0;for(var i=0;i<cs.length;i++){var s=cs[i].width*cs[i].height;if(s>a){a=s;best=cs[i];}}return best;}
 function done(){busy=Math.max(0,busy-1);}
 function grab(){var now=performance.now();if(busy>0&&now-since>1000)busy=0;if(busy>=1||now-last<MIN)return;var c=pick();if(!c||!c.width||!c.height)return;last=now;if(busy===0)since=now;busy++;var w=c.width,h=c.height;
-try{c.toBlob(function(b){if(!b){done();return;}b.arrayBuffer().then(function(buf){P.postMessage({type:"projmap:frame",w:w,h:h,jpeg:buf},"*",[buf]);},done);},"image/jpeg",0.85);}catch(e){done();}}
+try{if(c.dataset&&c.dataset.projmapTransport==="rgba"){var g=c.getContext("webgl2")||c.getContext("webgl");if(g){var pixels=new Uint8Array(w*h*4);g.readPixels(0,0,w,h,g.RGBA,g.UNSIGNED_BYTE,pixels);var raw=pixels.buffer;P.postMessage({type:"projmap:frame",w:w,h:h,rgba:raw,flipY:true},"*",[raw]);return;}}
+c.toBlob(function(b){if(!b){done();return;}b.arrayBuffer().then(function(buf){P.postMessage({type:"projmap:frame",w:w,h:h,jpeg:buf},"*",[buf]);},done);},"image/jpeg",0.85);}catch(e){done();}}
 var FRAME=1000/60,nextAt=0;
 window.requestAnimationFrame=function(cb){var wait=Math.max(0,nextAt-performance.now());
 var run=function(){return raf(function(t){nextAt=Math.max(nextAt+FRAME,performance.now());try{cb(t);}finally{lastRaf=performance.now();grab();}});};
@@ -235,13 +237,14 @@ export class MotionHostController {
 
   /** Quadro do motion (JPEG, ou RGBA w×h) → mestre. ``false`` = descartado (fila cheia ou sessão sumiu).
    * ``size``: tamanho real do canvas do motion (padrão: o da sessão). */
-  sendFrame(sid: string, body: Uint8Array | Uint8ClampedArray, fmt: "jpeg" | "rgba", size?: [number, number]): boolean {
+  sendFrame(sid: string, body: Uint8Array | Uint8ClampedArray, fmt: "jpeg" | "rgba", size?: [number, number],
+    flipY = false): boolean {
     const f = this.frames.find((x) => x.sid === sid);
     if (!f) return false;
     const [w, h] = size ?? [f.w, f.h];
     if (fmt === "rgba" && body.length !== w * h * 4) return false;
     if ((this.opts.socket.bufferedAmount ?? 0) > MAX_BUFFERED) return false;
-    this.opts.socket.send(packPacket({ sid, w, h, fmt }, body));
+    this.opts.socket.send(packPacket({ sid, w, h, fmt, ...(flipY ? { flip_y: true } : {}) }, body));
     return true;
   }
 

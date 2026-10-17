@@ -7,6 +7,15 @@ Motion Module v1 autocontido em
 canal `motion:video` e os envelopes/eventos do show por `motion:audio`, sem
 acessar diretamente a API do mestre.
 
+Desde a versão 1.1.0 do motion, posterização, contraste, recorte, cor, grão e
+scanlines são executados em um fragment shader WebGL. O vídeo é enviado direto
+para uma textura, sem `getImageData` nem laços JavaScript por pixel. O navegador
+dedicado solicita a GPU de alto desempenho e usa D3D11 no Windows.
+O parâmetro **Resolução interna** controla o custo de captura; o padrão de 35%
+preserva o aspecto do grão enquanto reduz cerca de 88% dos pixels processados
+em cada quadro. A saída RGBA é lida diretamente da GPU, sem codificar e
+decodificar JPEG.
+
 ## Visual
 
 - vídeo convertido em preto, branco e níveis de cinza;

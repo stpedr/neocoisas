@@ -389,6 +389,13 @@ entrada de câmera em preto, branco e tons de cinza, com grão e pulsos vermelho
 guiados pelo áudio. Importe pelo botão **+ Motion** da superfície e escolha
 **auto** em *Entrada de vídeo do motion*. Os agudos aumentam o grão, os graves
 reforçam o vermelho, a energia altera o contraste e o kick dispara o impacto.
+O tratamento visual roda em shader WebGL na GPU; o navegador dedicado pede a
+GPU de alto desempenho e usa D3D11 no Windows. A análise leve do áudio acontece
+no Web Audio e envia somente valores numéricos ao shader, sem laços por pixel
+na CPU.
+Para instalações em que a captura ainda seja o gargalo, ajuste **Resolução
+interna**: 35% é o padrão rápido e valores maiores priorizam nitidez. Este motion
+também usa transporte RGBA local, evitando conversão intermediária para JPEG.
 
 O motion tem três modos: **Vermelho granulado**, **Preto e branco** e
 **Negativo vermelho**. Sem câmera ele mantém um fundo procedural, permitindo

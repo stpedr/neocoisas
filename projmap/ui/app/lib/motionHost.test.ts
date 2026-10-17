@@ -142,6 +142,10 @@ describe("MotionHostController", () => {
     expect(Array.from(body)).toEqual([0xff, 0xd8, 0xff, 0xd9]);
     c.sendFrame("m1", jpeg, "jpeg", [640, 360]); // canvas do motion com outro tamanho
     expect(unpackPacket(socket.sent.at(-1) as ArrayBuffer).header).toMatchObject({ w: 640, h: 360 });
+    c.sendFrame("m1", new Uint8Array(4 * 2 * 4), "rgba", undefined, true);
+    expect(unpackPacket(socket.sent.at(-1) as ArrayBuffer).header).toEqual(
+      { sid: "m1", w: 4, h: 2, fmt: "rgba", flip_y: true },
+    );
   });
 
   it("descarta o quadro se o WebSocket ainda está enviando o anterior (latência baixa)", () => {

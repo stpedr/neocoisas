@@ -171,7 +171,8 @@ class MotionHub:
         else:
             if len(body) != w * h * 4:
                 raise ValueError("quadro com tamanho inválido")
-            rgba = np.frombuffer(body, np.uint8).reshape(h, w, 4).copy()
+            rgba = np.frombuffer(body, np.uint8).reshape(h, w, 4)
+            rgba = rgba[::-1].copy() if header.get("flip_y") else rgba.copy()
         with self._lock:
             sess = self._sessions.get(str(sid))
             if sess is None:

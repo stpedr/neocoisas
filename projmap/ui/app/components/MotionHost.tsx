@@ -71,15 +71,22 @@ export default function MotionHost() {
     };
 
     const onMessage = (e: MessageEvent) => {
-      const data = e.data as { type?: string; w?: number; h?: number; jpeg?: ArrayBuffer } | null;
-      if (!data || data.type !== "projmap:frame" || !(data.jpeg instanceof ArrayBuffer)) return;
+      const data = e.data as { type?: string; w?: number; h?: number; jpeg?: ArrayBuffer; rgba?: ArrayBuffer;
+        flipY?: boolean } | null;
+      if (!data || data.type !== "projmap:frame") return;
+      const jpeg = data.jpeg instanceof ArrayBuffer ? data.jpeg : null;
+      const rgba = data.rgba instanceof ArrayBuffer ? data.rgba : null;
+      if (!jpeg && !rgba) return;
       const sid = ctrl.sidFor(e.source);
       if (!sid) {
         (e.source as Window | null)?.postMessage({ type: "projmap:ack" }, "*"); // nunca deixa o shim travado
         return;
       }
       const t0 = performance.now();
-      if (ctrl.sendFrame(sid, new Uint8Array(data.jpeg), "jpeg", [data.w ?? 0, data.h ?? 0])) {
+      const sent = jpeg
+        ? ctrl.sendFrame(sid, new Uint8Array(jpeg), "jpeg", [data.w ?? 0, data.h ?? 0])
+        : ctrl.sendFrame(sid, new Uint8Array(rgba!), "rgba", [data.w ?? 0, data.h ?? 0], data.flipY === true);
+      if (sent) {
         stats.frames += 1;
         stats.ms += performance.now() - t0;
       }

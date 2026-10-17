@@ -29,11 +29,15 @@ def test_manifesto_do_motion_de_teste():
 
 
 def test_motion_camera_grain_distribuido_declara_video_e_modos():
-    info = parse_motion_html(CAMERA_GRAIN.read_bytes())
+    raw = CAMERA_GRAIN.read_bytes()
+    info = parse_motion_html(raw)
     assert (info.id, info.name, info.version, info.video_input) == (
-        "camera-grain-crimson", "Camera Grain Crimson", "1.0.0", True,
+        "camera-grain-crimson", "Camera Grain Crimson", "1.1.0", True,
     )
     assert info.modes == ["crimson", "monochrome", "negative"]
+    source = raw.decode("utf-8")
+    assert 'getContext("webgl"' in source
+    assert "getImageData" not in source
 
 
 @pytest.mark.parametrize("html, msg", [
@@ -141,12 +145,15 @@ def test_hub_recebe_quadros_validos_e_descarta_os_errados():
     h.put_frame(pack({"sid": s.sid, "w": 4, "h": 2}, bytes(range(32))))
     key, img = h.latest(s)
     assert key == 1 and img.shape == (2, 4, 4) and img[0, 0, 1] == 1
+    h.put_frame(pack({"sid": s.sid, "w": 4, "h": 2, "flip_y": True}, bytes(range(32))))
+    key, img = h.latest(s)
+    assert key == 2 and img[0, 0, 0] == 16 and img[1, 0, 0] == 0
     with pytest.raises(ValueError):
         h.put_frame(pack({"sid": s.sid, "w": 4, "h": 2}, b"\0" * 10))
     with pytest.raises(ValueError):
         unpack(b"\xff\xff\xff\xff{}")
     h.put_frame(pack({"sid": "outra", "w": 1, "h": 1}, b"\0" * 4))  # sessão fechada: ignora
-    assert h.latest(s)[0] == 1
+    assert h.latest(s)[0] == 2
 
 
 def test_factory_cria_fonte_motion(monkeypatch):

@@ -45,6 +45,8 @@ FLAGS = [
     "IsolateSandboxedIframes",  # iframe do motion no mesmo processo: o quadro não atravessa processos
     "--ignore-gpu-blocklist",
     "--enable-gpu-rasterization",
+    "--enable-zero-copy",
+    "--enable-accelerated-video-decode",
     # Nada de trabalho de "primeira execução" em segundo plano disputando CPU/GPU com o show.
     "--disable-extensions",
     "--disable-component-extensions-with-background-pages",
