@@ -45,7 +45,7 @@ describe("DetectPanel", () => {
   });
 
   it("com foto, clicar em 'Detectar na foto' chama a API e devolve os candidatos", async () => {
-    vi.mocked(api.detect).mockResolvedValue({ candidates: CANDIDATOS });
+    vi.mocked(api.detect).mockResolvedValue({ detector: "classic", candidates: CANDIDATOS });
     const props = setup({ hasPhoto: true });
 
     await userEvent.click(screen.getByRole("button", { name: "Detectar na foto" }));
@@ -55,7 +55,7 @@ describe("DetectPanel", () => {
   });
 
   it("detecção sem resultado avisa o operador (não é erro de rede)", async () => {
-    vi.mocked(api.detect).mockResolvedValue({ candidates: [] });
+    vi.mocked(api.detect).mockResolvedValue({ detector: "classic", candidates: [] });
     const props = setup({ hasPhoto: true });
 
     await userEvent.click(screen.getByRole("button", { name: "Detectar na foto" }));

@@ -1,4 +1,4 @@
-name: CI
+name: CI (ProjMap Standalone)
 
 on:
   push:
@@ -6,45 +6,29 @@ on:
   pull_request:
 
 jobs:
-  backend:
-    name: Backend (pytest)
+  projmap-backend:
+    name: ProjMap Backend (Ruff + Mypy + Pytest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Instalar dependências
-        run: pip install -r requirements-dev.txt -r requirements-projmap-master.txt
+      - name: Instalar dependências do ProjMap (standalone, sem Auto Niche)
+        run: pip install -r requirements-projmap-master.txt pytest>=8.0 ruff mypy
       # Xvfb + Mesa (llvmpipe): contexto OpenGL headless para os testes do
       # renderer do ProjMap (GPU vs. referência em CPU).
       - name: Instalar Xvfb/Mesa
         run: sudo apt-get update && sudo apt-get install -y xvfb libgl1 libgl1-mesa-dri
-      - name: Rodar testes
-        run: xvfb-run -a pytest -q
-
-  frontend:
-    name: Frontend (next build)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - name: Instalar dependências
-        run: npm ci
-      - name: Build
-        run: npm run build
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
+      - name: Lint e fronteira arquitetural (Ruff + TID251)
+        run: ruff check projmap tests/projmap
+      - name: Typecheck (Mypy)
+        run: mypy
+      - name: Testes do ProjMap (Pytest)
+        run: xvfb-run -a pytest -q tests/projmap
 
   projmap-ui:
-    name: ProjMap UI (next build)
+    name: ProjMap UI (Typecheck + Lint + Vitest + Build + Android)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -58,6 +42,12 @@ jobs:
           cache-dependency-path: projmap/ui/package-lock.json
       - name: Instalar dependências
         run: npm ci
+      - name: Typecheck (tsc --noEmit)
+        run: npm run typecheck
+      - name: Lint (ESLint)
+        run: npm run lint
+      - name: Testes unitários e componentes (Vitest)
+        run: npm test
       - name: Build (export estático)
         run: npm run build
       - name: Testes do lançador do app Android

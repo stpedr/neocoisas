@@ -12,8 +12,6 @@ const VIDEO: MediaItem = {
   ext: "mp4",
   kind: "video",
   size_bytes: 2048,
-  width: 1920,
-  height: 1080,
 };
 
 function makeLayer(id: string, label: string, overrides: Partial<Layer> = {}): Layer {

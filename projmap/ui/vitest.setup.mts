@@ -16,7 +16,6 @@ class ResizeObserverPolyfill {
   unobserve() {}
   disconnect() {}
 }
-// @ts-expect-error — jsdom não declara o tipo global
 globalThis.ResizeObserver ??= ResizeObserverPolyfill;
 
 // jsdom também não implementa a Pointer Capture API — Radix (Slider, Dialog

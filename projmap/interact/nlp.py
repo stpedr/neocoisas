@@ -19,11 +19,13 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import unicodedata
 from dataclasses import dataclass, field
 from typing import Optional, Protocol
 
+import httpx
 from pydantic import ValidationError
 
 from .scene import (
@@ -100,18 +102,60 @@ JSON:
 _client_error: Optional[str] = None
 
 
-def default_client() -> Optional[TextClient]:
-    """Cliente de texto do repo (Ollama/Gemini), se o pacote ``agents`` existir."""
-    global _client_error
-    try:
-        from agents.llm import get_text_client  # type: ignore
+class _OllamaHttpClient:
+    def __init__(self, base_url: str, model: str) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.model = model
 
+    def generate(self, prompt: str) -> str:
+        resp = httpx.post(
+            f"{self.base_url}/api/generate",
+            json={"model": self.model, "prompt": prompt, "stream": False},
+            timeout=30.0,
+        )
+        resp.raise_for_status()
+        return str(resp.json().get("response", ""))
+
+
+class _GeminiHttpClient:
+    def __init__(self, api_key: str, model: str) -> None:
+        self.api_key = api_key
+        self.model = model
+
+    def generate(self, prompt: str) -> str:
+        resp = httpx.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent",
+            headers={"x-goog-api-key": self.api_key},
+            json={"contents": [{"parts": [{"text": prompt}]}]},
+            timeout=30.0,
+        )
+        resp.raise_for_status()
+        candidates = resp.json().get("candidates") or []
+        parts = (candidates[0].get("content") or {}).get("parts") or [] if candidates else []
+        return str(parts[0].get("text", "")) if parts else ""
+
+
+def default_client() -> Optional[TextClient]:
+    """Cliente de texto autônomo do ProjMap (Ollama local ou Gemini via httpx)."""
+    global _client_error
+    provider = os.environ.get("PROJMAP_LLM_PROVIDER", os.environ.get("ANE_TEXT_PROVIDER", "ollama")).strip().lower()
+    try:
+        if provider == "gemini":
+            api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+            if not api_key:
+                raise RuntimeError("GEMINI_API_KEY não configurada")
+            model = os.environ.get("PROJMAP_GEMINI_MODEL", "gemini-2.5-flash").strip()
+            _client_error = None
+            return _GeminiHttpClient(api_key=api_key, model=model)
+        base_url = os.environ.get("PROJMAP_OLLAMA_URL", os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")).strip()
+        model = os.environ.get("PROJMAP_OLLAMA_MODEL", os.environ.get("OLLAMA_MODEL", "llama3")).strip()
         _client_error = None
-        return get_text_client(agent="projmap_scene")
+        return _OllamaHttpClient(base_url=base_url, model=model)
     except Exception as exc:  # noqa: BLE001 — sem LLM configurado: usamos o fallback
         _client_error = str(exc)
         log.info("LLM indisponível para cenas (%s); usando parser por palavras-chave", exc)
         return None
+
 
 
 def scene_from_text(text: str, client: Optional[TextClient] = None, use_llm: bool = True) -> NlpResult:

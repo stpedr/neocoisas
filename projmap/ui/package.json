@@ -8,6 +8,7 @@
     "prebuild": "node scripts/copy-mediapipe.mjs",
     "build": "next build",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
@@ -38,6 +39,8 @@
     "@types/react-dom": "18.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "autoprefixer": "^10.6.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.35",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.30",
     "tailwindcss": "^4.3.3",

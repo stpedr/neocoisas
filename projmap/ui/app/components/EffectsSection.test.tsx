@@ -112,7 +112,7 @@ describe("EffectsSection", () => {
     await userEvent.keyboard("{ArrowRight}");
 
     expect(api.effectParams).toHaveBeenCalledTimes(1);
-    expect(api.effectParams.mock.calls[0][0]).toHaveProperty("brilho");
+    expect(vi.mocked(api.effectParams).mock.calls[0][0]).toHaveProperty("brilho");
   });
 
   it("efeito vf-luz mostra os toggles próprios (Orbes nas mãos, Cor segue a música)", async () => {

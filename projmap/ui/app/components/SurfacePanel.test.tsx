@@ -61,10 +61,11 @@ function project(overrides: Partial<Project> = {}): Project {
 }
 
 function setup(overrides: Partial<React.ComponentProps<typeof SurfacePanel>> = {}) {
+  const onChange = vi.fn();
   const props = {
     surface: surface(),
     project: project(),
-    onChange: vi.fn(),
+    onChange,
     onDelete: vi.fn(),
     onUpload: vi.fn(),
     onError: vi.fn(),
@@ -72,7 +73,7 @@ function setup(overrides: Partial<React.ComponentProps<typeof SurfacePanel>> = {
     ...overrides,
   };
   render(<SurfacePanel {...props} />);
-  return props;
+  return { ...props, onChange };
 }
 
 describe("SurfacePanel", () => {

@@ -79,6 +79,7 @@ describe("MediaGallery", () => {
       },
     });
     vi.mocked(api.importLibrary).mockResolvedValue({
+      revision: 2,
       item: {
         sha256: "sha-imported-gif",
         filename: "fogo.gif",

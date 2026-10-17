@@ -1,0 +1,65 @@
+[project]
+name = "projmap"
+version = "0.1.0"
+description = "ProjMap — Sistema standalone de projeção mapeada em tempo real, calibração e interação"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/projmap"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+include = ["projmap/**/*.py", "tests/projmap/**/*.py"]
+
+[tool.ruff.lint]
+select = [
+    "E9",     # Erros de sintaxe
+    "F",      # Pyflakes (imports/variáveis não usadas, undefined names)
+    "B006",   # Argumentos default mutáveis
+    "S102",   # Proibido exec()
+    "S301",   # Proibido pickle
+    "S307",   # Proibido eval()
+    "S506",   # Proibido yaml.load inseguro
+    "TID251", # Fronteira arquitetural: proibido importar módulos do Auto Niche Engine
+]
+ignore = [
+    "F401",   # Re-exports intencionais em __init__.py
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/projmap/**/*.py" = ["S101"]
+"projmap/interact/touchdesigner/*.py" = ["F821"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"agents" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'agents' do Auto Niche Engine." }
+"agents.llm" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'agents.llm' do Auto Niche Engine." }
+"server" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'server' do Auto Niche Engine." }
+"engine" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'engine' do Auto Niche Engine." }
+"jobs" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'jobs' do Auto Niche Engine." }
+"scheduler" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'scheduler' do Auto Niche Engine." }
+"settings" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'settings' do Auto Niche Engine." }
+"registry" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'registry' do Auto Niche Engine." }
+"review" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'review' do Auto Niche Engine." }
+"publishers" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'publishers' do Auto Niche Engine." }
+"telegram_bot" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'telegram_bot' do Auto Niche Engine." }
+"raspberry_pi" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'raspberry_pi' do Auto Niche Engine." }
+"render" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'render' do Auto Niche Engine." }
+"render_carousel" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'render_carousel' do Auto Niche Engine." }
+"brand" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'brand' do Auto Niche Engine." }
+"carousel_art" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'carousel_art' do Auto Niche Engine." }
+"dashboard" = { msg = "PROIBIDO: ProjMap é standalone e não pode importar 'dashboard' do Auto Niche Engine." }
+
+[tool.mypy]
+python_version = "3.11"
+plugins = ["pydantic.mypy"]
+files = ["projmap/core", "projmap/mapping", "projmap/detect", "projmap/master"]
+follow_imports = "silent"
+ignore_missing_imports = true
+no_implicit_optional = true
+warn_return_any = false
+disable_error_code = ["attr-defined", "assignment", "arg-type", "return", "return-value", "call-overload"]
+
+
+

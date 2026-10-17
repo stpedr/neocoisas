@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Write(./.env)",
+      "Write(./.env.*)",
+      "Read(**/*token*.json)",
+      "Edit(**/*token*.json)",
+      "Write(**/*token*.json)",
+      "Edit(projmap/master/db/migrations/versions/*.py)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -Command \"if (Test-Path '.venv-projmap/Scripts/ruff.exe') { ./.venv-projmap/Scripts/ruff.exe check projmap tests/projmap }\""
+          },
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -Command \"Push-Location projmap/ui; npm run typecheck; Pop-Location\""
+          }
+        ]
+      }
+    ]
+  }
+}
